@@ -66,6 +66,15 @@ class Permission(db.Model):
   title = db.StringProperty()
   dj_list = db.ListProperty(db.Key)
 
+class Event(db.Model):
+  title = db.StringProperty()
+  event_date = db.DateTimeProperty()
+  desc = db.TextProperty()
+  url = db.StringProperty()
+
+def getEventsAfter(start):
+  return Event.all().filter("event_date >=", start).order("play_date").fetch(1000)
+
 def getLastPlay():
   return Play.all().order("-play_date").fetch(1)[0]
 
@@ -187,3 +196,6 @@ def removeDjFromPermission(dj, permission):
 def getPermissions():
   return Permission.all().order("-title").fetch(100)
 
+def getNewPlaysInRange(start, end):
+  plays = Play.all().filter("isNew =", True).filter("play_date >=", start).filter("play_date <=", end).fetch(1000)
+  return plays

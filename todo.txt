@@ -1,4 +1,3 @@
-View Charts
 Manage Blog
 Events
 Schedule

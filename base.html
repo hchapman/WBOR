@@ -77,6 +77,7 @@
                     var li = document.createElement("li");
                     li.innerHTML = value;
                     $("#" + p_key).append(li);
+                    $("#msgbox").html(data.msg);
                   }
                 }, "json");
               },

@@ -406,11 +406,11 @@ h4 {
   text-align: center;
 }
 
-#psas td, #ids td {
+#psas td, #ids td, #topsongs td, #topalbums td {
   padding: 5px;
 }
 
-#psas tr:hover, #ids tr:hover {
+#psas tbody tr:hover, #ids tbody tr:hover, #topsongs tbody tr:hover, #topalbums tbody tr:hover {
   background-color: #ddd;
 }
 

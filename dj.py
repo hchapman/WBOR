@@ -304,6 +304,72 @@ class ChartSong(webapp.RequestHandler):
 # Displays the top-played songs for a given period.
 # get(): Print log for the last week, display form for choosing endpoint.
 # post(): Print log of week-long period.
+class ViewCharts(webapp.RequestHandler):
+  def getTopSongsAndAlbums(self, start, end, song_num, album_num):
+    plays = models.getNewPlaysInRange(start=start, end=end)
+    songs = {}
+    albums = {}
+    for p in plays:
+      if p.song.key() in songs:
+        songs[p.song.key()][0] += 1
+      else:
+        songs[p.song.key()] = [1, p.song.title, p.song.artist, p.song.album.title]
+      if p.song.album.key() in albums:
+        albums[p.song.album.key()][0] += 1
+      else:
+        albums[p.song.album.key()] = [1, p.song.album.title, p.song.album.artist]
+    songs = [songs[s] for s in songs]
+    albums = [albums[a] for a in albums]
+    songs.sort()
+    songs.reverse()
+    albums.sort()
+    albums.reverse()
+    songs = songs[:song_num]
+    albums = albums[:album_num]
+    return (songs, albums)
+  
+  @login_required
+  def get(self):
+    default_songs = 20
+    default_albums = 50
+    start = datetime.datetime.now() - datetime.timedelta(weeks=1)
+    end = datetime.datetime.now()
+    songs, albums = self.getTopSongsAndAlbums(start, end, default_songs, default_albums)
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+      'songs': songs,
+      'albums': albums,
+      'start': start,
+      'end': end,
+    }
+    self.response.out.write(template.render(getPath("dj_charts.html"), template_values))
+  
+  @login_required
+  def post(self):
+    default_songs = 20
+    default_albums = 50
+    try:
+      start = datetime.datetime.strptime(self.request.get("start_date"), "%m/%d/%Y")
+    except ValueError:
+      self.flash.msg = "Unable to select date. Enter a date in the form mm/dd/yyyy."
+      self.redirect("/dj/charts/")
+      return
+    end = start + datetime.timedelta(weeks=1)
+    if self.request.get("song_num"):
+      default_songs = int(self.request.get("song_num"))
+    if self.request.get("album_num"):
+      default_albums = int(self.request.get("album_num"))
+    songs, albums = self.getTopSongsAndAlbums(start, end, default_songs, default_albums)
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+      'songs': songs,
+      'albums': albums,
+      'start': start,
+      'end': end,
+    }
+    self.response.out.write(template.render(getPath("dj_charts.html"), template_values))
 
 # Displays log of PSA and Station ID records for a given two-week period.
 # /dj/logs/?
@@ -778,6 +844,7 @@ def main():
       ('/dj/logs/?', ViewLogs),
       ('/dj/permissions/?', ManagePermissions),
       ('/dj/myshow/?', MyShow),
+      ('/dj/charts/?', ViewCharts),
                                        ],
                                        debug=True)
   util.run_wsgi_app(application)
