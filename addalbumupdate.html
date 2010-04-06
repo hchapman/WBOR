@@ -1,0 +1,11 @@
+<ul id='add-album-list'>
+    {% for album in items %}
+    <li id='{{ album.asin }}'>
+        <img src='{{ album.medium_pic }}' />
+        <br>{{ album.title }} - {{ album.artist }}
+        <br>{{ album.tracks|length }} Tracks
+    </li>
+    {% endfor %}
+</ul>
+        
+        

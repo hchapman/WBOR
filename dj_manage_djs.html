@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block left_column %}
+    <div id='edit-dj'>
+        <h4>{% if dj %}Edit{% else %}Add{% endif %} DJ</h4>
+        <form action='/dj/djs/{% if dj %}{{ dj.key }}/{% endif %}' method='post'>
+            <table>
+                <tr>
+                    <td><label for='email'>Email: </label></td>
+                    <td><input id='email' type='text' name='email' value='{{ dj.email|escape }}'/></td>
+                </tr>
+                <tr>
+                    <td><label for='fullname'>Full Name: </label></td>
+                    <td><input id='fullname' type='text' name='fullname' value='{{ dj.fullname|escape }}' /></td>
+                </tr>
+                <tr>
+                    <td><label for='username'>Username: </label></td>
+                    <td><input id='username' name='username' type='text' value='{{ dj.username|escape }}'/></td>
+                </tr>
+                <tr>
+                    <td><label for='password'>Password: </label></td>
+                    <td><input id='password' name='password' type='text' value='{{ dj.password_hash|escape }}'/></td>
+                </tr>
+            </table>
+            <input type='submit' name='submit' value="{% if dj %}Edit{% else %}Add{% endif %} DJ" />
+            {% if dj %}
+            <input id='delete-button' type='submit' name='submit' value="Delete DJ" />
+            {% endif %}
+        </form>
+    </div>
+    <div id='current-djs'>
+        <h4>Current DJs</h4>
+        <ul>
+            {% for dj in dj_list %}
+            <li><a href='/dj/djs/{{ dj.key }}'>{{ dj.fullname }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endblock %}
+
+{% block right_column %}
+    <div>
+        <a href='/dj/'>Return to main index</a>
+    </div>
+    {% include "last3posts.html" %}
+{% endblock %}

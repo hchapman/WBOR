@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block top_row %}
+<div>
+  <center>
+    Top artists:
+  <ol>
+    {% for a in program.top_artists|slice:":3" %}
+    <li>{{ a }}</li>
+    {% endfor %}
+  </ol>
+  </center>
+</div>
+{% endblock %}
+
+{% block left_column %}
+    <div>
+        <h4>{{ program.title }}</h4>
+        {{ program.page_html }}
+    </div>
+{% endblock %}
+
+{% block right_column %}
+    <div>
+        <h4>Brief</h4>
+        {{ program.desc }}
+    </div>
+    {% include "last3posts.html" %}
+{% endblock %}

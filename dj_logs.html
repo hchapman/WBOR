@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Station Logs{% endblock %}
+
+{% block left_column %}
+
+<div id='psas'>
+    <h4>PSAs</h4>
+    {% if psas %}
+    <table>
+      <thead>
+        <tr>
+          <td>PSA Title</td>
+          <td>Program</td>
+          <td>Date</td>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in psas %}
+        <tr>
+          <td>{{ p.desc }}</td>
+          <td>{{ p.program.title }}</td>
+          <td>{{ p.play_date|date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <center><b>No PSAs were found.  Is this date in the future?</b></center>
+    {% endif %}
+</div>
+
+<div id='ids'>
+  <h4>Station IDs</h4>
+  {% if ids %}
+  <table>
+    <thead>
+      <tr>
+        <td>Program</td>
+        <td>Date</td>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i in ids %}
+      <tr>
+        <td>{{ i.program.title }}</td>
+        <td>{{ i.play_date|date }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <center><b>No Station IDs were found. Is this date in the future?</b></center>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block right_column %}
+<div>
+    <a href='/dj/'>Return to main index</a>
+</div>
+<div>
+  <h4>{{ start|date }} through {{ end|date }}</h4>
+  
+  <p>Select a different two-week period below.</p>
+  <form method='post' action='/dj/logs'>
+    <label>Start date: <input type='text' class='datepicker' name='start_date' id='start_date'></label>
+    <br />
+    <input type='submit' name='submit' value="Submit">
+  </form>
+</div>
+{% endblock %}
+
+{% block footer %}
+    {% if flash.msg %}
+        <div class='flash-msg'>{{ flash.msg }}</div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,12 @@
+<h4>Recently on WBOR</h4>
+<table>
+  <tbody>
+    {% for p in plays %}
+    <tr>
+      <td>{{ p.song.title }}</td>
+      <td>{{ p.song.artist }}</td>
+      <td>{{ p.play_date|timesince }} ago</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<title>WBOR</title>
+<link rel="stylesheet" href="static/css/reset.css" />
+<link rel="stylesheet" href="static/css/text.css" />
+<link rel="stylesheet" href="static/css/960.css" />
+<link rel="stylesheet" href="static/css/page.css">
+<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js'></script>
+<script type='text/javascript'>
+    background = function() {
+        document.body.style.background = 'url(static/images/bg/' + (Math.round(Math.random() * 22) + 1) + '.gif)';
+    }
+        
+    $(document).ready(function() {
+        $("#nowplaying").mouseenter(function() {
+            $("#showdeschidden").slideDown("medium");
+        });
+        $("#nowplaying").mouseleave(function() {
+            $("#showdeschidden").slideUp("medium");
+        });
+    });
+</script>
+<script type="text/javascript" src="static/js/audio-player.js"></script>  
+<script type="text/javascript">  
+    AudioPlayer.setup("static/player.swf", {  
+        width: 210  
+    });
+</script>
+</head>
+<body onLoad="background();">
+<div id='outer-wrap'>
+<div id='wrap' class='container_12'>
+    <div id='header'>
+        <div class='grid_6' id='logo'><!-- Start header -->
+            <a title='May 9, 7:00 pm' href='/index'><img src='static/images/transparentlogo.png'></a>
+        </div>
+    
+        <div class='grid_3 header' id='audioplayer'>
+        </div>
+    
+        <div class='grid_3 header'>
+            <div id='download-m3u'>
+                <a href='static/wbor.m3u'>
+                <strong>Listen now</strong>
+                <br>
+                Live internet stream
+                </a>
+            </div>
+        </div><!-- End header -->
+    </div>
+    <div class='clear'></div>
+    
+    <!-- This is for the "floating" navbar -->
+    <div class='navbar_clear grid_12'></div>
+    <div class='clear'></div>
+    
+    
+    <div class='grid_6 left'><!-- Left-hand column on front page -->
+        <div id='latestplays'>
+            <h4>Recently on WBOR</h4>
+                <table>
+                    <tr>
+                        <td>Come Closer</td>
+                        <td>CFCF</td>
+                        <td>3 minutes ago</td>
+                    </tr>
+                    <tr>
+                        <td>Mimizan</td>
+                        <td>Beirut</td>
+                        <td>8 minutes ago</td>
+                    </tr>
+                    <tr>
+                        <td>Rebellion (Lies)</td>
+                        <td>Arcade Fire</td>
+                        <td>12 minutes ago</td>
+                    </tr>
+                    <tr>
+                        <td>Mirrorball</td>
+                        <td>The Crayon Fields</td>
+                        <td>17 minutes ago</td>
+                    </tr>
+                    <tr>
+                        <td>Infinity</td>
+                        <td>The xx</td>
+                        <td>21 minutes ago</td>
+                    </tr>
+                </table>
+        </div>
+        
+        <div id='newalbums'>
+            <h4>NEW THIS WEEK</h4>
+            <ul id='albumlist'>
+                <li><img title='I And Love And You - Avett Brothers' src='static/images/albums/1.png' /></li>
+                <li><img title='Emotionalism - Avett Brothers' src='static/images/albums/2.png'></li>
+                <li><img title='Illinoize - Tor and Sufjan Stevens' src='static/images/albums/3.png'></li>
+                <li><img title="It's Blitz! - Yeah Yeah Yeahs" src='static/images/albums/4.png'></li>
+                <li><img title='xx - The xx' src='static/images/albums/5.png'></li>
+                <li><img title='Eskimo Snow - Why?' src='static/images/albums/6.png'></li>
+                <li><img title='Glitter and Doom Live - Tom Waits' src='static/images/albums/7.png'></li>
+                <li><img title='' src='static/images/albums/8.png'></li>
+                <li><img title='' src='static/images/albums/9.png'></li>
+                <li><img title='' src='static/images/albums/10.png'></li>
+                <li><img title='' src='static/images/albums/11.png'></li>
+                <li><img title='' src='static/images/albums/12.png'></li>
+            </ul>
+        </div>
+        
+        <div id='charts'>
+            <h4>CHARTS</h4>
+            <div class='chart-toggler chart-selected'>
+            Songs
+            </div>
+            <div class='chart-toggler'>
+                Albums
+            </div>
+            <table class='charttable' id='songtable'>
+                <tr>
+                    <td>1. +81, <i>Deerhoof</i></td>
+                    <td>6. Effigy, <i>Andrew Bird</i></td>
+                </tr>
+                <tr>
+                    <td>2. Dress Up In You, <i>Belle &amp; Sebastian</i></td>
+                    <td>7. Halfway Home, <i>TV On The Radio</i></td>
+                </tr>
+                <tr>
+                    <td>3. Daniel, <i>Bat For Lashes</i></td>
+                    <td>8. Lust For Life, <i>Girls</i></td>
+                </tr>
+                <tr>
+                    <td>4. Child Is The Father Of Man, <i>Brian Wilson</i></td>
+                    <td>9. Sylvia, <i>Antlers</i></td>
+                </tr>
+                <tr>
+                    <td>5. Stars, <i>The Love Language</i></td>
+                    <td>10. Two Weeks, <i>Grizzly Bear</i></td>
+                </tr>
+            </table>
+            
+            <table id='albumtable'>
+                
+            </table>
+        </div>
+        
+    </div><!-- End left-hand column -->
+    
+    <!-- Right-hand column on front page -->
+    <div class='grid_6 right'>
+        <div class='post' id='post1'>
+            <h5>Welcome to the new site</h5>
+            <h6>January 20, 2010</h6>
+            <p>As is obvious before you, this is a new site.  In case you were curious, the biggest changes were to the backend (we're now hosted on Google's App Engine in Python as opposed to on standard hosting with PHP), but we've made a number of changes to the front-end as well (which you can see)!</p>
+            <p>First and foremost is the new home page.  Not only does it still display the currently-playing information, but it also shows new adds in an attractive little box there on the left.  It also displays the top-played songs and albums of the past X days.  And finally, a blog!  Or at least something like a blog.  We're debating putting up mp3s as it's not clear how best to do it legally.</p>
+            <a href='blah'>more</a>
+        </div>
+        
+        <div class='post' id='post2'>
+            <h5>New Music!</h5>
+            <h6>October 18, 2009</h6>
+            <p>Hey hi how's it going? Hope fall break was great! Have some music!</p>
+            TOP 5:
+            <ul>
+                <li>Lake</li>
+                <li>Thao with the Get Down Stay Down</li>
+                <li>Orchestre Poly Rythmo de Cotonou</li>
+                <li>Fuck Buttons</li>
+                <li>Efterklang & The Danish National Chamber Orchestra</li>
+            </ul>
+            
+            <p>ROCK:
+                <br>
+            Thao with the Get Down Stay Down - Know Better Learn Faster<br>
+            Fierce and catchy (and a little folky) rock, with a guest appearance by Andrew Bird!</p>
+            <a href='blah'>more</a>
+        </div>
+        
+        <div class='post' id='post3'>
+            <h5>Milkman's Union Tour</h5>
+            <h6>October 2, 2009</h6>
+            <p>Campus legends <a href='http://www.themilkmansunion.com'>The Milkman's Union</a> are going on tour this winter break! If you live in the northeast, you should listen - they're performing in Boston, New York, Connecticut, and New Hampshire to name a few.  Be sure to buy their album too - it's only $10 and pretty good if we can say so ourselves.</p>
+            <a href='blah'>more</a>
+        </div>
+
+    </div><!-- End right-hand column -->
+    <div class='clear'></div>
+    
+    <div id='footer'><!-- footer, obviously -->
+        FOOTER
+    </div><!-- end footer -->
+    
+    <div id='navigation'>
+        <ul>
+            <li class='selected'><a href='index'>News</a></li>
+            <li><a href='/events'>Events</a></li>
+            <li><a href='/schedule'>Schedule</a></li>
+            <li><a href='/playlists'>Playlists</a></li>
+            <li><a href='/fun'>Fun</a></li>
+            <li><a href='/history'>History</a></li>
+            <li><a href='/contact'>Contact</a></li>
+            <li><a href='/dj'>DJ Login</a></li>
+        </ul>
+        <div id='nowplaying'>
+            <strong>&#9835; NOW PLAYING &#9835;</strong>
+            <br>
+            I And Love And You &mdash; The Avett Brothers
+            <br>
+            on <a href='show/hitgitsplit'>The Hit Git and Split Show </a>
+            <div id='showdeschidden'>
+                <hr>
+                <p>The Hit Git &amp; Split is celebrating Tom Wait's 60th birthday for this college season. The theme is "Just Another Dime Store Novel". From "Pasties and a G-string", an adventure in tassel twirling, along with "Hang on St. Christopher", we'll take you "Straight to the Top" of "Frank's Wild Years". "Jesus Gonna Be Here", along with "Chocolate Jesus", because "God's Away on Business". The AWB will prevail as your "Late Night Evening Prostitute". A good gardener knows when to put his hose down and roll it up. "Well, that ain't half of it, man, you know - boy have I got a show for you!"</p>
+            </div>
+        </div>
+    </div>
+</div><!-- End wrap -->
+</div><!-- End outer wrap -->
+</body>
+</html>

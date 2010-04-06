@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+
+<title>{% block title %}WBOR{% endblock %}</title>
+
+<link rel="stylesheet" href="/static/css/reset.css" />
+<link rel="stylesheet" href="/static/css/text.css" />
+<link rel="stylesheet" href="/static/css/960.css" />
+<link rel="stylesheet" href="/static/css/page.css" />
+<link rel="stylesheet" href="/static/css/jquery-ui.css" />
+<link rel="stylesheet" type="text/css" href="/static/css/lightbox.css" media="screen" />
+<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js'></script>
+<script type='text/javascript' src='/static/js/jquery.autocomplete.js'></script>
+<script type='text/javascript' src='/static/js/jquery.lightbox.js'></script>
+<script type='text/javascript' src='/static/js/jquery-ui.js'></script>
+<script type='text/javascript' src='/static/js/jquery.tinymce.js'></script>
+<script type='text/javascript'>
+    background = function() {
+        document.body.style.background = 'url(/static/images/bg/' + (Math.round(Math.random() * 22) + 1) + '.gif)';
+    }
+        
+    $(document).ready(function() {
+        if ($('textarea.tinymce').length > 0) {
+          $('textarea.tinymce').tinymce({
+            script_url: '/static/js/tiny_mce.js',
+            theme: "advanced",
+          });
+        }
+        $("#nowplaying").mouseenter(function() {
+            $("#showdeschidden").slideDown("medium");
+        });
+        $("#nowplaying").mouseleave(function() {
+            $("#showdeschidden").slideUp("medium");
+        });
+        
+        $(".datepicker").datepicker();
+        
+        nowPlaying();
+        nowPlayingTimer = setTimeout("nowPlaying()", 60000);
+        if ($("#delete-button")) {
+            $("#delete-button").click(function() {
+                return confirm("Are you sure you want to do this?");
+            });
+        }
+        if ($(".artist-autocomplete").length > 0) {
+            $(".artist-autocomplete").autocomplete({
+                serviceUrl: '/ajax/artistcomplete',
+                minChars: 1,
+                width: $(".artist-autocomplete").width(),
+                maxHeight: 400,
+                onSelect: function(value, data) {
+                    
+                },
+            });
+        }
+        if ($(".dj-autocomplete").length > 0) {
+          $(".dj-autocomplete").each(function(index) {
+            var p_key = $(this).attr("key");
+            $(this).autocomplete({
+              serviceUrl: '/ajax/djcomplete',
+              minChars: 1,
+              width: $(".dj-autocomplete").width(),
+              maxHeight: 400,
+              onSelect: function(value, data) {
+                $.post("/dj/permissions",
+                {
+                  'dj_key': data,
+                  'permission_key': p_key,
+                  'action': "add",
+                },
+                function(data) {
+                  if (data.err) {
+                    alert(data.err);
+                  } else {
+                    var li = document.createElement("li");
+                    li.innerHTML = value;
+                    $("#" + p_key).append(li);
+                  }
+                }, "json");
+              },
+            });
+          });
+        }
+        if ($("#albumlist li a").length > 0) {
+            $("#albumlist li a").lightBox({
+                imageLoading: '/static/images/lightbox-ico-loading.gif',
+            	imageBtnClose: '/static/images/lightbox-btn-close.gif',
+            	imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
+            	imageBtnNext: '/static/images/lightbox-btn-next.gif',
+            	imageBlank: '/static/images/lightbox-blank.gif',
+            })
+        }
+    });
+    
+    function nowPlaying() {
+        // request currently-playing information; update page accordingly.
+        // requests both now-playing box and recently-played box, if you're on the main page.
+        $.get('/updateinfo', function(data) {
+            $("#currentsong").html(data.song_string);
+            $("#currentshow").html(data.program_title);
+            $("#currentshow").attr('href', '/programs/' + data.program_slug);
+            $("#currentshowdesc").html(data.program_desc + "<hr />" + data.top_played);
+            if ($("#latestplays")) {
+                $("#latestplays").html(data.recent_songs_html);
+            }
+        }, "json");
+    }
+</script>
+{% block extra_scripts %}{% endblock %}
+</head>
+<body onLoad="background();">
+<div id='outer-wrap'>
+<div id='wrap' class='container_12'>
+    <div id='header'>
+        <div class='grid_6' id='logo'><!-- Start header -->
+            <a title='May 9, 7:00 pm' href='/index'><img src='/static/images/transparentlogo.png'></a>
+        </div>
+    
+        <div class='grid_3 header' id='audioplayer'>
+        </div>
+    
+        <div class='grid_3 header'>
+            <div id='download-m3u'>
+                <a href='/static/wbor.m3u'>
+                <strong>Listen now</strong>
+                <br>
+                Live internet stream
+                </a>
+            </div>
+        </div><!-- End header -->
+    </div>
+    <div class='clear'></div>
+    
+    <!-- This is for the "floating" navbar -->
+    <div class='navbar_clear grid_12'></div>
+    <div class='clear'></div>
+    
+    {% block main_content %}
+    <div class='grid_12 flash-msg' id='msgbox'>
+      {% if flash.msg %}
+        {{ flash.msg }}
+      {% endif %}
+    </div>
+    {% block top_row %}{% endblock %}
+    <div class='grid_6 left'><!-- Left-hand column on front page -->
+        {% block left_column %}
+
+        {% endblock %}
+    </div><!-- End left-hand column -->
+    
+    <!-- Right-hand column on front page -->
+    <div class='grid_6 right'>
+        {% block right_column %}
+
+        {% endblock %}
+    </div><!-- End right-hand column -->
+    {% endblock %}
+    <div class='clear'></div>
+    
+    <div id='footer'>
+        {% block footer %}<!-- footer, obviously -->
+        FOOTER
+        {% endblock %}
+    </div><!-- end footer -->
+    
+    <div id='navigation'>
+        <ul>
+            <li {% if news_selected %}class='selected'{% endif %}><a href='/'>News</a></li>
+            <li {% if events_selected %}class='selected'{% endif %}><a href='/events'>Events</a></li>
+            <li {% if schedule_selected %}class='selected'{% endif %}><a href='/schedule'>Schedule</a></li>
+            <li {% if playlists_selected %}class='selected'{% endif %}><a href='/playlists'>Playlists</a></li>
+            <li {% if fun_selected %}class='selected'{% endif %}><a href='/fun'>Fun</a></li>
+            <li {% if history_selected %}class='selected'{% endif %}><a href='/history'>History</a></li>
+            <li {% if contact_selected %}class='selected'{% endif %}><a href='/contact'>Contact</a></li>
+            <li><a href='/dj/login'>DJ Login</a></li>
+        </ul>
+        <div id='nowplaying'>
+            <strong>&#9835; NOW PLAYING &#9835;</strong>
+            <br>
+            <span id='currentsong'>I And Love And You &mdash; The Avett Brothers</span>
+            <br>
+            on <a href='show/hitgitsplit' id='currentshow'>The Hit Git and Split Show </a>
+            <div id='showdeschidden'>
+                <hr>
+                <p id='currentshowdesc'>The Hit Git &amp; Split is celebrating Tom Wait's 60th birthday for this college season. The theme is "Just Another Dime Store Novel". From "Pasties and a G-string", an adventure in tassel twirling, along with "Hang on St. Christopher", we'll take you "Straight to the Top" of "Frank's Wild Years". "Jesus Gonna Be Here", along with "Chocolate Jesus", because "God's Away on Business". The AWB will prevail as your "Late Night Evening Prostitute". A good gardener knows when to put his hose down and roll it up. "Well, that ain't half of it, man, you know - boy have I got a show for you!"</p>
+            </div>
+        </div>
+    </div>
+</div><!-- End wrap -->
+</div><!-- End outer wrap -->
+</body>
+</html>

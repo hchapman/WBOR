@@ -1,0 +1,18 @@
+<table>
+  <thead>
+    <tr>
+      <td>Song</td>
+      <td>Artist</td>
+      <td>Time</td>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in plays %}
+    <tr>
+      <td>{{ p.song.title }}</td>
+      <td>{{ p.song.artist }}</td>
+      <td>{{ p.play_date|timesince }} ago</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

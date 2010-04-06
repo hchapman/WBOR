@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block extra_scripts %}
+<script type='text/javascript'>
+$(function() {
+    $("#isNew-checkbox").click(function() {
+        if (this.checked) {
+            $("#new-song-div").slideDown("fast");
+            $("#old-song-div").slideUp("fast");
+        } else {
+            $("#new-song-div").slideUp("fast");
+            $("#old-song-div").slideDown("fast");
+        }
+    });
+    $("#album_key").change(function() {
+        $.get(
+            '/ajax/getSongList/',
+            {
+                'album_key': $(this).val(),
+            },
+            function(data) {
+                if (data.err) {
+                    alert(data.err);
+                    return;
+                }
+                $("#song_key_list").html(data.songListHtml);
+            });
+    });
+});
+</script>
+{% endblock %}
+
+{% block left_column %}
+    <div>
+        <b>If you are unable to chart, please <a href='mailto:seth.glickman@gmail.com'>email me</a> ASAP with your full name, the name of your program, and the names of your co-DJs, if any.</b>
+    </div>
+    <div>
+        <h4>Chart Song</h4>
+        <form action='/dj/chartsong/' method='post'>
+            <label><input type='checkbox' name='isNew' value='yes' id='isNew-checkbox' /> Check if new</label>
+            <br>
+            
+            <div id='old-song-div'><label>Track Name:
+                <br><input type='text' name='trackname' id='trackname' /></label>
+            <br>
+            <br>
+            <label>Artist:
+                <br><input type='text' class='artist-autocomplete' name='artist' id='artist' /></label>
+            </div>
+            <div id='new-song-div'>
+                <label>Album</label>
+                <br>
+                <select name='album_key' id='album_key'>
+                    {% for album in new_albums %}
+                    <option value='{{ album.key }}'>{{ album.artist }} - {{ album.title }}</option>
+                    {% endfor %}
+                </select>
+                <br>
+                <br>
+                <label>Song</label>
+                <br>
+                <select name='song_key' id='song_key_list'>
+                    {% for song in album_songs %}
+                    <option value='{{ song.key }}'>{{ song.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input type='submit' name='submit' value='Chart Song'>
+        </form>
+    </div>
+    <div id='current-playlist'>
+        <h4>Last Played</h4>
+        <ul>
+            {% for p in playlist %}
+                <li>{{ p.song.title }} &mdash; {{ p.song.artist }}</li>
+            {% endfor %}
+        </ul>
+    </div>        
+{% endblock %}
+
+{% block right_column %}
+
+    <div>
+        <a href='/dj/'>Return to main index</a>
+    </div>
+    <div id='psa-status'>
+        The last PSA (<i>{{ last_psa.desc }}</i>) was played at {{ last_psa.play_date|date:"h:i" }}, or {{ last_psa.play_date|timesince }} ago.
+        <br>
+        <form action='/dj/chartsong/' method='post'>
+            <input type='submit' name='submit' value='Station ID'>
+        </form>
+        <br>
+        
+        <form action='/dj/chartsong/' method='post'>
+            <label>PSA Description: <input type='text' name='psa_desc' /></label> <input type='submit' name='submit' value='PSA'>
+        </form>
+    </div>
+
+    {% include "last3posts.html" %}
+{% endblock %}

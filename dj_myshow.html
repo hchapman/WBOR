@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block left_column %}
+    <div id='edit-program'>
+        <h4>{{ program.title }}</h4>
+        <form action='/dj/myshow' method='post'>
+          <input type='hidden' value='{{ program.key }}' name='program_key'>
+            <table>
+                <tr>
+                    <td><label for='title'>Title: </label></td>
+                    <td><input id='title' type='text' name='title' value='{{ program.title|escape }}'/></td>
+                </tr>
+                <tr>
+                    <td><label for='slug'>Slug: </label></td>
+                    <td><input id='slug' type='text' name='slug' value='{{ program.slug|escape }}' /></td>
+                </tr>
+                <tr>
+                    <td colspan='2'><label for='desc'>Description: </label></td>
+                </tr>
+                <tr>
+                    <td colspan='2'>
+                        <textarea class='tinymce' name='desc' id='desc'>{{ program.desc|escape }}</textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan='2'><label for='page_html'>Page HTML: </label></td>
+                </tr>
+                <tr>
+                    <td colspan='2'>
+                        <textarea class='tinymce' name='page_html' id='page_html'>{{ program.page_html|escape }}</textarea>
+                </tr>
+            </table>
+            <input type='submit' name='submit' value="Save">
+    </div>
+
+{% endblock %}
+
+{% block right_column %}
+    <div>
+        <a href='/dj/'>Return to main index</a>
+    </div>
+    {% include "last3posts.html" %}
+{% endblock %}

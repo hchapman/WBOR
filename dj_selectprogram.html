@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block right_column %}
+    {% include "last3posts.html" %}
+{% endblock %}
+
+{% block left_column %}
+    <div id='select-program'>
+        <h4>Select Program</h4>
+        {% for p in programlist %}
+        <form action='/dj/selectprogram/' method='post'>
+            <input type='hidden' name='programkey' value='{{ p.key }}' />
+            <input type='submit' name='submit' value='{{ p.title|escape }}' />
+        </form>
+        {% endfor %}
+    </div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block left_column %}
+    <div id='edit-program'>
+        <h4>{% if program %}Edit{% else %}Add{% endif %} Program</h4>
+        <form action='/dj/programs/{% if program %}{{ program.key }}/{% endif %}' method='post'>
+            <table>
+                <tr>
+                    <td><label for='title'>Title: </label></td>
+                    <td><input id='title' type='text' name='title' value='{{ program.title|escape }}'/></td>
+                </tr>
+                <tr>
+                    <td><label for='slug'>Slug: </label></td>
+                    <td><input id='slug' type='text' name='slug' value='{{ program.slug|escape }}' /></td>
+                </tr>
+                <tr>
+                    <td colspan='2'><label for='desc'>Description: </label></td>
+                </tr>
+                <tr>
+                    <td colspan='2'>
+                        <textarea class='tinymce' name='desc' id='desc'>{{ program.desc|escape }}</textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan='2'><label for='page_html'>Page HTML: </label></td>
+                </tr>
+                <tr>
+                    <td colspan='2'>
+                        <textarea class='tinymce' name='page_html' id='page_html'>{{ program.page_html|escape }}</textarea>
+                </tr>
+            </table>
+            <input type='submit' name='submit' value="{% if program %}Edit{% else %}Add{% endif %} Program">
+            {% if program %}
+            <input id='delete-button' type='submit' name='submit' value='Delete Program' />
+            {% endif %}
+    </div>
+    {% if all_dj_list %}
+    <div id='current-djs'>
+        <h4>Select DJs in program</h4>
+        <ul>
+            {% for pair in all_dj_list %}
+            <li><label>
+                {% if pair.in_program %}
+                <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' checked='checked' />
+                {% else %}
+                <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' />
+                {% endif %}
+                {{ pair.dj.fullname }} ({{ pair.dj.email }})</label></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    </form>
+
+    {% if program_list %}
+    <div id='current-programs'>
+        <h4>Current Programs</h4>
+        <ul>
+            {% for p in program_list %}
+            <li><a href='/dj/programs/{{ p.key }}'>{{ p.title }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block right_column %}
+    <div>
+        <a href='/dj/'>Return to main index</a>
+    </div>
+    {% include "last3posts.html" %}
+{% endblock %}

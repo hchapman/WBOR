@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block extra_scripts %}
+<script type='text/javascript'>
+    var newalbumlookup = "";
+    var oldalbumlookup = "";
+    var newalbumtimeout = null;
+    var oldalbumtimeout = null;
+    $(function() {
+        $("#album-lookup").keyup(function(e) {
+            if ($("#album-lookup").val() == "") {
+                $("#add-album-update").hide("medium");
+            } else if ($("#album-lookup").val() != newalbumlookup || e.keyCode == 13) {
+                clearTimeout(newalbumtimeout);
+                newalbumlookup = $("#album-lookup").val();
+                newalbumtimeout = setTimeout("amazonlookup(\"" + newalbumlookup + "\")", 300);
+            }
+        });
+    });
+    
+    function amazonlookup(keywords) {
+        $.get('/ajax/albuminfo',
+        {
+            'keywords': keywords,
+        },
+        function(data) {
+            $("#add-album-update").hide("fast", function() {
+                $("#add-album-update").html(data.updatehtml);
+                $("#add-album-list li").click(addAmazonAlbum);
+            });
+            $("#add-album-update").show("medium");
+        });
+    }
+    
+    function addAmazonAlbum() {
+        $(this).addClass("album-processing")
+        $.post("/dj/albums", 
+        {
+            'asin': $(this).attr("id"),
+            'action': "add",
+        },
+        function(data) {
+            if (data.err) {
+                this.removeClass("album-processing");
+                alert(data.err);
+            } else {
+                $("#add-album-update").hide("medium");
+                $("#msgbox").html(data.msg);
+            }
+        });
+    }
+    
+    function toggleNew() {
+        var checkbox = this.getElementsByTagName("input");
+        var li = $(this);
+        if (li.hasClass("newalbum")) {
+            li.removeClass("newalbum").addClass("workingalbum");
+            $.post("/dj/albums/", { 'action': "makeOld", 'key': li.attr("id") },
+                function(data) {
+                    li.removeClass("workingalbum").addClass("oldalbum");
+                    $(checkbox).attr("checked", false);
+                    $("#msgbox").html(data.msg);
+                }
+            );
+        } else if (li.hasClass("oldalbum")) {
+            li.removeClass("oldalbum").addClass("workingalbum");
+            $.post("/dj/albums/", { 'action': "makeNew", 'key': li.attr("id") },
+                function(data) {
+                    li.removeClass("workingalbum").addClass("newalbum");                
+                    $(checkbox).attr("checked", true);
+                    $("#msgbox").html(data.msg);
+                }
+            );
+        }        
+    }
+    
+    $(function() {
+        $("#manage-albums-list li").click(toggleNew);
+        $("#add-album-track-list li input[value='Delete']").live('click', function() {
+            if ($(this).parent().siblings("li").length < 1) {
+                return false;
+            }
+            $(this.parentNode).remove();
+        });
+        $("#add-album-track-list li input[type='text']").live('keydown', function(event) {
+            if (event.keyCode == '13') {
+                $(this).siblings("input[value='Insert']").click();
+                return false;
+            }
+        })
+        $("#add-album-track-list li input[value='Insert']").live('click', function() {
+            var li = $(this.parentNode);
+            var li2 = li.clone()
+            li2.insertAfter(li);
+            li2.children("input[type='text']").val("").focus();
+        });
+        $("#manual-url").change(function() {
+            $("#manual-cover-preview-image").attr("src", $(this).val());
+        });
+    });
+    
+</script>
+{% endblock %}
+
+{% block left_column %}
+    <div id='add-album'>
+        <h4>Add Album from Amazon</h4>
+        <label>Keywords: <input type='text' id='album-lookup' /></label>
+        <div id='add-album-update'></div>
+    </div>
+    <div id='new-albums'>
+        <h4>On the New Shelf</h4>
+        <ul id='manage-albums-list'>
+            {% for album in new_album_list %}
+                <li class='newalbum' id='{{ album.key }}'>
+                    <div class='album-manager'>
+                    <label>{{ album.title }}
+                    <br>
+                    <img src='/albums/{{ album.key }}/s' />
+                    <br>
+                    <input type='checkbox' {% if album.isNew %}checked='checked'{% endif %} /></label>
+                    </div></li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endblock %}
+
+
+{% block right_column %}
+    <div>
+        <a href='/dj/'>Return to main index</a>
+    </div>
+    <div id='add-album-manual'>
+        <h4>Add Album Manually</h4>
+        <form action='/dj/albums' method='post'>
+            <input type='hidden' name='action' value='manual'>
+            <table class='balancedtable'>
+                <tr>
+                    <td><label for='manual-title'>Title: </label></td>
+                    <td><input type='text' name='title' id='manual-title' /></td>
+                </tr>
+                <tr>
+                    <td><label for='manual-artist'>Artist: </label></td>
+                    <td><input type='text' class='artist-autocomplete' name='artist' id='manual-artist'></td>
+                </tr>
+                <tr>
+                    <td><label for='manual-url'>URL to artwork: </label></td>
+                    <td><input type='text' name='cover_url' id='manual-url'></td>
+                </tr>
+            </table>
+            <div id='manual-cover-preview'><img src='' id='manual-cover-preview-image' /></div>
+            <h5>Track List</h5>
+            <ol id='add-album-track-list'>
+                <li><input type='text' name='track'> <input type='button' value='Insert'> <input type='button' value='Delete'></li>
+            </ol>
+            <input type='submit' name='submit' value='Add'>
+        </form>
+    </div>
+{% endblock %}

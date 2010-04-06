@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}WBOR{% endblock %}
+
+{% block left_column %}
+
+<div id='latestplays'>
+    <h4>Recently on WBOR</h4>
+    {{ recently_played_html }}
+</div>
+
+<div id='newalbums'>
+    <h4>ON NEW SHELF</h4>
+    <ul id='albumlist'>
+        {% for album in album_list %}
+        <li><a href='/albums/{{ album.key }}/l' title='{{ album.title|escape }} - {{ album.artist|escape }}'><img src='/albums/{{ album.key }}/s' /></a></li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div id='charts'>
+    <h4>CHARTS</h4>
+    <div class='chart-toggler chart-selected'>
+    Songs
+    </div>
+    <div class='chart-toggler'>
+        Albums
+    </div>
+    <table class='charttable' id='songtable'>
+        {% for songpair in song_charts %}
+        <tr>
+            <td>{{ songpair.0.position }}. {{ songpair.0.title }}, <i>{{ songpair.0.artist }}</i></td>
+            <td>{{ songpair.1.position }}. {{ songpair.1.title }}, <i>{{ songpair.1.artist }}</i></td>
+        </tr>
+        {% endfor %}
+    </table>
+    
+    <table id='albumtable'>
+        {% for albumpair in album_charts %}
+        <tr>
+            <td>{{ albumpair.0.position }}. <i>{{ albumpair.0.title }}</i>, {{ albumpair.0.artist }}</td>
+            <td>{{ albumpair.1.position }}. <i>{{ albumpair.1.title }}</i>, {{ albumpair.1.artist }}</td>            
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+{% endblock %}
+
+{% block right_column %}
+    {% include "last3posts.html" %}
+{% endblock %}
+
+{% block footer %}
+    {% if flash.msg %}
+        <div class='flash-msg'>{{ flash.msg }}</div>
+    {% endif %}
+{% endblock %}

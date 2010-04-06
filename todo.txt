@@ -1,0 +1,68 @@
+View Charts
+Manage Blog
+Events
+Schedule
+Playlists
+Fun
+History
+Contact
+
+
+
+
+
+Manage DJs
+  - make form look better
+
+Manage Programs
+  - make form look better
+
+Manage Albums
+  - make "on the new shelf" look better, more regular
+
+Manage Genres
+  - add
+
+Manage Permissions
+  - could look better
+
+Manage Blog
+  - add
+
+Chart Song
+  - make form look better
+
+View Charts
+  - add
+  
+View Logs
+  
+  
+Edit Show Information
+
+Login
+  - make form look better
+  - add 2 columns
+
+Index
+
+Events
+  - add
+
+Schedule
+  - add
+
+Playlists
+  - add
+
+Fun
+  - add
+
+History
+  - add
+
+Contact
+  - add
+
+Blog
+  - add
