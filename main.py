@@ -116,7 +116,8 @@ class AlbumInfo(webapp.RequestHandler):
 class Setup(webapp.RequestHandler):
   def get(self):
     self.flash = flash.Flash()
-    labels = ["Manage DJs", "Manage Programs", "Manage Permissions", "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
+    labels = ["Manage DJs", "Manage Programs", "Manage Permissions", 
+      "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
     for l in labels:
       if not models.getPermission(l):
         permission = models.Permission(title=l, dj_list=[])

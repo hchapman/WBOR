@@ -12,5 +12,7 @@ handlers:
   static_dir: static
 - url: /dj.*
   script: dj.py
+- url: /blog/.*/edit/?
+  script: dj.py
 - url: /.*
   script: main.py

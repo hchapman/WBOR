@@ -628,6 +628,91 @@ class MyShow(webapp.RequestHandler):
     self.redirect("/dj/myshow")
   
 
+# How DJs with the appropriate permissions can create a blog post
+# get(): Display "new blog post" form
+# post(): Save as post, redirect to home page to display their hard work
+class NewBlogPost(webapp.RequestHandler):
+  @authorization_required("Manage Blog")
+  def get(self):
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+    }
+    self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
+  
+  @authorization_required("Manage Blog")
+  def post(self):
+    errors = ""
+    title = self.request.get("title")
+    text = self.request.get("text")
+    post_date = datetime.datetime.now();
+    slug = self.request.get("slug")
+    post = models.BlogPost(title=title, text=text, post_date=post_date, slug=slug)
+    if models.getPostBySlug(post_date, slug):
+      errors = "Error: this post has a duplicate slug to another post from the same day.  This probably shouldn't happen often."
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+      'errors': errors,
+      'post': post,
+    }
+    if errors:
+      self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
+    else:
+      post.put()
+      self.flash.msg = "Post \"%s\" successfully added." % title
+      self.redirect("/")
+
+
+class EditBlogPost(webapp.RequestHandler):
+  @authorization_required("Manage Blog")
+  def get(self, date_string, slug):
+    post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
+    post = models.getPostBySlug(post_date, slug)
+    if not post:
+      self.flash.msg = "The post you're looking for does not exist.  But you can look at actual posts below :)"
+      self.redirect("/")
+      return
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+      'post': post,
+      'editing': True,
+    }
+    self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
+  
+  @authorization_required("Manage Blog")
+  def post(self, date_string, slug):
+    errors = ""
+    title = self.request.get("title")
+    text = self.request.get("text")
+    slug = self.request.get("slug")
+    post_key = self.request.get("post_key")
+    post = models.BlogPost.get(post_key)
+    if not post:
+      self.flash.msg = "The post you're looking for does not exist.  Something strange has occurred."
+      # this shouldn't happen unless people are fiddling around with POST values by hand I think
+      self.redirect("/")
+      return
+    duplicate = models.getPostBySlug(post.post_date, slug)
+    if str(duplicate.key()) != post_key:
+      errors = "This post has a duplicate slug to another post from the same day.  Please rename the slug."
+    post.title = title
+    post.text = text
+    post.slug = slug
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+      'errors': errors,
+      'post': post,
+      'editing': True,
+    }
+    if errors:
+      self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
+    else:
+      post.put()
+      self.flash.msg = "Successfully altered post %s" % post.title
+      self.redirect("/")
 
 # Rules for who can access what.
 # get(): Display permissions along with DJs
@@ -845,6 +930,8 @@ def main():
       ('/dj/permissions/?', ManagePermissions),
       ('/dj/myshow/?', MyShow),
       ('/dj/charts/?', ViewCharts),
+      ('/blog/([^/]*)/([^/]*)/edit/?', EditBlogPost),
+      ('/dj/newpost/?', NewBlogPost),
                                        ],
                                        debug=True)
   util.run_wsgi_app(application)

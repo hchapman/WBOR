@@ -70,6 +70,8 @@ acronym {
 
 #nowplaying hr {
     width: 80%;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 #nowplaying a {
@@ -186,7 +188,7 @@ acronym {
     height: 124px;
 }
 
-.left div, .right div {
+.left div, .right div, .top_row div {
     padding: 10px;
     border: 2px solid black;
     margin-top: 5px;
@@ -291,6 +293,7 @@ h4 {
   margin-bottom: 10px;
   margin-left: 10px;
   margin-right: 10px;
+  text-align: center;
 }
 
 #latestplays table {
@@ -327,7 +330,7 @@ h4 {
     background-color: #DDD;
 }
 
-.flash-msg {
+.flash-msg, .error {
   text-align: center;
   color: red;
 }
@@ -425,4 +428,10 @@ form table {
 
 form table td {
   padding: 5px;
+}
+
+.loginbox {
+  width: 300px;
+  margin-left: 300px;
+  text-align: center;
 }

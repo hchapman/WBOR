@@ -2,6 +2,7 @@
 #Access Key ID: AKIAJIXECWA77X5XX4DQ
 
 from google.appengine.ext import db
+import datetime
 
 class Dj(db.Model):
   fullname = db.StringProperty()
@@ -199,3 +200,12 @@ def getPermissions():
 def getNewPlaysInRange(start, end):
   plays = Play.all().filter("isNew =", True).filter("play_date >=", start).filter("play_date <=", end).fetch(1000)
   return plays
+
+def getPostBySlug(post_date, slug):
+  day_start = datetime.datetime(post_date.year, post_date.month, post_date.day)
+  day_end = day_start + datetime.timedelta(days=1)
+  posts = BlogPost.all().filter("post_date >=", day_start).filter("post_date <=", day_end).filter("slug =", slug).fetch(1)
+  if posts:
+    return posts[0]
+  else:
+    return None

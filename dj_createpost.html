@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% if errors %}
+  {% block top_row %}
+    <div class='error'>{{ errors }}</div>
+  {% endblock %}
+{% endif %}
+
+{% block left_column %}
+  <div id='edit-post'>
+    <h4>{% if editing %}Edit{% else %}Create{% endif %} Post</h4>
+    <form {% if editing %}{% else %}action='/dj/newpost/'{% endif %} method='post'>
+      {% if editing %}
+      <input type='hidden' value='{{ post.key }}' name='post_key' />
+      {% endif %}
+      <table>
+        <tr>
+          <td><label for='title'>Title:</label></td>
+          <td><input type='text' name='title' id='title' value='{{ post.title }}'></td>
+        </tr>
+        <tr>
+          <td><label for='slug'>Slug:</label></td>
+          <td><input type='text' name='slug' id='slug' value='{{ post.slug }}'></td>
+        </tr>
+        <tr>
+          <td colspan='2'><label for='text'>Page HTML</label></td>
+        </tr>
+        <tr>
+          <td colspan='2'>
+            <textarea class='tinymce' name='text' id='text'>{{ post.text|escape }}</textarea>
+          </td>
+        </tr>
+      </table>
+      <input type='submit' {% if editing %}value='Edit Post'{% else %}value='Create Post'{% endif %} />
+      {% if editing %}<input type='submit' value='Delete Post' />{% endif %}
+    </form>
+  </div>
+{% endblock %}
+
+{% block right_column %}
+  {% include last3posts.html %}
+{% endblock %}
