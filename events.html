@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Events{% endblock %}
+
+{% block main_content %}
+
+<div class='center events'>
+  {% for e in events %}
+  <div>
+    {% if e.url %}
+    <h5><a href='{{ e.url }}'>{{ e.title }}</a></h5>
+    {% else %}
+    <h5>{{ e.title }}</h5>
+    {% endif %}
+    <h6>{{ e.date | }}
+    
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

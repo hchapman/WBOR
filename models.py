@@ -74,7 +74,7 @@ class Event(db.Model):
   url = db.StringProperty()
 
 def getEventsAfter(start):
-  return Event.all().filter("event_date >=", start).order("play_date").fetch(1000)
+  return Event.all().filter("event_date >=", start).order("event_date").fetch(1000)
 
 def getLastPlay():
   return Play.all().order("-play_date").fetch(1)[0]

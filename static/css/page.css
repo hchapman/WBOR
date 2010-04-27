@@ -188,7 +188,11 @@ acronym {
     height: 124px;
 }
 
-.left div, .right div, .top_row div {
+div.center {
+   padding: 10px; 
+}
+
+.center div, .left div, .right div, .top_row div {
     padding: 10px;
     border: 2px solid black;
     margin-top: 5px;
@@ -229,11 +233,11 @@ h4 {
     text-align: center;
 }
 
-.post h5 {
+.post h5, .event h5 {
     margin-bottom: 0;
 }
 
-.post h6 {
+.post h6, .event h5 {
     font-size: 0.9em;
 }
 

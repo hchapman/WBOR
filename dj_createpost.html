@@ -32,7 +32,7 @@
         </tr>
       </table>
       <input type='submit' {% if editing %}value='Edit Post'{% else %}value='Create Post'{% endif %} />
-      {% if editing %}<input type='submit' value='Delete Post' />{% endif %}
+      {% if editing %}<input name='submit' type='submit' value='Delete Post' />{% endif %}
     </form>
   </div>
 {% endblock %}

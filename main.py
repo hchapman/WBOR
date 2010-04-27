@@ -166,6 +166,19 @@ class Setup(webapp.RequestHandler):
   
 
 
+class BlogDisplay(webapp.RequestHandler):
+  def get(self, date_string, post_slug):
+    post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
+    post = models.getPostBySlug(post_date, post_slug)
+    if not post:
+      self.flash.msg = "The post you requested could not be found.  Please try again."
+      self.redirect('/')
+      return
+    template_values = {
+      'post': post,
+    }
+    self.response.out.write(template.render("blog_post.html", template_values))
+
 class AlbumDisplay(webapp.RequestHandler):
   def get(self, key_id, size):
     album = models.Album.get(key_id)
@@ -215,6 +228,41 @@ class SongList(webapp.RequestHandler):
     }))
     
 
+
+class EventPage(webapp.RequestHandler):
+  def get(self):
+    start_date = datetime.datetime.now() - datetime.timedelta(days=2)
+    events = models.getEventsAfter(start_date)
+    template_values = {}
+    self.response.out.write(template.render(getPath("events.html"), template_values))
+
+class SchedulePage(webapp.RequestHandler):
+  def get(self):
+    template_values = {}
+    self.response.out.write(template.render(getPath("schedule.html"), template_values))
+
+class PlaylistPage(webapp.RequestHandler):
+  def get(self):
+    template_values = {}
+    self.response.out.write(template.render(getPath("playlists.html"), template_values))
+
+class FunPage(webapp.RequestHandler):
+  def get(self):
+    template_values = {}
+    self.response.out.write(template.render(getPath("fun.html"), template_values))
+  
+
+class HistoryPage(webapp.RequestHandler):
+  def get(self):
+    template_values = {}
+    self.response.out.write(template.render(getPath("history.html"), template_values))
+
+class ContactPage(webapp.RequestHandler):
+  def get(self):
+    template_values = {}
+    self.response.out.write(template.render(getPath("contact.html"), template_values))
+
+
 class ProgramPage(webapp.RequestHandler):
   def get(self, slug):
     self.flash = flash.Flash()
@@ -240,7 +288,14 @@ def main():
       ('/ajax/getSongList/?', SongList),
       ('/ajax/djcomplete/?', DjComplete),
       ('/setup/?', Setup),
+      ('/blog/([^/]*)/([^/]*)/?', BlogDisplay),
       ('/programs?/([^/]*)/?', ProgramPage),
+      ('/schedule/?', SchedulePage),
+      ('/playlists/?', PlaylistPage),
+      ('/fun/?', FunPage),
+      ('/history/?', HistoryPage),
+      ('/contact/?', ContactPage),
+      ('/events/?', EventPage),
       ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
                                        ],
                                        debug=True)

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Events{% endblock %}
+
+{% if errors %}
+  {% block top_row %}
+    <div class='error'>{{ errors }}</div>
+  {% endblock %}
+{% endif %}
+
+{% block left_column %}
+  <div id='edit-event'>
+    <h4>{% if editing %}Edit{% else %}Create{% endif %} Event</h4>
+    <form {% if editing %}{% else %}action='/dj/event/'{% endif %} method='post'>
+      {% if editing %}
+      <input type='hidden' value='{{ event.key }}' name='event_key' />
+      {% endif %}
+      <table>
+        <tr>
+          <td><label for='title'>Title:</label></td>
+          <td><input type='text' name='title' id='title' value='{{ event.title }}'></td>
+        </tr>
+        <tr>
+          <td><label for='slug'>Date:</label></td>
+          <td><input type='text' name='date' id='date' class='datepicker' value='{{ post.slug }}'></td>
+        </tr>
+        <tr>
+          <td><label for='url'>URL:</label></td>
+          <td><input type='text' name='url' id='url' value='{{ post.url }}'/></td>
+        </tr>
+        <tr>
+          <td><label>Time:</label></td>
+          <td>
+            <select name='hour' id='hour'>
+                <option value='00'>00</option>
+                <option value='01'>01</option>
+                <option value='02'>02</option>
+                <option value='03'>03</option>
+                <option value='04'>04</option>
+                <option value='05'>05</option>
+                <option value='06'>06</option>
+                <option value='07'>07</option>
+                <option value='08'>08</option>
+                <option value='09'>09</option>
+                <option value='10'>10</option>
+                <option value='11'>11</option>
+                <option value='12'>12</option>
+                <option value='13'>13</option>
+                <option value='14'>14</option>
+                <option value='15'>15</option>
+                <option value='16'>16</option>
+                <option value='17'>17</option>
+                <option value='18'>18</option>
+                <option value='19'>19</option>
+                <option value='20'>20</option>
+                <option value='21'>21</option>
+                <option value='22'>22</option>
+                <option value='23'>23</option>
+            </select>
+            <select name='minute' id='minute'>
+              <option value='00'>00</option>
+              <option value='15'>15</option>
+              <option value='30'>30</option>
+              <option value='45'>45</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td colspan='2'><label for='desc'>Description</label></td>
+        </tr>
+        <tr>
+          <td colspan='2'>
+            <textarea class='tinymce' name='desc' id='desc'>{{ post.desc|escape }}</textarea>
+          </td>
+        </tr>
+      </table>
+      <input type='submit' {% if editing %}value='Edit Event'{% else %}value='Create Event'{% endif %} />
+      {% if editing %}<input type='submit' value='Delete Event' />{% endif %}
+    </form>
+  </div>
+{% endblock %}
+
+{% block right_column %}
+  {% include last3posts.html %}
+{% endblock %}

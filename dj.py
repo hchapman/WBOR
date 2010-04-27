@@ -83,6 +83,7 @@ class MainPage(webapp.RequestHandler):
       'manage_albums': models.hasPermission(dj, "Manage Albums"),
       'manage_genres': models.hasPermission(dj, "Manage Genres"),
       'manage_blog': models.hasPermission(dj, "Manage Blog"),
+      'manage_events': models.hasPermission(dj, "Manage Events"),
       'posts': models.getLastPosts(3),
     }
     self.response.out.write(template.render(getPath("dj_main.html"), template_values))
@@ -185,7 +186,9 @@ class ChartSong(webapp.RequestHandler):
     playlist = models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))
     last_psa = models.getLastPsa()
     new_albums = models.getNewAlbums()
-    album_songs = [models.Song.get(k) for k in new_albums[0].songList]
+    album_songs = []
+    if new_albums:
+      album_songs = [models.Song.get(k) for k in new_albums[0].songList]
     template_values = {
       'last_psa': last_psa,
       'playlist': playlist,
@@ -664,6 +667,7 @@ class NewBlogPost(webapp.RequestHandler):
       self.redirect("/")
 
 
+
 class EditBlogPost(webapp.RequestHandler):
   @authorization_required("Manage Blog")
   def get(self, date_string, slug):
@@ -694,12 +698,20 @@ class EditBlogPost(webapp.RequestHandler):
       # this shouldn't happen unless people are fiddling around with POST values by hand I think
       self.redirect("/")
       return
+    if self.request.get("submit") == "Delete Post":
+      post.delete()
+      self.flash.msg = "Post deleted."
+      self.redirect("/")
+      return
     duplicate = models.getPostBySlug(post.post_date, slug)
-    if str(duplicate.key()) != post_key:
-      errors = "This post has a duplicate slug to another post from the same day.  Please rename the slug."
+    old_slug = post.slug
+    post.slug = slug
+    if duplicate:
+      if str(duplicate.key()) != post_key:
+        errors = "This post has a duplicate slug to another post from the same day.  Please rename the slug."
+        post.slug = old_slug
     post.title = title
     post.text = text
-    post.slug = slug
     template_values = {
       'session': self.sess,
       'flash': self.flash,
@@ -713,6 +725,27 @@ class EditBlogPost(webapp.RequestHandler):
       post.put()
       self.flash.msg = "Successfully altered post %s" % post.title
       self.redirect("/")
+
+
+class NewEvent(webapp.RequestHandler):
+  @authorization_required("Manage Events")
+  def get(self):
+    pass
+
+  @authorization_required("Manage Events")
+  def post(self):
+    pass
+
+
+class EditEvent(webapp.RequestHandler):
+  @authorization_required("Manage Events")
+  def get(self):
+    pass
+
+  @authorization_required("Manage Events")
+  def post(self):
+    pass
+
 
 # Rules for who can access what.
 # get(): Display permissions along with DJs
@@ -932,6 +965,8 @@ def main():
       ('/dj/charts/?', ViewCharts),
       ('/blog/([^/]*)/([^/]*)/edit/?', EditBlogPost),
       ('/dj/newpost/?', NewBlogPost),
+      ('/dj/event/?', NewEvent),
+      ('/dj/event/([^/]*)/?', EditEvent),
                                        ],
                                        debug=True)
   util.run_wsgi_app(application)
