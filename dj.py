@@ -156,6 +156,7 @@ class SelectProgram(webapp.RequestHandler):
       'programlist': programlist,
       'session': self.sess,
       'flash': self.flash,
+      'posts': models.getLastPosts(1)
     }
     self.response.out.write(template.render(getPath("dj_selectprogram.html"),
       template_values))
@@ -183,6 +184,7 @@ class ChartSong(webapp.RequestHandler):
       self.flash.msg = "You can't chart songs until you have an associated program in the system.  Please contact a member of management immediately."
       self.redirect("/dj/")
       return
+    posts = models.getLastPosts(2)
     playlist = models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))
     last_psa = models.getLastPsa()
     new_albums = models.getNewAlbums()
@@ -196,6 +198,7 @@ class ChartSong(webapp.RequestHandler):
       'flash': self.flash,
       'new_albums': new_albums,
       'album_songs': album_songs,
+      'posts': posts,
     }
     self.response.out.write(template.render(getPath("dj_chartsong.html"), template_values))
   
@@ -580,7 +583,8 @@ class MySelf(webapp.RequestHandler):
     template_values = {
       'session': self.sess,
       'flash': self.flash,
-      'dj': dj
+      'dj': dj,
+      'posts': models.getLastPosts(1),
     }
     self.response.out.write(template.render(getPath("dj_self.html"), template_values))
   
@@ -622,6 +626,7 @@ class MyShow(webapp.RequestHandler):
       'session': self.sess,
       'flash': self.flash,
       'program': program,
+      'posts': models.getLastPosts(2),
     }
     self.response.out.write(template.render(getPath("dj_myshow.html"), template_values))
   
@@ -654,9 +659,11 @@ class MyShow(webapp.RequestHandler):
 class NewBlogPost(webapp.RequestHandler):
   @authorization_required("Manage Blog")
   def get(self):
+    posts = models.getLastPosts(2)
     template_values = {
       'session': self.sess,
       'flash': self.flash,
+      'posts': posts,
     }
     self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
   
@@ -668,6 +675,7 @@ class NewBlogPost(webapp.RequestHandler):
     post_date = datetime.datetime.now();
     slug = self.request.get("slug")
     post = models.BlogPost(title=title, text=text, post_date=post_date, slug=slug)
+    posts = models.getLastPosts(2)
     if models.getPostBySlug(post_date, slug):
       errors = "Error: this post has a duplicate slug to another post from the same day.  This probably shouldn't happen often."
     template_values = {
@@ -675,6 +683,7 @@ class NewBlogPost(webapp.RequestHandler):
       'flash': self.flash,
       'errors': errors,
       'post': post,
+      'posts': posts,
     }
     if errors:
       self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
@@ -694,11 +703,13 @@ class EditBlogPost(webapp.RequestHandler):
       self.flash.msg = "The post you're looking for does not exist.  But you can look at actual posts below :)"
       self.redirect("/")
       return
+    posts = models.getLastPosts(2)
     template_values = {
       'session': self.sess,
       'flash': self.flash,
       'post': post,
       'editing': True,
+      'posts': posts,
     }
     self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
   
@@ -729,12 +740,14 @@ class EditBlogPost(webapp.RequestHandler):
         post.slug = old_slug
     post.title = title
     post.text = text
+    posts = models.getLastPosts(2)
     template_values = {
       'session': self.sess,
       'flash': self.flash,
       'errors': errors,
       'post': post,
       'editing': True,
+      'posts': posts,
     }
     if errors:
       self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
@@ -764,12 +777,14 @@ class RemovePlay(webapp.RequestHandler):
 class NewEvent(webapp.RequestHandler):
   @authorization_required("Manage Events")
   def get(self):
+    posts = models.getLastPosts(2)
     template_values = {
       'session': self.sess,
       'flash': self.flash,
       'editing': False,
       'hours': [str(i).rjust(2, "0") for i in range(24)],
-      'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)]
+      'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)],
+      'posts': posts,
     }
     self.response.out.write(template.render(getPath("dj_create_event.html"), template_values))
 
@@ -805,6 +820,7 @@ class EditEvent(webapp.RequestHandler):
     day = event.event_date.strftime("%m/%d/%Y")
     hour = event.event_date.strftime("%H")
     minute = event.event_date.strftime("%M")
+    posts = models.getLastPosts(2)
     template_values = {
       'session': self.sess,
       'flash': self.flash,
@@ -814,7 +830,8 @@ class EditEvent(webapp.RequestHandler):
       'hour': hour,
       'minute': minute,
       'hours': [str(i).rjust(2, "0") for i in range(24)],
-      'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)]
+      'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)],
+      'posts': posts,
     }
     self.response.out.write(template.render(getPath("dj_create_event.html"), template_values))
 
@@ -864,6 +881,7 @@ class ManagePermissions(webapp.RequestHandler):
         } for p in permissions],
       'session': self.sess,
       'flash': self.flash,
+      'posts': models.getLastPosts(2),
     }
     self.response.out.write(template.render(getPath("dj_permissions.html"), template_values))
   

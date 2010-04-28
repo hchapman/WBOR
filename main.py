@@ -56,7 +56,7 @@ class MainPage(webapp.RequestHandler):
     song_num = 10
     album_num = 10
     top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
-    posts = models.getLastPosts(3)
+    posts = models.getLastPosts(5)
     template_values = {
       'flash': self.flash,
       'session': self.sess,
@@ -272,6 +272,7 @@ class ProgramPage(webapp.RequestHandler):
     self.flash = flash.Flash()
     self.sess = sessions.Session()
     program = models.getProgramBySlug(slug)
+    posts = models.getLastPosts(3)
     if not program:
       self.flash.msg = "Invalid program slug specified."
       self.redirect("/")
@@ -280,6 +281,7 @@ class ProgramPage(webapp.RequestHandler):
       'session': self.sess,
       'flash': self.flash,
       'program': program,
+      'posts': posts,
     }
     self.response.out.write(template.render(getPath("show.html"), template_values))
 
