@@ -351,10 +351,13 @@ div.contact a {
     text-align: left;
 }
 
-#latestplays tr:hover {
+#latestplays tr.highlight:hover {
     background-color: #DDD;
 }
 
+#latestplays tr td {
+    padding: 0;
+}
 .flash-msg, .error {
   text-align: center;
   color: red;

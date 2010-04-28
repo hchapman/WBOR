@@ -9,15 +9,6 @@
     {{ recently_played_html }}
 </div>
 
-<div id='newalbums'>
-    <h4>ON NEW SHELF</h4>
-    <ul id='albumlist'>
-        {% for album in album_list %}
-        <li><a href='/albums/{{ album.key }}/l' title='{{ album.title|escape }} - {{ album.artist|escape }}'><img src='/albums/{{ album.key }}/s' /></a></li>
-        {% endfor %}
-    </ul>
-</div>
-
 <div id='charts'>
     <h4>CHARTS</h4>
     <div class='chart-toggler chart-selected'>
@@ -41,6 +32,15 @@
         </tr>
         {% endfor %}
     </table>
+</div>
+
+<div id='newalbums'>
+    <h4>ON NEW SHELF</h4>
+    <ul id='albumlist'>
+        {% for album in album_list %}
+        <li><a href='/albums/{{ album.key }}/l' title='{{ album.title|escape }} - {{ album.artist|escape }}'><img src='/albums/{{ album.key }}/s' /></a></li>
+        {% endfor %}
+    </ul>
 </div>
 
 {% endblock %}

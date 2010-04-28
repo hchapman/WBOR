@@ -744,6 +744,23 @@ class EditBlogPost(webapp.RequestHandler):
       self.redirect("/")
 
 
+class RemovePlay(webapp.RequestHandler):
+  @login_required
+  def post(self):
+    self.response.headers['Content-Type'] = 'text/json'
+    play = models.Play.get(self.request.get("play_key"))
+    errors = ""
+    if not play:
+      errors = "An error occurred.  The play could not be found... please try again."
+      self.response.out.write(simplejson.dumps({
+        'err': errors,
+      }))
+    else:
+      play.delete()
+      self.response.out.write(simplejson.dumps({
+        'status': "Successfully deleted play."
+      }))
+
 class NewEvent(webapp.RequestHandler):
   @authorization_required("Manage Events")
   def get(self):
@@ -1029,7 +1046,6 @@ class ManageAlbums(webapp.RequestHandler):
         an.put()
       self.flash.msg = self.request.get("title") + " added."
       self.redirect("/dj/albums/")
-  
 
 
 def main():
@@ -1052,6 +1068,7 @@ def main():
       ('/dj/newpost/?', NewBlogPost),
       ('/dj/event/?', NewEvent),
       ('/dj/myself/?', MySelf),
+      ('/dj/removeplay/?', RemovePlay),
       ('/dj/event/([^/]*)/?', EditEvent),
                                        ],
                                        debug=True)

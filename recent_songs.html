@@ -2,10 +2,13 @@
 <table>
   <tbody>
     {% for p in plays %}
+    <tr class='highlight'>
+      <td>{{ p.song.title }}
+        <br />
+        <i>{{ p.song.artist }}</i>, {{ p.play_date|timesince }} ago
+    </tr>
     <tr>
-      <td>{{ p.song.title }}</td>
-      <td>{{ p.song.artist }}</td>
-      <td>{{ p.play_date|timesince }} ago</td>
+      <td><hr /></td>
     </tr>
     {% endfor %}
   </tbody>

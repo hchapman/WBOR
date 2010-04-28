@@ -12,6 +12,23 @@ $(function() {
             $("#old-song-div").slideDown("fast");
         }
     });
+    $("#played_list li a").click(function() {
+      var play_key = $(this).parent().attr("id");
+      $.post(
+        '/dj/removeplay/',
+        {
+          'play_key': play_key,
+        },
+        function(data) {
+          if (data.err) {
+            alert(data.err);
+            return;
+          }
+          $("#" + play_key).hide();
+        }
+      );
+      return false;
+    });
     $("#album_key").change(function() {
         $.get(
             '/ajax/getSongList/',
@@ -70,9 +87,9 @@ $(function() {
     </div>
     <div id='current-playlist'>
         <h4>Last Played</h4>
-        <ul>
+        <ul id='played_list'>
             {% for p in playlist %}
-                <li>{{ p.song.title }} &mdash; {{ p.song.artist }}</li>
+                <li id='{{ p.key }}'>{{ p.song.title }} &mdash; {{ p.song.artist }} <a href='#'>[x]</a></li>
             {% endfor %}
         </ul>
     </div>        
