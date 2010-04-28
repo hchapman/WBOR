@@ -12,9 +12,9 @@
 <link rel="stylesheet" href="/static/css/jquery-ui.css" />
 <link rel="stylesheet" type="text/css" href="/static/css/lightbox.css" media="screen" />
 <script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js'></script>
+<script type='text/javascript' src='/static/js/jquery-ui.js'></script>
 <script type='text/javascript' src='/static/js/jquery.autocomplete.js'></script>
 <script type='text/javascript' src='/static/js/jquery.lightbox.js'></script>
-<script type='text/javascript' src='/static/js/jquery-ui.js'></script>
 <script type='text/javascript' src='/static/js/jquery.tinymce.js'></script>
 <script type='text/javascript'>
     background = function() {
@@ -28,6 +28,17 @@
             theme: "advanced",
           });
         }
+        $(".chart-toggler").click(function() {
+          $(".chart-toggler").removeClass("chart-selected");
+          $(this).addClass("chart-selected");
+          if ($.trim($(this).html()) == "Songs") {
+            $("#albumtable").hide();
+            $("#songtable").show();
+          } else {
+            $("#songtable").hide();            
+            $("#albumtable").show();
+          }
+        });
         $("#nowplaying").mouseenter(function() {
             $("#showdeschidden").slideDown("medium");
         });

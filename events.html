@@ -5,6 +5,7 @@
 {% block main_content %}
 
 <div class='center events'>
+  {% if events %}
   {% for e in events %}
   <div>
     {% if e.url %}
@@ -12,10 +13,18 @@
     {% else %}
     <h5>{{ e.title }}</h5>
     {% endif %}
-    <h6>{{ e.date | }}
-    
+    <h6>{{ e.event_date|date:"F j, Y g:i a"}}</h6>
+    <p>{{ e.desc }}</p>
+    {% if logged_in %}
+    <a href='/dj/event/{{ e.key }}'>Edit</a>
+    {% endif %}
   </div>
   {% endfor %}
+  {% else %}
+  <div>
+    There are no events scheduled for the immediate future.
+  </div>
+  {% endif %}
 </div>
 
 {% endblock %}

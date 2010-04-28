@@ -11,7 +11,7 @@
             {% if manage_djs %}<li><a href='/dj/djs'>Manage DJs</a></li>{% endif %}
             {% if manage_programs %}<li><a href='/dj/programs'>Manage Programs</a></li>{% endif %}
             {% if manage_albums %}<li><a href='/dj/albums'>Manage Albums</a></li>{% endif %}
-            {% if manage_events %}<li><a href='/dj/newevent'>New Event</a></li>{% endif %}
+            {% if manage_events %}<li><a href='/dj/event'>New Event</a></li>{% endif %}
             {% if manage_genres %}<!-- <li><a href='/dj/genres'>Manage Genres</a></li> -->{% endif %}
             {% if manage_permissions %}<li><a href='/dj/permissions'>Manage Permissions</a></li>{% endif %}
             {% if manage_blog %}<li><a href='/dj/newpost'>New Blog Post</a></li>{% endif %}
@@ -19,6 +19,7 @@
             <li><a href='/dj/charts'>View Charts</a></li>
             <li><a href='/dj/logs'>View Logs</a></li>
             <li><a href='/dj/myshow'>Edit Show Information</a></li>
+            <li><a href='/dj/myself'>Edit DJ Information</a></li>
         </ul>
     </div>
 {% endblock %}

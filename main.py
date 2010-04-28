@@ -51,20 +51,19 @@ class MainPage(webapp.RequestHandler):
       },
     ]
     album_list = models.getNewAlbums()
-    song_charts = [
-    
-    ]
-    album_charts = [
-    
-    ]
+    start = datetime.datetime.now() - datetime.timedelta(weeks=1)
+    end = datetime.datetime.now()
+    song_num = 10
+    album_num = 10
+    top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
     posts = models.getLastPosts(3)
     template_values = {
       'flash': self.flash,
       'session': self.sess,
       'recently_played': recently_played,
       'album_list': album_list,
-      'song_charts': song_charts,
-      'album_charts': album_charts,
+      'top_songs': top_songs,
+      'top_albums': top_albums,
       'posts': posts,
     }
     self.response.out.write(template.render(getPath("index.html"), template_values))
@@ -233,7 +232,12 @@ class EventPage(webapp.RequestHandler):
   def get(self):
     start_date = datetime.datetime.now() - datetime.timedelta(days=2)
     events = models.getEventsAfter(start_date)
-    template_values = {}
+    self.sess = sessions.Session()
+    self.flash = flash.Flash()
+    template_values = {
+      'events': events,
+      'logged_in': self.sess.has_key('dj'),
+    }
     self.response.out.write(template.render(getPath("events.html"), template_values))
 
 class SchedulePage(webapp.RequestHandler):

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block left_column %}
+    <div id='edit-self'>
+        <h4>Your Profile</h4>
+        <form action='/dj/myself' method='post'>
+          <input type='hidden' value='{{ dj.key }}' name='dj_key'>
+            <table>
+                <tr>
+                    <td><label for='fullname'>Full Name: </label></td>
+                    <td><input id='fullname' type='text' name='fullname' value='{{ dj.fullname|escape }}'/></td>
+                </tr>
+                <tr>
+                    <td><label for='email'>Email: </label></td>
+                    <td><input id='email' type='text' name='email' value='{{ dj.email|escape }}' /></td>
+                </tr>
+                <tr>
+                    <td><label for='username'>Username: </label></td>
+                    <td><input id='username' type='text' name='username' value='{{ dj.username|escape }}' /></td>
+                </tr>
+                <tr>
+                    <td><label for='password'>Password: </label></td>
+                    <td><input id='password' type='text' name='password' value='{{ dj.password_hash|escape }}' /></td>
+                </tr>
+            </table>
+            <input type='submit' name='submit' value="Save">
+    </div>
+
+{% endblock %}
+
+{% block right_column %}
+    <div>
+        <a href='/dj/'>Return to main index</a>
+    </div>
+    {% include "last3posts.html" %}
+{% endblock %}

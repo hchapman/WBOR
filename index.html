@@ -27,19 +27,17 @@
         Albums
     </div>
     <table class='charttable' id='songtable'>
-        {% for songpair in song_charts %}
+        {% for song in top_songs %}
         <tr>
-            <td>{{ songpair.0.position }}. {{ songpair.0.title }}, <i>{{ songpair.0.artist }}</i></td>
-            <td>{{ songpair.1.position }}. {{ songpair.1.title }}, <i>{{ songpair.1.artist }}</i></td>
+            <td>{{ song.0 }}: {{ song.1 }}, {{ song.2 }}, <i>{{ song.3 }}</i></td>
         </tr>
         {% endfor %}
     </table>
     
-    <table id='albumtable'>
-        {% for albumpair in album_charts %}
+    <table class='charttable' id='albumtable'>
+        {% for album in top_albums %}
         <tr>
-            <td>{{ albumpair.0.position }}. <i>{{ albumpair.0.title }}</i>, {{ albumpair.0.artist }}</td>
-            <td>{{ albumpair.1.position }}. <i>{{ albumpair.1.title }}</i>, {{ albumpair.1.artist }}</td>            
+            <td>{{ album.0 }}: <i>{{ album.1 }}</i>, {{ album.2 }}</td>
         </tr>
         {% endfor %}
     </table>

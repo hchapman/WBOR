@@ -2,6 +2,10 @@ body {
     background-color: #201F25;
 }
 
+#albumtable {
+    display: none;
+}
+
 #wrap {
     position: relative;
     background-color: white;    
@@ -217,6 +221,7 @@ div.center {
     height: 25px;
     background-color: #201F25;
     color: white;
+    font-weight: bold;
 }
 
 div.chart-selected {
@@ -233,12 +238,17 @@ h4 {
     text-align: center;
 }
 
-.post h5, .event h5 {
+.post h5, .events h5 {
     margin-bottom: 0;
 }
 
-.post h6, .event h5 {
+.post h6, .events h6 {
     font-size: 0.9em;
+}
+
+.events {
+    width: 600px;
+    margin: 0 auto;
 }
 
 div.history, div.contact {

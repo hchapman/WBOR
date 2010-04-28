@@ -15,6 +15,11 @@ indexes:
   properties:
   - name: isNew
   - name: play_date
+
+- kind: BlogPost
+  properties:
+  - name: slug
+  - name: post_date
   
 
 
@@ -27,8 +32,3 @@ indexes:
 # manually, move them above the marker line.  The index.yaml file is
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
-
-- kind: BlogPost
-  properties:
-  - name: slug
-  - name: post_date

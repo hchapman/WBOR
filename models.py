@@ -209,3 +209,26 @@ def getPostBySlug(post_date, slug):
     return posts[0]
   else:
     return None
+
+def getTopSongsAndAlbums(start, end, song_num, album_num):
+  plays = getNewPlaysInRange(start=start, end=end)
+  songs = {}
+  albums = {}
+  for p in plays:
+    if p.song.key() in songs:
+      songs[p.song.key()][0] += 1
+    else:
+      songs[p.song.key()] = [1, p.song.title, p.song.artist, p.song.album.title]
+    if p.song.album.key() in albums:
+      albums[p.song.album.key()][0] += 1
+    else:
+      albums[p.song.album.key()] = [1, p.song.album.title, p.song.album.artist]
+  songs = [songs[s] for s in songs]
+  albums = [albums[a] for a in albums]
+  songs.sort()
+  songs.reverse()
+  albums.sort()
+  albums.reverse()
+  songs = songs[:song_num]
+  albums = albums[:album_num]
+  return (songs, albums)

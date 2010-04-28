@@ -5,6 +5,7 @@
     $(function() {
         $("a.delete").click(function(e) {
           var dj_key = $(this).parent().attr("id");
+          dj_key = dj_key.split("_")[1];
           var permission_key = $(this).parent().parent().attr("id");
           $.post("/dj/permissions",
           {
@@ -16,9 +17,10 @@
             if (data.err) {
               alert(data.err);
             } else {
-              $("#" + dj_key).remove();
+              $("#" + permission_key + "_" + dj_key).remove();
             }
           }, "json");
+          return false;
         });
     });
     
@@ -31,7 +33,7 @@
         <h4>{{ p.title }}</h4>
           <ul id='{{ p.key }}'>
             {% for dj in p.dj_list %}
-            <li id='{{ dj.key }}'>{{ dj.fullname }} <a class='delete' href='#'>[x]</a></li>
+            <li id='{{ p.key }}_{{ dj.key }}'>{{ dj.fullname }} <a class='delete' href='#'>[x]</a></li>
             {% endfor %}
           </ul>
           <label>Add DJ: <input key='{{ p.key }}' type='text' class='add_perm dj-autocomplete' /></label>

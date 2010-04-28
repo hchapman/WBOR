@@ -307,37 +307,14 @@ class ChartSong(webapp.RequestHandler):
 # Displays the top-played songs for a given period.
 # get(): Print log for the last week, display form for choosing endpoint.
 # post(): Print log of week-long period.
-class ViewCharts(webapp.RequestHandler):
-  def getTopSongsAndAlbums(self, start, end, song_num, album_num):
-    plays = models.getNewPlaysInRange(start=start, end=end)
-    songs = {}
-    albums = {}
-    for p in plays:
-      if p.song.key() in songs:
-        songs[p.song.key()][0] += 1
-      else:
-        songs[p.song.key()] = [1, p.song.title, p.song.artist, p.song.album.title]
-      if p.song.album.key() in albums:
-        albums[p.song.album.key()][0] += 1
-      else:
-        albums[p.song.album.key()] = [1, p.song.album.title, p.song.album.artist]
-    songs = [songs[s] for s in songs]
-    albums = [albums[a] for a in albums]
-    songs.sort()
-    songs.reverse()
-    albums.sort()
-    albums.reverse()
-    songs = songs[:song_num]
-    albums = albums[:album_num]
-    return (songs, albums)
-  
+class ViewCharts(webapp.RequestHandler):  
   @login_required
   def get(self):
     default_songs = 20
     default_albums = 50
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
-    songs, albums = self.getTopSongsAndAlbums(start, end, default_songs, default_albums)
+    songs, albums = models.getTopSongsAndAlbums(start, end, default_songs, default_albums)
     template_values = {
       'session': self.sess,
       'flash': self.flash,
@@ -363,7 +340,7 @@ class ViewCharts(webapp.RequestHandler):
       default_songs = int(self.request.get("song_num"))
     if self.request.get("album_num"):
       default_albums = int(self.request.get("album_num"))
-    songs, albums = self.getTopSongsAndAlbums(start, end, default_songs, default_albums)
+    songs, albums = models.getTopSongsAndAlbums(start, end, default_songs, default_albums)
     template_values = {
       'session': self.sess,
       'flash': self.flash,
@@ -517,7 +494,7 @@ class EditDJ(webapp.RequestHandler):
       if "@" not in dj.email:
         dj.email = dj.email + "@bowdoin.edu"
       dj.username = self.request.get("username")
-      dj.password = self.request.get("password")
+      dj.password_hash = self.request.get("password")
       dj.put()
       self.flash.msg = dj.fullname + " has been successfully edited."
     elif self.request.get("submit") == "Delete DJ":
@@ -595,6 +572,46 @@ class EditProgram(webapp.RequestHandler):
       self.flash.msg = program.title + " successfully deleted."
     self.redirect("/dj/programs/")
   
+
+class MySelf(webapp.RequestHandler):
+  @login_required
+  def get(self):
+    dj = models.Dj.get(self.sess['dj'].key())
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+      'dj': dj
+    }
+    self.response.out.write(template.render(getPath("dj_self.html"), template_values))
+  
+  @login_required
+  def post(self):
+    dj = models.Dj.get(self.request.get("dj_key"))
+    errors = ""
+    if not dj:
+      self.flash.msg = "An error occurred processing your request.  Please try again."
+      self.redirect("/dj/myself")
+      return
+    dj.fullname = self.request.get("fullname")
+    dj.lowername = dj.fullname.lower()
+    email = self.request.get("email")
+    duplicate_dj = models.getDjByEmail(email)
+    if duplicate_dj and str(duplicate_dj.key()) != str(dj.key()):
+      errors += "The email specified is already in use by another DJ.  Please enter a unique one."
+    dj.email = email
+    username = self.request.get("username")
+    duplicate_dj = models.getDjByUsername(username)
+    if duplicate_dj and str(duplicate_dj.key()) != str(dj.key()):
+      errors += "The username specified is already in use by another DJ.  Please choose another."
+    dj.username = username
+    if errors:
+      self.flash.msg = errors
+      self.redirect("/dj/myself")
+      return
+    dj.password_hash = self.request.get("password")
+    dj.put()
+    self.flash.msg = "You have successfully updated your profile."
+    self.redirect("/dj/")
 
 # Lets a DJ edit the description etc. of their show.
 class MyShow(webapp.RequestHandler):
@@ -730,21 +747,89 @@ class EditBlogPost(webapp.RequestHandler):
 class NewEvent(webapp.RequestHandler):
   @authorization_required("Manage Events")
   def get(self):
-    pass
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+      'editing': False,
+      'hours': [str(i).rjust(2, "0") for i in range(24)],
+      'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)]
+    }
+    self.response.out.write(template.render(getPath("dj_create_event.html"), template_values))
 
   @authorization_required("Manage Events")
   def post(self):
-    pass
+    title = self.request.get('title')
+    desc = self.request.get('desc')
+    url = self.request.get('url')
+    event_date = self.request.get("date")
+    hours = self.request.get("hour")
+    minutes = self.request.get("minute")
+    date_string = event_date + " " + hours + ":" + minutes
+    try:
+      event_date = datetime.datetime.strptime(date_string, "%m/%d/%Y %H:%M")
+    except ValueError:
+      self.flash.msg = "Unable to work with date \"%s\". Enter a valid date in the form mm/dd/yyyy, and an hour/minute as well." % date_string
+      self.redirect("/dj/event/")
+      return    
+    event = models.Event(event_date=event_date, title=title, url=url, desc=desc)
+    event.put()
+    self.flash.msg = "Event %s successfully created." % title
+    self.redirect("/dj/")
 
 
 class EditEvent(webapp.RequestHandler):
   @authorization_required("Manage Events")
-  def get(self):
-    pass
+  def get(self, event_key):
+    event = models.Event.get(event_key)
+    if not event:
+      self.flash.msg = "Unable to find the requested event.  Please try again."
+      self.redirect("/dj/")
+      return
+    day = event.event_date.strftime("%m/%d/%Y")
+    hour = event.event_date.strftime("%H")
+    minute = event.event_date.strftime("%M")
+    template_values = {
+      'session': self.sess,
+      'flash': self.flash,
+      'editing': True,
+      'event': event,
+      'day': day,
+      'hour': hour,
+      'minute': minute,
+      'hours': [str(i).rjust(2, "0") for i in range(24)],
+      'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)]
+    }
+    self.response.out.write(template.render(getPath("dj_create_event.html"), template_values))
 
   @authorization_required("Manage Events")
-  def post(self):
-    pass
+  def post(self, event_key):
+    event = models.Event.get(self.request.get("event_key"))
+    if not event:
+      self.flash.msg = "Unable to find the requested event.  Please try again."
+      self.redirect("/dj/")
+      return
+    if self.request.get("submit") == "Delete Event":
+      event.delete()
+      self.flash.msg = "Event %s deleted." % event.title
+      self.redirect("/dj/")
+      return
+    event.title = self.request.get("title")
+    event.desc = self.request.get("desc")
+    event.url = self.request.get("url")
+    event_date = self.request.get("date")
+    hours = self.request.get("hour")
+    minutes = self.request.get("minute")
+    date_string = event_date + " " + hours + ":" + minutes
+    try:
+      event_date = datetime.datetime.strptime(date_string, "%m/%d/%Y %H:%M")
+    except ValueError:
+      self.flash.msg = "Unable to work with date. Enter a date in the form mm/dd/yyyy, and an hour/minute as well."
+      self.redirect("/dj/event/")
+      return
+    event.event_date = event_date
+    event.put()
+    self.flash.msg = "Event %s updated." % event.title
+    self.redirect("/events/")
 
 
 # Rules for who can access what.
@@ -966,6 +1051,7 @@ def main():
       ('/blog/([^/]*)/([^/]*)/edit/?', EditBlogPost),
       ('/dj/newpost/?', NewBlogPost),
       ('/dj/event/?', NewEvent),
+      ('/dj/myself/?', MySelf),
       ('/dj/event/([^/]*)/?', EditEvent),
                                        ],
                                        debug=True)

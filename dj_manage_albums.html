@@ -9,7 +9,7 @@
     $(function() {
         $("#album-lookup").keyup(function(e) {
             if ($("#album-lookup").val() == "") {
-                $("#add-album-update").hide("medium");
+                $("#add-album-update").hide("slow");
             } else if ($("#album-lookup").val() != newalbumlookup || e.keyCode == 13) {
                 clearTimeout(newalbumtimeout);
                 newalbumlookup = $("#album-lookup").val();
@@ -28,7 +28,7 @@
                 $("#add-album-update").html(data.updatehtml);
                 $("#add-album-list li").click(addAmazonAlbum);
             });
-            $("#add-album-update").show("medium");
+            $("#add-album-update").show("slow");
         });
     }
     
@@ -44,7 +44,7 @@
                 this.removeClass("album-processing");
                 alert(data.err);
             } else {
-                $("#add-album-update").hide("medium");
+                $("#add-album-update").hide("slow");
                 $("#msgbox").html(data.msg);
             }
         });

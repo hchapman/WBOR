@@ -20,7 +20,7 @@
         <tr>
           <td>{{ p.desc }}</td>
           <td>{{ p.program.title }}</td>
-          <td>{{ p.play_date|date }}</td>
+          <td>{{ p.play_date|date:"F j, Y G:i" }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -44,7 +44,7 @@
       {% for i in ids %}
       <tr>
         <td>{{ i.program.title }}</td>
-        <td>{{ i.play_date|date }}</td>
+        <td>{{ i.play_date|date:"F j, Y G:i" }}</td>
       </tr>
       {% endfor %}
     </tbody>
