@@ -253,8 +253,11 @@ class SchedulePage(webapp.RequestHandler):
 
 class PlaylistPage(webapp.RequestHandler):
   def get(self):
-    template_values = {}
-    self.response.out.write(template.render(getPath("playlists.html"), template_values))
+    shows = models.getPrograms()
+    template_values = {
+      'shows':shows,
+      }
+    self.response.out.write(template.render(getPath("playlist.html"), template_values))
 
 class FunPage(webapp.RequestHandler):
   def get(self):

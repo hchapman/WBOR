@@ -235,3 +235,8 @@ def getTopSongsAndAlbums(start, end, song_num, album_num):
   songs = songs[:song_num]
   albums = albums[:album_num]
   return (songs, albums)
+
+def getPrograms():
+  """ Get programs from the database
+  """
+  return Program.all().fetch(1000)
