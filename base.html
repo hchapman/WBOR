@@ -49,7 +49,6 @@
         $(".datepicker").datepicker();
         
         nowPlaying();
-        nowPlayingTimer = setTimeout("nowPlaying()", 60000);
         if ($("#delete-button")) {
             $("#delete-button").click(function() {
                 return confirm("Are you sure you want to do this?");
@@ -102,7 +101,7 @@
             	imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
             	imageBtnNext: '/static/images/lightbox-btn-next.gif',
             	imageBlank: '/static/images/lightbox-blank.gif',
-            })
+            });
         }
     });
     
@@ -118,6 +117,7 @@
                 $("#latestplays").html(data.recent_songs_html);
             }
         }, "json");
+        nowPlayingTimer = setTimeout("nowPlaying()", 30000);
     }
 </script>
 {% block extra_scripts %}{% endblock %}
@@ -127,10 +127,11 @@
 <div id='wrap' class='container_12'>
     <div id='header'>
         <div class='grid_6' id='logo'><!-- Start header -->
-            <a title='May 9, 7:00 pm' href='/index'><img src='/static/images/transparentlogo.png'></a>
+            <a title='May 9, 7:00 pm' href='/'><img src='/static/images/transparentlogo.png'></a>
         </div>
     
-        <div class='grid_3 header' id='audioplayer'>
+        <div class='grid_3 header' id='voicewidget'>
+          <object type="application/x-shockwave-flash" data="https://clients4.google.com/voice/embed/webCallButton" width="230" height="85"><param name="movie" value="https://clients4.google.com/voice/embed/webCallButton" /><param name="wmode" value="transparent" /><param name="FlashVars" value="id=149751eac6a0d999583c849fb23a20e411e05cf7&style=0" /></object>
         </div>
     
         <div class='grid_3 header'>

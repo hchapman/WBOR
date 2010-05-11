@@ -2,11 +2,52 @@
 
 {% block title %}WBOR{% endblock %}
 
+{% block extra_scripts %}
+<script type='text/javascript'>
+  $(function() {
+    $("#newalbums").load("/ajax/albumtable/", {'page': 0}, function(data) {
+      $("#albumlist li a").lightBox({
+          imageLoading: '/static/images/lightbox-ico-loading.gif',
+      	imageBtnClose: '/static/images/lightbox-btn-close.gif',
+      	imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
+      	imageBtnNext: '/static/images/lightbox-btn-next.gif',
+      	imageBlank: '/static/images/lightbox-blank.gif',
+      });
+    });
+  });
+</script>
+{% endblock %}
+
+
 {% block left_column %}
 
 <div id='latestplays'>
     <h4>Recently on WBOR</h4>
-    {{ recently_played_html }}
+    <i>Loading...</i>
+</div>
+
+<div id='upcomingevents'>
+  <h4>Upcoming Events</h4>
+  {% if events %}
+  {% for e in events %}
+  <div>
+    {% if e.url %}
+    <h5><a href='{{ e.url }}'>{{ e.title }}</a></h5>
+    {% else %}
+    <h5>{{ e.title }}</h5>
+    {% endif %}
+    <h6>{{ e.event_date|date:"F j, Y g:i a"}}</h6>
+    <p>{{ e.desc }}</p>
+    {% if logged_in %}
+    <a href='/dj/event/{{ e.key }}'>Edit</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <div>
+    There are no events scheduled for the immediate future.
+  </div>
+  {% endif %}
 </div>
 
 <div id='charts'>

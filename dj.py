@@ -1039,8 +1039,24 @@ class ManageAlbums(webapp.RequestHandler):
       # The user has typed in the title, the artist, all track names,
       # and provided a cover image URL.
       tracks = self.request.get_all("track")
-      cover = urlfetch.fetch(self.request.get("cover_url")).content
-      cover_filetype = self.request.get("cover_url")[-4:].strip('.')
+      cover_url = self.request.get("cover_url")
+      if not cover_url:
+        cover_url = "/static/images/noalbumart.png"
+      try:
+        cover = urlfetch.fetch(cover_url).content
+      except ResponseTooLargeError:
+        self.flash.msg = "The image you provided was too large.  There is a 1MB limit on cover artwork.  Try a different version with a reasonable size."
+        self.redirect("/dj/albums/")
+        return
+      except InvalidURLError:
+        self.flash.msg = "The URL you provided could not be downloaded.  Hit back and try again."
+        self.redirect("/dj/albums/")
+        return
+      except DownloadError:
+        self.flash.msg = "The URL you provided could not be downloaded.  Hit back and try again."
+        self.redirect("/dj/albums/")
+        return
+      cover_filetype = cover_url[-4:].strip('.')
       artist = self.request.get('artist')
       album = models.Album(
         title=self.request.get("title"),

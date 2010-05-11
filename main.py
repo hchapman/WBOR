@@ -24,6 +24,7 @@ import sessions
 import time
 import flash
 import amazon
+import logging
 from google.appengine.api import urlfetch
 from google.appengine.ext.webapp import template
 from google.appengine.ext import webapp
@@ -34,37 +35,26 @@ def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
 
 class MainPage(webapp.RequestHandler):
-
   def get(self):
     self.sess = sessions.Session()
     self.flash = flash.Flash()
-    recently_played = [
-      {
-        'title': "Song 1",
-        'artist': "Artist 1",
-        'timestamp': "5 minutes ago",
-      },
-      {
-        'title': "Song 1",
-        'artist': "Artist 1",
-        'timestamp': "5 minutes ago",
-      },
-    ]
-    album_list = models.getNewAlbums()
+    album_list = []
+    # album_list = models.getNewAlbums(50)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
     song_num = 10
     album_num = 10
     top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
-    posts = models.getLastPosts(5)
+    posts = models.getLastPosts(3)
+    events = models.getEventsAfter(datetime.datetime.now() - datetime.timedelta(days=1), 3)
     template_values = {
       'flash': self.flash,
       'session': self.sess,
-      'recently_played': recently_played,
       'album_list': album_list,
       'top_songs': top_songs,
       'top_albums': top_albums,
       'posts': posts,
+      'events': events,
     }
     self.response.out.write(template.render(getPath("index.html"), template_values))
 
@@ -86,6 +76,22 @@ class ArtistComplete(webapp.RequestHandler):
       'query': q,
       'suggestions': [ar.artist_name for ar in artists],      
     }))
+
+class AlbumTable(webapp.RequestHandler):
+  def post(self):
+    page = self.request.get('page')
+    try:
+      page = int(page)
+    except ValueError:
+      self.response.out.write(simplejson.dumps({
+        'err': "Unable to parse requested page."
+      }))
+      return
+    albums = models.getNewAlbums(100, page)
+    template_values = {
+      'album_list': albums,
+    }
+    self.response.out.write(template.render(getPath("newalbums.html"), template_values))
 
 class AlbumInfo(webapp.RequestHandler):
   def get(self):    
@@ -199,7 +205,7 @@ class UpdateInfo(webapp.RequestHandler):
     song, program = lastPlay.song, lastPlay.program
     song_string = song.title + " &mdash; " + song.artist
     recent_songs = models.getLastNPlays(3)
-    # self.response.headers["Content-Type"] = "text/json"
+    self.response.headers["Content-Type"] = "text/json"
     self.response.out.write(simplejson.dumps({
       'song_string': song_string,
       'program_title': program.title,
@@ -272,7 +278,7 @@ class ProgramPage(webapp.RequestHandler):
     self.flash = flash.Flash()
     self.sess = sessions.Session()
     program = models.getProgramBySlug(slug)
-    posts = models.getLastPosts(3)
+    posts = models.getLastPosts(1)
     if not program:
       self.flash.msg = "Invalid program slug specified."
       self.redirect("/")
@@ -285,10 +291,27 @@ class ProgramPage(webapp.RequestHandler):
     }
     self.response.out.write(template.render(getPath("show.html"), template_values))
 
-def main():
+
+def profile_main():
+  # This is the main function for profiling
+  # We've renamed our original main() above to real_main()
+  import cProfile, pstats, StringIO
+  prof = cProfile.Profile()
+  prof = prof.runctx("real_main()", globals(), locals())
+  stream = StringIO.StringIO()
+  stats = pstats.Stats(prof, stream=stream)
+  stats.sort_stats("time")  # Or cumulative
+  stats.print_stats(80)  # 80 = how many to print
+  # The rest is optional.
+  # stats.print_callees()
+  # stats.print_callers()
+  logging.info("Profile data:\n%s", stream.getvalue())
+
+def real_main():
   application = webapp.WSGIApplication([
       ('/', MainPage),
       ('/updateinfo/?', UpdateInfo),
+      ('/ajax/albumtable/?', AlbumTable),
       ('/ajax/albuminfo/?', AlbumInfo),
       ('/ajax/artistcomplete/?', ArtistComplete),
       ('/ajax/getSongList/?', SongList),
@@ -307,7 +330,7 @@ def main():
                                        debug=True)
   util.run_wsgi_app(application)
 
-
+main = real_main
 if __name__ == '__main__':
   main()
 

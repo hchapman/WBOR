@@ -73,8 +73,8 @@ class Event(db.Model):
   desc = db.TextProperty()
   url = db.StringProperty()
 
-def getEventsAfter(start):
-  return Event.all().filter("event_date >=", start).order("event_date").fetch(1000)
+def getEventsAfter(start, num=1000):
+  return Event.all().filter("event_date >=", start).order("event_date").fetch(num)
 
 def getLastPlay():
   return Play.all().order("-play_date").fetch(1)[0]
@@ -149,8 +149,11 @@ def getLastPsa():
 def getProgramsByDj(dj):
   return Program.all().filter("dj_list =", dj).fetch(100)
 
-def getNewAlbums():
-  return Album.all().filter("isNew =", True).order("-add_date").fetch(1000)
+def getNewAlbums(num=1000, page=0):
+  return Album.all().filter("isNew =", True).order("-add_date").fetch(num, offset=page*50)
+
+def getNewAlbumsAlphabetically(num=1000):
+  return Album.all().filter("isNew =", True).order("artist").fetch(num)
 
 def getLastAlbums(num):
   return Album.all().order("-add_date").fetch(num)

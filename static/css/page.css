@@ -238,11 +238,11 @@ h4 {
     text-align: center;
 }
 
-.post h5, .events h5 {
+.post h5, .events h5, #upcomingevents div h5 {
     margin-bottom: 0;
 }
 
-.post h6, .events h6 {
+.post h6, .events h6, #upcomingevents div h6 {
     font-size: 0.9em;
 }
 
@@ -462,4 +462,8 @@ form table td {
   width: 300px;
   margin-left: 300px;
   text-align: center;
+}
+
+#voicewidget {
+    padding-top: 20px;
 }
