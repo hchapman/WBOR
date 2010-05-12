@@ -30,6 +30,7 @@ from google.appengine.ext.webapp import template
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import util
 from django.utils import simplejson
+from google.appengine.api import memcache
 
 def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
@@ -87,11 +88,15 @@ class AlbumTable(webapp.RequestHandler):
         'err': "Unable to parse requested page."
       }))
       return
-    albums = models.getNewAlbums(100, page)
-    template_values = {
-      'album_list': albums,
-    }
-    self.response.out.write(template.render(getPath("newalbums.html"), template_values))
+    album_table_html = memcache.get("album_table_html")
+    if album_table_html is None:
+      albums = models.getNewAlbums(100, page)
+      template_values = {
+        'album_list': albums,
+      }
+      album_table_html = template.render(getPath("newalbums.html"), template_values)
+      memcache.add("album_table_html", album_table_html)
+    self.response.out.write(album_table_html)
 
 class AlbumInfo(webapp.RequestHandler):
   def get(self):    

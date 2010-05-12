@@ -110,6 +110,9 @@
     </div>
     <div id='new-albums'>
         <h4>On the New Shelf</h4>
+        {% if new_album_html %}
+        {{ new_album_html }}
+        {% else %}
         <ul id='manage-albums-list'>
             {% for album in new_album_list %}
                 <li class='newalbum' id='{{ album.key }}'>
@@ -122,6 +125,7 @@
                     </div></li>
             {% endfor %}
         </ul>
+        {% endif %}
     </div>
 {% endblock %}
 

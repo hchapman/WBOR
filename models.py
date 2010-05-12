@@ -3,6 +3,7 @@
 
 from google.appengine.ext import db
 import datetime
+from google.appengine.api import memcache
 
 class Dj(db.Model):
   fullname = db.StringProperty()
@@ -150,7 +151,8 @@ def getProgramsByDj(dj):
   return Program.all().filter("dj_list =", dj).fetch(100)
 
 def getNewAlbums(num=1000, page=0):
-  return Album.all().filter("isNew =", True).order("-add_date").fetch(num, offset=page*50)
+  albums = Album.all().filter("isNew =", True).order("-add_date").fetch(num, offset=page*50)
+  return albums
 
 def getNewAlbumsAlphabetically(num=1000):
   return Album.all().filter("isNew =", True).order("artist").fetch(num)
@@ -214,6 +216,9 @@ def getPostBySlug(post_date, slug):
     return None
 
 def getTopSongsAndAlbums(start, end, song_num, album_num):
+  cached = memcache.get("topsongsandalbums")
+  if cached is not None:
+    return cached
   plays = getNewPlaysInRange(start=start, end=end)
   songs = {}
   albums = {}
@@ -234,6 +239,7 @@ def getTopSongsAndAlbums(start, end, song_num, album_num):
   albums.reverse()
   songs = songs[:song_num]
   albums = albums[:album_num]
+  memcache.add("topsongsandalbums", (songs, albums))
   return (songs, albums)
 
 def getPrograms():

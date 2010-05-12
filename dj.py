@@ -30,6 +30,7 @@ from google.appengine.ext.webapp import template
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import util
 from django.utils import simplejson
+from google.appengine.api import memcache
 
 # This is a decoration for making sure that the user
 # is logged in before they view the page.
@@ -187,10 +188,20 @@ class ChartSong(webapp.RequestHandler):
     posts = models.getLastPosts(2)
     playlist = models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))
     last_psa = models.getLastPsa()
-    new_albums = models.getNewAlbums()
+    new_albums = None
+    new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []
-    if new_albums:
-      album_songs = [models.Song.get(k) for k in new_albums[0].songList]
+    if new_song_div_html is None:
+      new_albums = models.getNewAlbums()
+      if new_albums:
+        album_songs = [models.Song.get(k) for k in new_albums[0].songList]
+      memcache.add("new_song_div_html",
+        template.render(
+          getPath("dj_chartsong_newsongdiv.html"), 
+            {'new_albums': new_albums,
+             'album_songs': album_songs,}
+        )
+      )
     template_values = {
       'last_psa': last_psa,
       'playlist': playlist,
@@ -198,6 +209,7 @@ class ChartSong(webapp.RequestHandler):
       'flash': self.flash,
       'new_albums': new_albums,
       'album_songs': album_songs,
+      'new_song_div_html': new_song_div_html,
       'posts': posts,
     }
     self.response.out.write(template.render(getPath("dj_chartsong.html"), template_values))
@@ -262,6 +274,7 @@ class ChartSong(webapp.RequestHandler):
         pylast.SCROBBLE_SOURCE_USER, pylast.SCROBBLE_MODE_PLAYED, 60)
       self.flash.msg = trackname + " has been charted, and should show up below."
       self.redirect("/dj/chartsong/")
+      return
       # End of song charting.
     elif self.request.get("submit") == "Station ID":
       # If the DJ has recorded a station ID
@@ -270,6 +283,7 @@ class ChartSong(webapp.RequestHandler):
       station_id.put()
       self.flash.msg = "Station ID recorded."
       self.redirect("/dj/chartsong/")
+      return
     elif self.request.get("submit") == "PSA":
       # If the DJ has recorded a PSA play
       psa_desc = self.request.get("psa_desc")
@@ -278,6 +292,7 @@ class ChartSong(webapp.RequestHandler):
       psa.put()
       self.flash.msg = "PSA recorded."
       self.redirect("/dj/chartsong/")
+      return
   
   # This is a helper method to update which artists are recorded as
   # the most-played artists for a given program.
@@ -938,9 +953,19 @@ class ManagePermissions(webapp.RequestHandler):
 class ManageAlbums(webapp.RequestHandler):
   @authorization_required("Manage Albums")
   def get(self):
-    new_album_list = models.getNewAlbums()
+    new_album_list = None
+    new_album_html = memcache.get("manage_new_albums_html")
+    if new_album_html is None:
+      new_album_list = models.getNewAlbums()
+      memcache.add("manage_new_albums_html", 
+        template.render(
+          getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
+        )
+      )
+      
     template_values = {
       'new_album_list': new_album_list,
+      'new_album_html': new_album_html,
       'session': self.sess,
       'flash': self.flash,
     }
@@ -961,6 +986,7 @@ class ManageAlbums(webapp.RequestHandler):
       if album:
         album.isNew = True
         album.put()
+        memcache.flush_all()
         self.response.out.write(simplejson.dumps({
           'msg': "Success, already existed. The album was re-set to new."
         }))
@@ -1012,6 +1038,7 @@ class ManageAlbums(webapp.RequestHandler):
         s.put()
       album.songList = [s.key() for s in songlist]
       album.put()
+      memcache.flush_all()
       self.response.out.write(simplejson.dumps({'msg': "Album successfully added."}))
     elif action == "makeNew":
       # We're marking an existing album as "new" again
@@ -1023,6 +1050,7 @@ class ManageAlbums(webapp.RequestHandler):
         return
       album.isNew = True
       album.put()
+      memcache.flush_all()
       self.response.out.write(simplejson.dumps({'msg': "Made new."}))
     elif action == "makeOld":
       # We're removing the "new" marking from an album
@@ -1034,6 +1062,7 @@ class ManageAlbums(webapp.RequestHandler):
         return
       album.isNew = False
       album.put()
+      memcache.flush_all()
       self.response.out.write(simplejson.dumps({'msg': "Made old."}))
     elif action == "manual":
       # The user has typed in the title, the artist, all track names,
@@ -1070,6 +1099,7 @@ class ManageAlbums(webapp.RequestHandler):
         small_filetype=cover_filetype
       )
       album.put()
+      memcache.flush_all()
       songlist = [models.Song(title=trackname, artist=artist, album=album) for trackname in tracks]
       for s in songlist:
         s.put()

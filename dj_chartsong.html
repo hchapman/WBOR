@@ -65,6 +65,9 @@ $(function() {
                 <br><input type='text' class='artist-autocomplete' name='artist' id='artist' /></label>
             </div>
             <div id='new-song-div'>
+              {% if new_song_div_html %}
+              {{ new_song_div_html }}
+              {% else %}
                 <label>Album</label>
                 <br>
                 <select name='album_key' id='album_key'>
@@ -81,6 +84,7 @@ $(function() {
                     <option value='{{ song.key }}'>{{ song.title }}</option>
                     {% endfor %}
                 </select>
+              {% endif %}
             </div>
             <input type='submit' name='submit' value='Chart Song'>
         </form>
