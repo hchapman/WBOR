@@ -246,7 +246,7 @@ h4 {
     font-size: 0.9em;
 }
 
-.events {
+.events, .onecol {
     width: 600px;
     margin: 0 auto;
 }
@@ -273,7 +273,8 @@ div.contact a {
     text-align: center;
     background-color: #131218;
     color: #DDD;
-    height: 100px;
+    height: 80px;
+    padding-top: 20px;
     -moz-border-radius-bottomright: 5px;
     -moz-border-radius-bottomleft: 5px;
     -webkit-border-bottom-left-radius: 5px;
@@ -466,4 +467,17 @@ form table td {
 
 #voicewidget {
     padding-top: 20px;
+}
+
+#playlistresults h5 {
+    margin-bottom: 0;
+}
+
+#playlistresults h6 {
+    font-size: 0.85em;
+}
+
+#playlistsearch label {
+    display: block;
+    margin-bottom: 15px;
 }

@@ -133,11 +133,20 @@ def getLastNPlays(num):
   plays = Play.all().order("-play_date").fetch(num)
   return plays
 
-def getLastPlays(program, after=None):  
+def getPlaysBetween(program, before=None, after=None):
   plays = Play.all().filter("program =", program)
   if after:
     plays = plays.filter("play_date >=", after)
-  plays = plays.order("-play_date").fetch(1000)
+  if before:
+    plays = plays.filter("play_date <=", before)
+  plays = plays.order("play_date").fetch(1000)
+  return plays
+
+def getLastPlays(program, after=None, num=1000):  
+  plays = Play.all().filter("program =", program)
+  if after:
+    plays = plays.filter("play_date >=", after)
+  plays = plays.order("-play_date").fetch(num)
   return plays
 
 def getLastPsa():

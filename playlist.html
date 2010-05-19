@@ -3,27 +3,41 @@
 {% block title %}Playlists{% endblock %}
 
 {% block main_content %}
-
-<div class='center playlist'>
-  <h4>Playlists</h4>
+<h4>Playlists</h4>
+<div class='center onecol'>
   <div id='playlistsearch'>
-	<h5>Playlist Search</h5>
-	<form method="GET" id="" action="">
-	  <label for="programdate">Date (leave blank for most recent playlist):
-		<input type="text" class="datepicker" name="programdate" id="programdate" />
-	  </label><br />
-	  <label for="show">Show:
-		<select id="show" name="show">
-		  {% for s in shows %}<option value={{ s.slug }}>{{ s.title }}</option>{% endfor %}
-		</select>
-	  </label><br />
-	  <input type="submit" name="submit" value="Search" />
-	</form>
+  	<h5>Playlist Search</h5>
+  	<form method="GET" id="" action="">
+  	  <label for="programdate">Date (leave blank for most recent playlist):
+  		<input type="text" class="datepicker" name="programdate" id="programdate" />
+  	  </label>
+  	  <label for="show">Show:
+  		<select id="show" name="show">
+  		  {% for s in shows %}<option value={{ s.slug }}>{{ s.title }}</option>{% endfor %}
+  		</select>
+  	  </label>
+  	  <input type="submit" value="Search" />
+  	</form>
   </div>
   
   <div id='playlistresults'>
-	
-  </div> 
-</div>
+    {% if plays %}
+    <ul style='display:none;'>
+    {% for p in plays %}
+      {% ifchanged %}
+      </ul>
+      {% if p.program.slug %}<h5><a href='/programs/{{ p.program.slug }}'>{{ p.program.title }}</a></h5>{% else %}
+      <h5>{{ s.title }}</h5>
+      {% endif %}
+      <h6>{{ p.play_date|date:"F d, Y"}}</h6>
+      <ul>
+      {% endifchanged %}
+        <li>{{ p.song.title }} &ndash; {{ p.song.artist }}</li>
+    {% endfor %}
+    {% else %}
+    We have no playlists for this show at the time specified.  Perhaps they haven't charted yet.
+    {% endif %}
+  </div>
 
+</div>
 {% endblock %}

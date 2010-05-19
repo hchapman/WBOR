@@ -110,6 +110,9 @@ $(function() {
         <form action='/dj/chartsong/' method='post'>
             <input type='submit' name='submit' value='Station ID'>
         </form>
+        {% if station_id %}
+        <p>Station ID recorded.</p>
+        {% endif %}
         <br>
         
         <form action='/dj/chartsong/' method='post'>

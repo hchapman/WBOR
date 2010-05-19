@@ -185,6 +185,9 @@ class ChartSong(webapp.RequestHandler):
       self.flash.msg = "You can't chart songs until you have an associated program in the system.  Please contact a member of management immediately."
       self.redirect("/dj/")
       return
+    station_id = False
+    if self.flash.msg == "Station ID recorded.":
+      station_id = True
     posts = models.getLastPosts(2)
     playlist = models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))
     last_psa = models.getLastPsa()
@@ -211,6 +214,7 @@ class ChartSong(webapp.RequestHandler):
       'album_songs': album_songs,
       'new_song_div_html': new_song_div_html,
       'posts': posts,
+      'station_id': station_id,
     }
     self.response.out.write(template.render(getPath("dj_chartsong.html"), template_values))
   

@@ -223,7 +223,15 @@ class UpdateInfo(webapp.RequestHandler):
 
 class SongList(webapp.RequestHandler):
   def get(self):
+    self.response.headers["Content-Type"] = "text/json"
     album_key = self.request.get("album_key")
+    songlist_html = memcache.get("songlist_html_" + album_key)
+    if songlist_html:
+      self.response.out.write(simplejson.dumps({
+      'songListHtml': songlist_html,
+      'generated': 'memcache',
+      }))
+      return
     album = models.Album.get(album_key)
     self.response.headers["Content-Type"] = "text/json"
     if not album:
@@ -231,10 +239,15 @@ class SongList(webapp.RequestHandler):
         'err': "An error occurred and the specified album could not be found.  Please try again."
       }))
       return
+    songlist_html = template.render(getPath("ajax_songlist.html"), {
+      'songList': [models.Song.get(k) for k in album.songList],
+    })
+    memcache.add("songlist_html_" + album_key, songlist_html)
     self.response.out.write(simplejson.dumps({
       'songListHtml': template.render(getPath("ajax_songlist.html"), {
         'songList': [models.Song.get(k) for k in album.songList],
-      })
+      }),
+      'generated': 'generated',
     }))
     
 
@@ -259,8 +272,43 @@ class SchedulePage(webapp.RequestHandler):
 class PlaylistPage(webapp.RequestHandler):
   def get(self):
     shows = models.getPrograms()
+    self.sess = sessions.Session()
+    self.flash = flash.Flash()
+    slug = self.request.get("show")
+    datestring = self.request.get("programdate")
+    selected_date = None
+    if datestring:
+      try:
+        selected_date = datetime.datetime.strptime(datestring, "%m/%d/%Y")
+        selected_date = selected_date + datetime.timedelta(hours=12)
+      except:
+        self.flash.msg = "The date provided could not be parsed."
+        self.redirect("/")
+        return
+    if slug:
+      selected_program = models.getProgramBySlug(slug)
+      if not selected_program:
+        self.flash.msg = "There is no program for slug %s." % slug
+        self.redirect("/")
+        return
+      if selected_date:
+        plays = models.getPlaysBetween(program=selected_program, 
+                                       after=selected_date - datetime.timedelta(hours=24), 
+                                       before=selected_date + datetime.timedelta(hours=24))
+      else:
+        lastplay = models.getLastPlays(program=selected_program, num=1)
+        if lastplay:
+          lastplay = lastplay[0]
+          last_date = lastplay.play_date
+          plays = models.getPlaysBetween(program=selected_program,
+                                         after=last_date - datetime.timedelta(days=1))
+        else:
+          plays = []
+    else:
+      plays = models.getLastNPlays(60)
     template_values = {
-      'shows':shows,
+      'plays': plays,
+      'shows': shows,
       }
     self.response.out.write(template.render(getPath("playlist.html"), template_values))
 

@@ -1,0 +1,12 @@
+<ul id='manage-albums-list'>
+    {% for album in new_album_list %}
+        <li class='newalbum' id='{{ album.key }}'>
+            <div class='album-manager'>
+            <label>{{ album.title }}
+            <br>
+            <img src='/albums/{{ album.key }}/s' />
+            <br>
+            <input type='checkbox' {% if album.isNew %}checked='checked'{% endif %} /></label>
+            </div></li>
+    {% endfor %}
+</ul>

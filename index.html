@@ -89,9 +89,3 @@
 {% block right_column %}
     {% include "last_n_posts.html" %}
 {% endblock %}
-
-{% block footer %}
-    {% if flash.msg %}
-        <div class='flash-msg'>{{ flash.msg }}</div>
-    {% endif %}
-{% endblock %}
