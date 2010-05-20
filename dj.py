@@ -24,6 +24,7 @@ import flash
 import time
 import pylast
 import amazon
+import logging
 from xml.dom import minidom
 from google.appengine.api import urlfetch
 from google.appengine.ext.webapp import template
@@ -189,7 +190,13 @@ class ChartSong(webapp.RequestHandler):
     if self.flash.msg == "Station ID recorded.":
       station_id = True
     posts = models.getLastPosts(2)
-    playlist = models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))
+    playlist_html = memcache.get("playlist_html_" + str(self.sess['program'].key()))
+    if not playlist_html:
+      playlist_html = template.render("dj_chartsong_playlist_div.html",
+        {'playlist': models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))}
+      )
+      memcache_key = "playlist_html_" + str(self.sess['program'].key())
+      memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
     last_psa = models.getLastPsa()
     new_albums = None
     new_song_div_html = memcache.get("new_song_div_html")
@@ -198,7 +205,7 @@ class ChartSong(webapp.RequestHandler):
       new_albums = models.getNewAlbums()
       if new_albums:
         album_songs = [models.Song.get(k) for k in new_albums[0].songList]
-      memcache.add("new_song_div_html",
+      memcache.set("new_song_div_html",
         template.render(
           getPath("dj_chartsong_newsongdiv.html"), 
             {'new_albums': new_albums,
@@ -207,7 +214,7 @@ class ChartSong(webapp.RequestHandler):
       )
     template_values = {
       'last_psa': last_psa,
-      'playlist': playlist,
+      'playlist_html': playlist_html,
       'session': self.sess,
       'flash': self.flash,
       'new_albums': new_albums,
@@ -256,11 +263,20 @@ class ChartSong(webapp.RequestHandler):
           play_date=datetime.datetime.now(), isNew=False)
       # whether or not the song is new, save it.
       play.put()
+      memcache_key = "playlist_html_" + str(self.sess['program'].key())
+      playlist_html = memcache.get(memcache_key)
+      if not playlist_html:
+        playlist_html = template.render("dj_chartsong_playlist_div.html",
+          {'playlist': models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))}
+        )
+      playlist_html = ("<li id='%s'>%s &mdash; %s <a href='#'>[x]</a></li>\n" % (str(play.key()), play.song.title, play.song.artist)) + playlist_html
+      memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
       if not models.getArtist(track_artist):
         # this is for autocomplete purposes. if the artist hasn't been charted
         # before, save the artist name in the datastore.
         an = models.ArtistName(artist_name=track_artist, 
-          lowercase_name=track_artist.lower())
+          lowercase_name=track_artist.lower(),
+          search_name=models.artistSearchName(track_artist))
         an.put()
       # updates the top 10 artists for the program
       self.updateArtists(models.Program.get(program.key()), track_artist)
@@ -789,6 +805,7 @@ class RemovePlay(webapp.RequestHandler):
       }))
     else:
       play.delete()
+      memcache.delete("playlist_html_" + str(self.sess["program"].key()))
       self.response.out.write(simplejson.dumps({
         'status': "Successfully deleted play."
       }))
@@ -961,7 +978,7 @@ class ManageAlbums(webapp.RequestHandler):
     new_album_html = memcache.get("manage_new_albums_html")
     if new_album_html is None:
       new_album_list = models.getNewAlbums()
-      memcache.add("manage_new_albums_html", 
+      memcache.set("manage_new_albums_html", 
         template.render(
           getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
         )
@@ -1035,7 +1052,9 @@ class ManageAlbums(webapp.RequestHandler):
       album.put()
       artist_name = json_data['artist']
       if not models.getArtist(artist_name):
-        an = models.ArtistName(artist_name=artist_name, lowercase_name=artist_name.lower())
+        an = models.ArtistName(artist_name=artist_name, 
+          lowercase_name=artist_name.lower(),
+          search_name=models.artistSearchName(artist_name))
         an.put()
       songlist = [models.Song(title=t, artist=json_data['artist'], album=album) for t in json_data['tracks']]
       for s in songlist:
@@ -1110,7 +1129,9 @@ class ManageAlbums(webapp.RequestHandler):
       album.songList = [s.key() for s in songlist]
       album.put()
       if not models.getArtist(artist):
-        an = models.ArtistName(artist_name=artist, lowercase_name=artist.lower())
+        an = models.ArtistName(artist_name=artist, 
+          lowercase_name=artist.lower(),
+          search_name=models.artistSearchName(artist))
         an.put()
       self.flash.msg = self.request.get("title") + " added."
       self.redirect("/dj/albums/")

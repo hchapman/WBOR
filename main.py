@@ -95,7 +95,7 @@ class AlbumTable(webapp.RequestHandler):
         'album_list': albums,
       }
       album_table_html = template.render(getPath("newalbums.html"), template_values)
-      memcache.add("album_table_html", album_table_html)
+      memcache.set("album_table_html", album_table_html)
     self.response.out.write(album_table_html)
 
 class AlbumInfo(webapp.RequestHandler):
@@ -169,7 +169,7 @@ class Setup(webapp.RequestHandler):
     ]
     for a in artists:
       if not models.ArtistName.all().filter("artist_name =", a).fetch(1):
-        ar = models.ArtistName(artist_name=a, lowercase_name=a.lower())
+        ar = models.ArtistName(artist_name=a, lowercase_name=a.lower(), search_name=models.artistSearchName(a))
         ar.put()
     self.flash.msg = "Permissions set up, ArtistNames set up, Blog posts set up, DJ Seth entered."
     self.redirect('/')
@@ -242,7 +242,7 @@ class SongList(webapp.RequestHandler):
     songlist_html = template.render(getPath("ajax_songlist.html"), {
       'songList': [models.Song.get(k) for k in album.songList],
     })
-    memcache.add("songlist_html_" + album_key, songlist_html)
+    memcache.set("songlist_html_" + album_key, songlist_html)
     self.response.out.write(simplejson.dumps({
       'songListHtml': template.render(getPath("ajax_songlist.html"), {
         'songList': [models.Song.get(k) for k in album.songList],
@@ -328,6 +328,15 @@ class ContactPage(webapp.RequestHandler):
     template_values = {}
     self.response.out.write(template.render(getPath("contact.html"), template_values))
 
+class ConvertArtistNames(webapp.RequestHandler):
+  def get(self):
+    an = models.ArtistName.all().fetch(1000)
+    for a in an:
+      if not a.search_name:
+        a.search_name = models.artistSearchName(a.lowercase_name)
+        a.put()
+    self.response.out.write("converted %d artist names." % len(an))
+
 
 class ProgramPage(webapp.RequestHandler):
   def get(self, slug):
@@ -381,6 +390,7 @@ def real_main():
       ('/history/?', HistoryPage),
       ('/contact/?', ContactPage),
       ('/events/?', EventPage),
+      ('/searchnames/?', ConvertArtistNames),
       ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
                                        ],
                                        debug=True)
@@ -389,4 +399,3 @@ def real_main():
 main = real_main
 if __name__ == '__main__':
   main()
-

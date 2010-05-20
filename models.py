@@ -24,6 +24,7 @@ class Program(db.Model):
 class ArtistName(db.Model):
   artist_name = db.StringProperty()
   lowercase_name = db.StringProperty()
+  search_name = db.StringProperty()
 
 class BlogPost(db.Model):
   title = db.StringProperty()
@@ -117,7 +118,16 @@ def getLastPosts(num):
 
 def artistAutocomplete(prefix):
   prefix = prefix.lower()
-  artists = ArtistName.all().filter("lowercase_name >=", prefix).filter("lowercase_name <", prefix + u"\ufffd").fetch(30)
+  artists_full = ArtistName.all().filter("lowercase_name >=", prefix).filter("lowercase_name <", prefix + u"\ufffd").fetch(20)
+  artists_trunc = ArtistName.all().filter("search_name >=", prefix).filter("search_name <", prefix + u"\ufffd").fetch(20)
+  artist_dict = {}
+  all_artists = artists_full + artists_trunc
+  for a in all_artists:
+    artist_dict[a.artist_name] = a
+  artists = []
+  for a in artist_dict:
+    artists.append(artist_dict[a])
+  artists = sorted(artists, key=lambda x: x.search_name)
   return artists
 
 def djAutocomplete(prefix):
@@ -255,3 +265,15 @@ def getPrograms():
   """ Get programs from the database
   """
   return Program.all().fetch(1000)
+
+
+def artistSearchName(a):
+  """ Saves names without the word "The" or "A" as the first word so you can find them.
+  In other words, allows a search for "Magnetic Fields" to match "The Magnetic Fields".
+  """
+  a = a.lower()
+  if a.startswith("the "):
+    a = a[4:]
+  if a.startswith("a "):
+    a = a[2:]
+  return a

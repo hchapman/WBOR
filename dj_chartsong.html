@@ -92,9 +92,7 @@ $(function() {
     <div id='current-playlist'>
         <h4>Last Played</h4>
         <ul id='played_list'>
-            {% for p in playlist %}
-                <li id='{{ p.key }}'>{{ p.song.title }} &mdash; {{ p.song.artist }} <a href='#'>[x]</a></li>
-            {% endfor %}
+            {{ playlist_html }}
         </ul>
     </div>        
 {% endblock %}
