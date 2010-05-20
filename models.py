@@ -236,7 +236,7 @@ def getPostBySlug(post_date, slug):
 
 def getTopSongsAndAlbums(start, end, song_num, album_num):
   cached = memcache.get("topsongsandalbums")
-  if cached is not None:
+  if cached:
     return cached
   plays = getNewPlaysInRange(start=start, end=end)
   songs = {}
@@ -258,7 +258,7 @@ def getTopSongsAndAlbums(start, end, song_num, album_num):
   albums.reverse()
   songs = songs[:song_num]
   albums = albums[:album_num]
-  memcache.add("topsongsandalbums", (songs, albums))
+  memcache.set("topsongsandalbums", (songs, albums), 60 * 60 * 3)
   return (songs, albums)
 
 def getPrograms():
