@@ -31,6 +31,7 @@ from google.appengine.ext import webapp
 from google.appengine.ext.webapp import util
 from django.utils import simplejson
 from google.appengine.api import memcache
+from google.appengine.runtime import DeadlineExceededError
 
 def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
@@ -169,7 +170,7 @@ class Setup(webapp.RequestHandler):
     ]
     for a in artists:
       if not models.ArtistName.all().filter("artist_name =", a).fetch(1):
-        ar = models.ArtistName(artist_name=a, lowercase_name=a.lower(), search_name=models.artistSearchName(a))
+        ar = models.ArtistName(artist_name=a, lowercase_name=a.lower(), search_names=models.artistSearchName(a).split())
         ar.put()
     self.flash.msg = "Permissions set up, ArtistNames set up, Blog posts set up, DJ Seth entered."
     self.redirect('/')
@@ -180,6 +181,7 @@ class BlogDisplay(webapp.RequestHandler):
   def get(self, date_string, post_slug):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
     post = models.getPostBySlug(post_date, post_slug)
+    self.flash = flash.Flash()
     if not post:
       self.flash.msg = "The post you requested could not be found.  Please try again."
       self.redirect('/')
@@ -306,10 +308,13 @@ class PlaylistPage(webapp.RequestHandler):
           plays = []
     else:
       plays = models.getLastNPlays(60)
+    
     template_values = {
       'plays': plays,
       'shows': shows,
       }
+    logging.info("plays: %d" % plays)
+    logging.info("shows:" % shows)
     self.response.out.write(template.render(getPath("playlist.html"), template_values))
 
 class FunPage(webapp.RequestHandler):
@@ -330,13 +335,29 @@ class ContactPage(webapp.RequestHandler):
 
 class ConvertArtistNames(webapp.RequestHandler):
   def get(self):
-    an = models.ArtistName.all().fetch(1000)
-    for a in an:
-      if not a.search_name:
-        a.search_name = models.artistSearchName(a.lowercase_name)
-        a.put()
-    self.response.out.write("converted %d artist names." % len(an))
+    an = models.ArtistName.all().fetch(2000)
+    total = 0
+    try:
+      for a in an:
+        if not a.search_names:
+          total += 1
+          a.search_names = models.artistSearchName(a.lowercase_name).split()
+          a.put()
+      self.response.out.write("converted %d artist names." % total)
+    except DeadlineExceededError:
+      self.response.out.write("converted %d artist names, incomplete." % total)
+    
 
+class ConvertPlays(webapp.RequestHandler):
+  def get(self):
+    pc = models.Play.all().fetch(2000)
+    total = 0
+    for p in pc:
+      if not p.artist:
+        total += 1
+        p.artist = p.song.artist
+        p.put()
+    self.response.out.write("converted %d plays." % total)
 
 class ProgramPage(webapp.RequestHandler):
   def get(self, slug):
@@ -391,6 +412,7 @@ def real_main():
       ('/contact/?', ContactPage),
       ('/events/?', EventPage),
       ('/searchnames/?', ConvertArtistNames),
+      ('/convertplays/?', ConvertPlays),
       ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
                                        ],
                                        debug=True)

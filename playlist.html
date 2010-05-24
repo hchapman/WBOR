@@ -27,7 +27,7 @@
       {% ifchanged %}
       </ul>
       {% if p.program.slug %}<h5><a href='/programs/{{ p.program.slug }}'>{{ p.program.title }}</a></h5>{% else %}
-      <h5>{{ s.title }}</h5>
+      <h5>{{ p.program.title }}</h5>
       {% endif %}
       <h6>{{ p.play_date|date:"F d, Y"}}</h6>
       <ul>

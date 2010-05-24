@@ -2,11 +2,13 @@
     {% for album in new_album_list %}
         <li class='newalbum' id='{{ album.key }}'>
             <div class='album-manager'>
-            <label>{{ album.title }}
-            <br>
+            <label>
+            <input type='checkbox' {% if album.isNew %}checked='checked'{% endif %} />
+            {{ album.artist }} &mdash; <i>{{ album.title }}</i> ({{ album.add_date|date:"F j, Y"}})
+            <!-- <br>
             <img src='/albums/{{ album.key }}/s' />
-            <br>
-            <input type='checkbox' {% if album.isNew %}checked='checked'{% endif %} /></label>
+            <br> -->
+            </label>
             </div></li>
     {% endfor %}
 </ul>

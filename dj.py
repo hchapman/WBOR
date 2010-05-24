@@ -202,7 +202,7 @@ class ChartSong(webapp.RequestHandler):
     new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []
     if new_song_div_html is None:
-      new_albums = models.getNewAlbums()
+      new_albums = models.getNewAlbums(byArtist=True)
       if new_albums:
         album_songs = [models.Song.get(k) for k in new_albums[0].songList]
       memcache.set("new_song_div_html",
@@ -250,7 +250,7 @@ class ChartSong(webapp.RequestHandler):
         trackname = song.title
         track_artist = song.artist
         play = models.Play(song=song, program=program, 
-          play_date=datetime.datetime.now(), isNew=True)
+          play_date=datetime.datetime.now(), isNew=True, artist=album.artist)
       else:
         # a song needs to have an artist and a track name
         if not track_artist or not trackname:
@@ -260,7 +260,7 @@ class ChartSong(webapp.RequestHandler):
         song = models.Song(title=trackname, artist=track_artist)
         song.put()
         play = models.Play(song=song, program=program, 
-          play_date=datetime.datetime.now(), isNew=False)
+          play_date=datetime.datetime.now(), isNew=False, artist=track_artist)
       # whether or not the song is new, save it.
       play.put()
       memcache_key = "playlist_html_" + str(self.sess['program'].key())
@@ -276,23 +276,26 @@ class ChartSong(webapp.RequestHandler):
         # before, save the artist name in the datastore.
         an = models.ArtistName(artist_name=track_artist, 
           lowercase_name=track_artist.lower(),
-          search_name=models.artistSearchName(track_artist))
+          search_names=models.artistSearchName(track_artist).split())
         an.put()
       # updates the top 10 artists for the program
       self.updateArtists(models.Program.get(program.key()), track_artist)
-      # last.fm integration
-      lastfm_username = "wbor"
-      lastfm_password = "WBOR911!"
-      lastfm_api_key = "59925bd7155e59bd39f14adcb70b7b77"
-      lastfm_secret_key = "6acf5cc79a41da5a16f36d5baac2a484"
-      network = pylast.get_lastfm_network(api_key=lastfm_api_key, 
-        api_secret=lastfm_secret_key,
-        username=lastfm_username, 
-        password_hash=pylast.md5(lastfm_password))
-      scrobbler = network.get_scrobbler("tst", "1.0")
-      scrobbler.scrobble(track_artist, trackname, int(time.time()),
-        pylast.SCROBBLE_SOURCE_USER, pylast.SCROBBLE_MODE_PLAYED, 60)
-      self.flash.msg = trackname + " has been charted, and should show up below."
+      try:
+        # last.fm integration
+        lastfm_username = "wbor"
+        lastfm_password = "WBOR911!"
+        lastfm_api_key = "59925bd7155e59bd39f14adcb70b7b77"
+        lastfm_secret_key = "6acf5cc79a41da5a16f36d5baac2a484"
+        network = pylast.get_lastfm_network(api_key=lastfm_api_key, 
+          api_secret=lastfm_secret_key,
+          username=lastfm_username, 
+          password_hash=pylast.md5(lastfm_password))
+        scrobbler = network.get_scrobbler("tst", "1.0")
+        scrobbler.scrobble(track_artist, trackname, int(time.time()),
+          pylast.SCROBBLE_SOURCE_USER, pylast.SCROBBLE_MODE_PLAYED, 60)
+        self.flash.msg = trackname + " has been charted and scrobbled to Last.FM, and should show up below."
+      except urlfetch.DownloadError:
+        self.flash.msg = trackname + " has been charted, but was not scrobbled to Last.FM"
       self.redirect("/dj/chartsong/")
       return
       # End of song charting.
@@ -439,7 +442,7 @@ class ViewLogs(webapp.RequestHandler):
 class ManageDJs(webapp.RequestHandler):
   @authorization_required("Manage DJs")
   def get(self):
-    dj_list = models.Dj.all()
+    dj_list = models.Dj.all().order("fullname")
     template_values = {
       'dj_list': dj_list,
       'session': self.sess,
@@ -505,7 +508,7 @@ class EditDJ(webapp.RequestHandler):
   @authorization_required("Manage DJs")
   def get(self, dj_key):
     dj = models.Dj.get(dj_key)
-    dj_list = models.Dj.all()
+    dj_list = models.Dj.all().order("fullname")
     if not dj:
       self.flash.msg = "The DJ specified (" + dj_key + ") does not exist.  Please try again."
       self.redirect("/dj/djs/")
@@ -547,7 +550,7 @@ class EditDJ(webapp.RequestHandler):
 class ManagePrograms(webapp.RequestHandler):
   @authorization_required("Manage Programs")
   def get(self):
-    program_list = models.Program.all()
+    program_list = models.Program.all().order("title")
     template_values = {
       'program_list': program_list,
       'session': self.sess,
@@ -978,12 +981,10 @@ class ManageAlbums(webapp.RequestHandler):
     new_album_html = memcache.get("manage_new_albums_html")
     if new_album_html is None:
       new_album_list = models.getNewAlbums()
-      memcache.set("manage_new_albums_html", 
-        template.render(
-          getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
-        )
+      new_album_html = template.render(
+        getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
       )
-      
+      memcache.set("manage_new_albums_html", new_album_html)
     template_values = {
       'new_album_list': new_album_list,
       'new_album_html': new_album_html,
@@ -1054,7 +1055,7 @@ class ManageAlbums(webapp.RequestHandler):
       if not models.getArtist(artist_name):
         an = models.ArtistName(artist_name=artist_name, 
           lowercase_name=artist_name.lower(),
-          search_name=models.artistSearchName(artist_name))
+          search_names=models.artistSearchName(artist_name).split())
         an.put()
       songlist = [models.Song(title=t, artist=json_data['artist'], album=album) for t in json_data['tracks']]
       for s in songlist:
@@ -1096,15 +1097,15 @@ class ManageAlbums(webapp.RequestHandler):
         cover_url = "/static/images/noalbumart.png"
       try:
         cover = urlfetch.fetch(cover_url).content
-      except ResponseTooLargeError:
+      except urlfetch.ResponseTooLargeError:
         self.flash.msg = "The image you provided was too large.  There is a 1MB limit on cover artwork.  Try a different version with a reasonable size."
         self.redirect("/dj/albums/")
         return
-      except InvalidURLError:
+      except urlfetch.InvalidURLError:
         self.flash.msg = "The URL you provided could not be downloaded.  Hit back and try again."
         self.redirect("/dj/albums/")
         return
-      except DownloadError:
+      except urlfetch.DownloadError:
         self.flash.msg = "The URL you provided could not be downloaded.  Hit back and try again."
         self.redirect("/dj/albums/")
         return
@@ -1131,7 +1132,7 @@ class ManageAlbums(webapp.RequestHandler):
       if not models.getArtist(artist):
         an = models.ArtistName(artist_name=artist, 
           lowercase_name=artist.lower(),
-          search_name=models.artistSearchName(artist))
+          search_names=models.artistSearchName(artist).split())
         an.put()
       self.flash.msg = self.request.get("title") + " added."
       self.redirect("/dj/albums/")

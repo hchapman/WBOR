@@ -25,6 +25,7 @@ class ArtistName(db.Model):
   artist_name = db.StringProperty()
   lowercase_name = db.StringProperty()
   search_name = db.StringProperty()
+  search_names = db.StringListProperty()
 
 class BlogPost(db.Model):
   title = db.StringProperty()
@@ -55,6 +56,7 @@ class Play(db.Model):
   program = db.ReferenceProperty(Program)
   play_date = db.DateTimeProperty()
   isNew = db.BooleanProperty()
+  artist = db.StringProperty()
 
 class Psa(db.Model):
   desc = db.StringProperty()
@@ -119,9 +121,9 @@ def getLastPosts(num):
 def artistAutocomplete(prefix):
   prefix = prefix.lower()
   artists_full = ArtistName.all().filter("lowercase_name >=", prefix).filter("lowercase_name <", prefix + u"\ufffd").fetch(20)
-  artists_trunc = ArtistName.all().filter("search_name >=", prefix).filter("search_name <", prefix + u"\ufffd").fetch(20)
+  artists_sn = ArtistName.all().filter("search_name >=", prefix).filter("search_name <", prefix + u"\ufffd").fetch(20)
   artist_dict = {}
-  all_artists = artists_full + artists_trunc
+  all_artists = artists_full + artists_sn
   for a in all_artists:
     artist_dict[a.artist_name] = a
   artists = []
@@ -169,8 +171,13 @@ def getLastPsa():
 def getProgramsByDj(dj):
   return Program.all().filter("dj_list =", dj).fetch(100)
 
-def getNewAlbums(num=1000, page=0):
-  albums = Album.all().filter("isNew =", True).order("-add_date").fetch(num, offset=page*50)
+def getNewAlbums(num=1000, page=0, byArtist=False):
+  albums = Album.all().filter("isNew =", True)
+  if byArtist:
+    albums = albums.order("artist")
+  else:
+    albums = albums.order("-add_date")
+  albums = albums.fetch(num, offset=page*50)
   return albums
 
 def getNewAlbumsAlphabetically(num=1000):
@@ -237,7 +244,8 @@ def getPostBySlug(post_date, slug):
 def getTopSongsAndAlbums(start, end, song_num, album_num):
   cached = memcache.get("topsongsandalbums")
   if cached:
-    return cached
+    if cached[0]:
+      return cached
   plays = getNewPlaysInRange(start=start, end=end)
   songs = {}
   albums = {}
@@ -264,7 +272,7 @@ def getTopSongsAndAlbums(start, end, song_num, album_num):
 def getPrograms():
   """ Get programs from the database
   """
-  return Program.all().fetch(1000)
+  return Program.all().order("title")
 
 
 def artistSearchName(a):
