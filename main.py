@@ -313,8 +313,6 @@ class PlaylistPage(webapp.RequestHandler):
       'plays': plays,
       'shows': shows,
       }
-    logging.info("plays: %d" % plays)
-    logging.info("shows:" % shows)
     self.response.out.write(template.render(getPath("playlist.html"), template_values))
 
 class FunPage(webapp.RequestHandler):

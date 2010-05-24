@@ -187,8 +187,11 @@ class ChartSong(webapp.RequestHandler):
       self.redirect("/dj/")
       return
     station_id = False
-    if self.flash.msg == "Station ID recorded.":
-      station_id = True
+    try:
+      if self.flash.msg == "Station ID recorded.":
+        station_id = True
+    except AttributeError:
+      pass 
     posts = models.getLastPosts(2)
     playlist_html = memcache.get("playlist_html_" + str(self.sess['program'].key()))
     if not playlist_html:
@@ -294,7 +297,10 @@ class ChartSong(webapp.RequestHandler):
         scrobbler.scrobble(track_artist, trackname, int(time.time()),
           pylast.SCROBBLE_SOURCE_USER, pylast.SCROBBLE_MODE_PLAYED, 60)
         self.flash.msg = trackname + " has been charted and scrobbled to Last.FM, and should show up below."
-      except urlfetch.DownloadError:
+      except:
+        # just catch all errors with the last.fm; it's not that important that
+        # everything get scrobbled exactly; plus this is like the #1 source
+        # of errors in charting songs.
         self.flash.msg = trackname + " has been charted, but was not scrobbled to Last.FM"
       self.redirect("/dj/chartsong/")
       return
