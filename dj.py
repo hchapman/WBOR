@@ -193,18 +193,18 @@ class ChartSong(webapp.RequestHandler):
     except AttributeError:
       pass 
     posts = models.getLastPosts(2)
-    playlist_html = memcache.get("playlist_html_" + str(self.sess['program'].key()))
+    memcache_key = "playlist_html_" + str(self.sess['program'].key())
+    playlist_html = memcache.get(memcache_key)
     if not playlist_html:
       playlist_html = template.render("dj_chartsong_playlist_div.html",
         {'playlist': models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))}
       )
-      memcache_key = "playlist_html_" + str(self.sess['program'].key())
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
     last_psa = models.getLastPsa()
     new_albums = None
     new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []
-    if new_song_div_html is None:
+    if not new_song_div_html:
       new_albums = models.getNewAlbums(byArtist=True)
       if new_albums:
         album_songs = [models.Song.get(k) for k in new_albums[0].songList]
@@ -233,8 +233,8 @@ class ChartSong(webapp.RequestHandler):
     program = self.sess["program"]
     if self.request.get("submit") == "Chart Song":
       # Charting a song, not a PSA or ID
-      track_artist = self.request.get("artist")
-      trackname = self.request.get("trackname")
+      track_artist = self.request.get("artist").encode("latin1", 'replace')
+      trackname = self.request.get("trackname").encode("latin1", 'replace')
       isNew = self.request.get("isNew")
       if isNew:
         # if it's "new", the album should be in the datastore already with
@@ -266,13 +266,20 @@ class ChartSong(webapp.RequestHandler):
           play_date=datetime.datetime.now(), isNew=False, artist=track_artist)
       # whether or not the song is new, save it.
       play.put()
-      memcache_key = "playlist_html_" + str(self.sess['program'].key())
+      memcache_key = "playlist_html_" + str(program.key())
       playlist_html = memcache.get(memcache_key)
       if not playlist_html:
         playlist_html = template.render("dj_chartsong_playlist_div.html",
           {'playlist': models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))}
         )
-      playlist_html = ("<li id='%s'>%s &mdash; %s <a href='#'>[x]</a></li>\n" % (str(play.key()), play.song.title, play.song.artist)) + playlist_html
+      playlist_html = "<li id='" + \
+        str(play.key()) + \
+        "'>" + \
+        play.song.title + \
+        " &mdash; " + \
+        play.song.artist + \
+        " <a href='#'>[x]</a></li>\n" + \
+        playlist_html
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
       if not models.getArtist(track_artist):
         # this is for autocomplete purposes. if the artist hasn't been charted
@@ -985,7 +992,7 @@ class ManageAlbums(webapp.RequestHandler):
   def get(self):
     new_album_list = None
     new_album_html = memcache.get("manage_new_albums_html")
-    if new_album_html is None:
+    if not new_album_html:
       new_album_list = models.getNewAlbums()
       new_album_html = template.render(
         getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
