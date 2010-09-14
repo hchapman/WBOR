@@ -13,6 +13,11 @@
                     <td><label for='slug'>Slug: </label></td>
                     <td><input id='slug' type='text' name='slug' value='{{ program.slug|escape }}' /></td>
                 </tr>
+				<tr>
+				  <td><label for='current'>Show is current: </label></td>
+				  <td><input id='current' type='checkbox' name='current' value='1' 
+							 {% if program.current %}checked='checked'{% endif %} /></td>
+				</tr>
                 <tr>
                     <td colspan='2'><label for='desc'>Description: </label></td>
                 </tr>
@@ -45,19 +50,34 @@
                 {% else %}
                 <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' />
                 {% endif %}
-                {{ pair.dj.fullname }} ({{ pair.dj.email }})</label></li>
+                {{ pair.dj.fullname }} ({{ pair.dj.email }})</label>
             {% endfor %}
         </ul>
     </div>
     {% endif %}
     </form>
 
-    {% if program_list %}
+    {% if current_programs %}
     <div id='current-programs'>
         <h4>Current Programs</h4>
         <ul>
-            {% for p in program_list %}
-            <li><a href='/dj/programs/{{ p.key }}'>{{ p.title }}</a></li>
+            {% for p in current_programs %}
+            <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
+			{% if p.dj_list %}<ul style="margin-bottom:0;">
+			  {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
+			</ul>{% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+	{% endif %}{% if legacy_programs %}
+    <div id='legacy-programs'>
+        <h4>Old Programs</h4>
+        <ul>
+            {% for p in legacy_programs %}
+            <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
+			{% if p.dj_list %}<ul style="margin-bottom:0;">
+			  {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
+			</ul>{% endif %}
             {% endfor %}
         </ul>
     </div>

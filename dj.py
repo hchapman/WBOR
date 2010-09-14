@@ -564,8 +564,18 @@ class ManagePrograms(webapp.RequestHandler):
   @authorization_required("Manage Programs")
   def get(self):
     program_list = models.Program.all().order("title")
+
     template_values = {
-      'program_list': program_list,
+      'current_programs': tuple({"prog" : program,
+                                 "dj_list" : (tuple(models.Dj.get(dj) 
+                                                    for dj in program.dj_list) if program.dj_list
+                                              else None)}
+                                for program in program_list if program.current),
+      'legacy_programs': tuple({"prog" : program,
+                                "dj_list" : (tuple(models.Dj.get(dj) 
+                                                   for dj in program.dj_list) if program.dj_list
+                                              else None)}
+                               for program in program_list if not program.current),
       'session': self.sess,
       'flash': self.flash,
       'posts': models.getLastPosts(3),
@@ -580,13 +590,26 @@ class ManagePrograms(webapp.RequestHandler):
       slug = self.request.get("slug")
       program = models.getProgramBySlug(slug)
       if program:
-        self.flash.msg = "Program \"" + program.title + "\" already exists with slug \"" + slug + "\"."
+        self.flash.msg = ("Program \"%s\" already exists with slug %s."%
+                          (program.title, slug))
         self.redirect("/dj/programs/")
         return
-      program = models.Program(title=self.request.get("title"), slug=self.request.get("slug"),
-        desc=self.request.get("desc"), dj_list=[], page_html=self.request.get("page_html"))
+
+      # Set up the program entry, and then put it in the DB
+      program = models.Program(title=self.request.get("title"), 
+                               slug=self.request.get("slug"),
+                               desc=self.request.get("desc"), 
+                               dj_list=[], 
+                               page_html=self.request.get("page_html"),
+                               current=bool(self.request.get("current")))
       program.put()
-      self.flash.msg = program.title + " was successfully created as a program.  Click <a href='/dj/programs/" + str(program.key()) + "'>here</a> to edit it (you probably want to do this as there are no DJs on it currently)."
+
+      self.flash.msg = ("%s was successfully created associated a program. "
+                        "Click <a href='/dj/programs/%s'>here</a> "
+                        "to edit it (you probably want to do "
+                        "this as there are no DJs on it currently)."% 
+                        (program.title, str(program.key())))
+
     self.redirect('/dj/programs/')
   
 
@@ -619,6 +642,7 @@ class EditProgram(webapp.RequestHandler):
       program.desc = self.request.get("desc")
       program.page_html = self.request.get("page_html")
       program.dj_list = [models.db.Key(k) for k in self.request.get("dj_list", allow_multiple=True)]
+      program.current = bool(self.request.get("current"))
       program.put()
       self.flash.msg = program.title + " successfully edited."
     elif self.request.get("submit") == "Delete Program":

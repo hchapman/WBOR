@@ -20,6 +20,7 @@ class Program(db.Model):
   page_html = db.TextProperty()
   top_artists = db.StringListProperty()
   top_playcounts = db.ListProperty(int)
+  current = db.BooleanProperty(default=False)
 
 class ArtistName(db.Model):
   artist_name = db.StringProperty()
