@@ -32,6 +32,7 @@ from google.appengine.ext.webapp import util
 from django.utils import simplejson
 from google.appengine.api import memcache
 from google.appengine.runtime import DeadlineExceededError
+from passwd_crypto import hash_password
 
 def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
@@ -135,9 +136,12 @@ class Setup(webapp.RequestHandler):
         permission.put()
     seth = models.getDjByEmail("seth.glickman@gmail.com")
     if not seth:
-      seth = models.Dj(fullname='Seth Glickman', lowername='seth glickman', email='seth.glickman@gmail.com', username='seth', password_hash='testme')
+      seth = models.Dj(fullname='Seth Glickman', lowername='seth glickman', 
+                       email='seth.glickman@gmail.com', username='seth', 
+                       password_hash=hash_password('testme'))
       seth.put()
-      program = models.Program(title='Seth\'s Show', slug='seth', desc='This is the show where Seth plays his favorite music.',
+      program = models.Program(title='Seth\'s Show', slug='seth', 
+                               desc='This is the show where Seth plays his favorite music.',
         dj_list=[seth.key()], page_html='a <b>BOLD</b> show!')
       program.put()
     for l in labels:

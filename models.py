@@ -4,6 +4,7 @@
 from google.appengine.ext import db
 import datetime
 from google.appengine.api import memcache
+from passwd_crypto import hash_password, check_password
 
 class Dj(db.Model):
   fullname = db.StringProperty()
@@ -106,9 +107,12 @@ def getDjByUsername(username):
     return None
 
 def djLogin(username, password):
-  d = Dj.all().filter("username =", username).filter("password_hash =", password).fetch(1)
+  d = Dj.all().filter("username =", username).fetch(1)
   if len(d) > 0:
-    return d[0]
+    if check_password(d[0].password_hash, password):
+      return d[0]
+    else:
+      return None
   else:
     return None
 

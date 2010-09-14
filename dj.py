@@ -32,6 +32,7 @@ from google.appengine.ext import webapp
 from google.appengine.ext.webapp import util
 from django.utils import simplejson
 from google.appengine.api import memcache
+from passwd_crypto import hash_password
 
 # This is a decoration for making sure that the user
 # is logged in before they view the page.
@@ -479,6 +480,10 @@ class ManageDJs(webapp.RequestHandler):
         self.flash.msg = "Please enter a valid password."
         self.redirect("/dj/djs")
         return
+      if not self.request.get("password") == self.request.get("confirm"):
+        self.flash.msg = "Passwords do not match."
+        self.redirect("/dj/djs")
+        return
       if "@" not in email:
         email = email + "@bowdoin.edu"
       if email[-1] == "@":
@@ -498,7 +503,7 @@ class ManageDJs(webapp.RequestHandler):
         lowername=self.request.get("fullname").lower(),
         email=email,
         username=username,
-        password_hash=self.request.get("password"))
+        password_hash=hash_password(self.request.get("password")))
       dj.put()
       self.flash.msg = dj.fullname + " successfully added as a DJ."
       self.redirect("/dj/djs/")
@@ -538,7 +543,13 @@ class EditDJ(webapp.RequestHandler):
       if "@" not in dj.email:
         dj.email = dj.email + "@bowdoin.edu"
       dj.username = self.request.get("username")
-      dj.password_hash = self.request.get("password")
+      if self.request.get("password"):
+        if not self.request.get("password") == self.request.get("confirm"):
+          self.flash.msg = "New passwords do not match."
+          self.redirect("/dj/djs")
+          return
+        else:
+          dj.password_hash = hash_password(self.request.get("password"))
       dj.put()
       self.flash.msg = dj.fullname + " has been successfully edited."
     elif self.request.get("submit") == "Delete DJ":
@@ -677,7 +688,7 @@ class MySelf(webapp.RequestHandler):
       self.flash.msg = errors
       self.redirect("/dj/myself")
       return
-    dj.password_hash = self.request.get("password")
+    dj.password_hash = hash_password(self.request.get("password"))
     dj.put()
     self.flash.msg = "You have successfully updated your profile."
     self.redirect("/dj/")
