@@ -1,32 +1,36 @@
 {% extends "base.html" %}
 
 {% block left_column %}
-    <div id='edit-dj'>
+    <div id='edit-dj' align='center'>
         <h4>{% if dj %}Edit{% else %}Add{% endif %} DJ</h4>
-        <form action='/dj/djs/{% if dj %}{{ dj.key }}/{% endif %}' method='post'>
-            <table>
-                <tr>
-                    <td><label for='email'>Email: </label></td>
-                    <td><input id='email' type='text' name='email' value='{{ dj.email|escape }}'/></td>
-                </tr>
-                <tr>
-                    <td><label for='fullname'>Full Name: </label></td>
-                    <td><input id='fullname' type='text' name='fullname' value='{{ dj.fullname|escape }}' /></td>
-                </tr>
-                <tr>
-                    <td><label for='username'>Username: </label></td>
-                    <td><input id='username' name='username' type='text' value='{{ dj.username|escape }}'/></td>
-                </tr>
-                <tr>
-                    <td><label for='password'>Password: </label></td>
-                    <td><input id='password' name='password' type='text' value='{{ dj.password_hash|escape }}'/></td>
-                </tr>
-            </table>
-            <input type='submit' name='submit' value="{% if dj %}Edit{% else %}Add{% endif %} DJ" />
-            {% if dj %}
-            <input id='delete-button' type='submit' name='submit' value="Delete DJ" />
-            {% endif %}
-        </form>
+		<div id='edit-dj-form'>
+          <form action='/dj/djs/{% if dj %}{{ dj.key }}/{% endif %}' method='post'>
+			
+			<label for='email'>Email: </label>
+			<input id='email' type='text' name='email' value='{{ dj.email|escape }}'/><br />
+			
+			
+			<label for='fullname'>Full Name: </label>
+			<input id='fullname' type='text' name='fullname' value='{{ dj.fullname|escape }}' /><br />
+			
+			
+			<label for='username'>Username: </label>
+			<input id='username' name='username' type='text' value='{{ dj.username|escape }}'/><br />
+			
+			
+			<label for='password'>New Password: </label>
+			<input id='password' name='password' type='password'/><br />
+			
+			
+			<label for='confirm'>Confirm New Password: </label>
+			<input id='confirm' name='confirm' type='password'/><br />
+
+			<input type='submit' name='submit' value="{% if dj %}Edit{% else %}Add{% endif %} DJ" />
+			{% if dj %}
+			<input id='delete-button' type='submit' name='submit' value="Delete DJ" />
+			{% endif %}
+          </form>
+		</div>
     </div>
     <div id='current-djs'>
         <h4>Current DJs</h4>

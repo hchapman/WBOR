@@ -262,6 +262,21 @@ div.contact a {
     text-decoration: none;
 }
 
+div #edit-dj {
+	align: center;
+}
+
+div #edit-dj-form {
+	width: 200px;
+	text-align: left;
+}
+
+#edit-dj-form form input {
+	width: 100%;
+}
+
+label { display: block; }
+
 #charts {
 }
 
