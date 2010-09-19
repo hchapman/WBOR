@@ -44,8 +44,8 @@ class MainPage(webapp.RequestHandler):
     # album_list = models.getNewAlbums(50)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
-    song_num = 10
-    album_num = 10
+    song_num = 30
+    album_num = 30
     top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
     posts = models.getLastPosts(3)
     events = models.getEventsAfter(datetime.datetime.now() - datetime.timedelta(days=1), 3)
