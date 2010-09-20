@@ -328,6 +328,13 @@ div.contact a {
     color: white;
 }
 
+ol.charttable {
+    background-color: #66F;
+    width: ;
+    padding: 5px;
+    color: white;
+}
+
 #showdeschidden {
     display: none;
     text-align: justify;
