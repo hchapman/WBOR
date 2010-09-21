@@ -362,6 +362,23 @@ table.charttable, ol.charttable {
     color: white;
 }
 
+#topsongs table, #topalbums table {
+	width: 100%;
+}
+
+#topsongs thead tr, #topalbums thead tr {
+	background-color: #AAF;
+}
+
+#topsongs tr, #topalbums tr {
+	border-bottom: 1px solid #FFF;
+}
+
+#topsongs th, #topalbums th {
+	text-align: left;
+	padding: 10px 5px 10px;
+}
+
 #showdeschidden {
     display: none;
     text-align: justify;
@@ -485,6 +502,10 @@ table.charttable, ol.charttable {
 
 #psas td, #ids td, #topsongs td, #topalbums td {
   padding: 5px;
+}
+
+#topsongs tbody tr, #topalbums tbody tr {
+	background-color: #DDF;
 }
 
 #psas tbody tr:hover, #ids tbody tr:hover, #topsongs tbody tr:hover, #topalbums tbody tr:hover {
