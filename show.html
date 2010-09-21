@@ -6,6 +6,15 @@
   {{ program.page_html }}
 </div>
 
+<div id='show-djs'>
+  <h4>DJs</h4>
+  <ul>
+	{% for dj in djs %}
+	<li>{{ dj.fullname }}
+	{% endfor %}
+  </ul>
+</div>
+
 <div id='charts'>
   <h4>Show Stats</h4>
   <div class='chart-toggler chart-selected'>

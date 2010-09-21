@@ -36,7 +36,7 @@ acronym {
 }
 
 #navigation {
-    width: 1058px;
+    width: 1062px;
     //width: 1060px;
     margin: 0;
     position: absolute;
@@ -90,7 +90,7 @@ acronym {
     display: inline-block;
     border-top: 2px solid black;
     border-bottom: 2px solid black;
-    width: 130px;
+    width: 115px;
     margin-left: 0;
     background-color: #A7A0F7;
     height: 100%;
@@ -321,14 +321,26 @@ div.contact a {
   border: 2px solid black;
 }
 
-.charttable td {
-    background-color: #66F;
-    width: 50%;
-    padding: 5px;
-    color: white;
+.charttable tr.headers {
+	background-color: #66F;
+	padding: 5px;
+	color: white;
+	align: left;
 }
 
-ol.charttable {
+.charttable tr.headers th {
+	text-align: left;
+}
+
+.charttable tr.dark-row {
+	background-color: #55E;
+}
+
+.charttable tr.light-row {
+	backgroun-color: #66F;
+}
+
+table.charttable, ol.charttable {
     background-color: #66F;
     width: ;
     padding: 5px;

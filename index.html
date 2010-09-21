@@ -51,32 +51,28 @@
 </div>
 
 <div id='charts'>
-    <h4>CHARTS</h4>
+    <h4>Top 10s</h4>
     <div class='chart-toggler chart-selected'>
     Songs
     </div>
     <div class='chart-toggler'>
         Albums
     </div>
-    <table class='charttable' id='songtable'>
+    <ol class='charttable' id='songtable'>
         {% for song in top_songs %}
-        <tr>
-            <td>{{ song.0 }}: {{ song.1 }}, {{ song.2 }}, <i>{{ song.3 }}</i></td>
-        </tr>
+        <li>{{ song.0 }}: {{ song.1 }}, {{ song.2 }}, <i>{{ song.3 }}</i>
         {% endfor %}
-    </table>
+    </ol>
     
-    <table class='charttable' id='albumtable'>
+    <ol class='charttable' id='albumtable'>
         {% for album in top_albums %}
-        <tr>
-            <td>{{ album.0 }}: <i>{{ album.1 }}</i>, {{ album.2 }}</td>
-        </tr>
+        <li>{{ album.0 }}: <i>{{ album.1 }}</i>, {{ album.2 }}
         {% endfor %}
-    </table>
+    </ol>
 </div>
 
 <div id='newalbums'>
-    <h4>ON NEW SHELF</h4>
+    <h4>On The New Shelf</h4>
     <ul id='albumlist'>
         {% for album in album_list %}
         <li><a href='/albums/{{ album.key }}/l' title='{{ album.title|escape }} - {{ album.artist|escape }}'><img src='/albums/{{ album.key }}/s' /></a></li>

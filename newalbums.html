@@ -1,4 +1,4 @@
-<h4>ON NEW SHELF</h4>
+<h4>On the New Shelf</h4>
 <ul id='albumlist'>
     {% for album in album_list %}
     <li><a href='/albums/{{ album.key }}/l' title='{{ album.title|escape }} - {{ album.artist|escape }}'><img src='/albums/{{ album.key }}/s' /></a></li>

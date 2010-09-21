@@ -158,14 +158,14 @@
       {% endif %}
     </div>
     {% block top_row %}{% endblock %}
-    <div class='grid_6 left'><!-- Left-hand column on front page -->
+    <div class='grid_7 left'><!-- Left-hand column on front page -->
         {% block left_column %}
 
         {% endblock %}
     </div><!-- End left-hand column -->
     
     <!-- Right-hand column on front page -->
-    <div class='grid_6 right'>
+    <div class='grid_5 right'>
         {% block right_column %}
 
         {% endblock %}
@@ -185,7 +185,8 @@
             <li {% if events_selected %}class='selected'{% endif %}><a href='/events'>Events</a></li>
             <li {% if schedule_selected %}class='selected'{% endif %}><a href='/schedule'>Schedule</a></li>
             <li {% if playlists_selected %}class='selected'{% endif %}><a href='/playlists'>Playlists</a></li>
-            <li {% if fun_selected %}class='selected'{% endif %}><a href='/fun'>Fun</a></li>
+            <li {% if charts_selected %}class='selected'{% endif %}><a href='/charts'>Charts</a></li>
+			<li {% if fun_selected %}class='selected'{% endif %}><a href='/charts'>Fun</a></li>
             <li {% if history_selected %}class='selected'{% endif %}><a href='/history'>History</a></li>
             <li {% if contact_selected %}class='selected'{% endif %}><a href='/contact'>Contact</a></li>
             <li><a href='/dj/login'>DJ Login</a></li>

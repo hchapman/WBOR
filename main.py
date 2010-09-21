@@ -44,8 +44,8 @@ class MainPage(webapp.RequestHandler):
     # album_list = models.getNewAlbums(50)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
-    song_num = 60
-    album_num = 60
+    song_num = 10
+    album_num = 10
     top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
     posts = models.getLastPosts(3)
     events = models.getEventsAfter(datetime.datetime.now() - datetime.timedelta(days=1), 3)
@@ -319,7 +319,21 @@ class FunPage(webapp.RequestHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("fun.html"), template_values))
-  
+
+class ChartsPage(webapp.RequestHandler):
+  def get(self):
+    start = datetime.datetime.now() - datetime.timedelta(weeks=1)
+    end = datetime.datetime.now()
+    song_num = 60
+    album_num = 60
+    songs, albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
+    template_values = {
+      'songs': songs,
+      'albums': albums,
+      'start': start,
+      'end': end,
+      }
+    self.response.out.write(template.render(getPath("charts.html"), template_values))
 
 class HistoryPage(webapp.RequestHandler):
   def get(self):
@@ -371,6 +385,9 @@ class ProgramPage(webapp.RequestHandler):
       'session': self.sess,
       'flash': self.flash,
       'program': program,
+      'djs' :  (tuple(models.Dj.get(dj) 
+                      for dj in program.dj_list) if program.dj_list
+                else None),
       'posts': posts,
     }
     self.response.out.write(template.render(getPath("show.html"), template_values))
@@ -406,6 +423,7 @@ def real_main():
       ('/schedule/?', SchedulePage),
       ('/playlists/?', PlaylistPage),
       ('/fun/?', FunPage),
+      ('/charts/?', ChartsPage),
       ('/history/?', HistoryPage),
       ('/contact/?', ContactPage),
       ('/events/?', EventPage),
