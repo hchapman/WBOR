@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Charts{% endblock %}
+
+{% block main_content %}
+<div class='grid_9 left chart-col'>
+
+<div id='topsongs'>
+    <h4>Top {{ songs|length }} Songs</h4>
+    {% if songs %}
+    <table>
+      <thead>
+        <tr>
+          <td>Count</td>
+          <td>Song Title</td>
+          <td>Artist</td>
+          <td>Album</td>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in songs %}
+        <tr>
+          {% for entry in s %}
+          <td>{{ entry }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <center><b>No plays were found.  Is this date in the future or in the distant past?</b></center>
+    {% endif %}
+</div>
+
+<div id='topalbums'>
+  <h4>Top {{ albums|length }} Albums</h4>
+  {% if albums %}
+  <table>
+    <thead>
+      <tr>
+        <td>Count</td>
+        <td>Album</td>
+        <td>Artist</td>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in albums %}
+      <tr>
+        {% for entry in a %}
+        <td>{{ entry }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <center><b>No plays were found. Is this date in the future or in the distant past?</b></center>
+  {% endif %}
+</div>
+
+</div>
+<div class='grid_3 right chart-opts-col'>
+
+<div>
+    <a href='/dj/'>Return to main index</a>
+</div>
+<div>
+  <h4>{{ start|date }} through {{ end|date }}</h4>
+  
+  <p>Select a different week below.</p>
+  <form method='post' action='/dj/charts/'>
+    <label>Start date: <input type='text' class='datepicker' name='start_date' id='start_date'></label>
+    <br />
+	<label>End date: <input type='text' class='datepicker' name='start_date' id='start_date'></label>
+	<br />
+    <input type='submit' name='submit' value="Submit">
+  </form>
+</div>
+
+</div>
+{% endblock %}
