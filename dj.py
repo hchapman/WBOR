@@ -130,7 +130,7 @@ class Login(webapp.RequestHandler):
     self.sess["dj"] = dj
     programList = models.getProgramsByDj(dj)
     if not programList:
-      self.flash.msg = "You have successfully logged in, but you have no associated programs.  You will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:seth.glickman@gmail.com'>Seth</a> immediately."
+      self.flash.msg = "You have successfully logged in, but you have no associated programs.  You will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:hchaps@gmail.com'>Harrison</a> immediately."
       # self.sess['program'] = None
       self.redirect('/dj/')
       return
