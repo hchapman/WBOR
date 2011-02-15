@@ -44,11 +44,13 @@ class MainPage(webapp.RequestHandler):
     # album_list = models.getNewAlbums(50)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
-    song_num = 10
-    album_num = 10
-    top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
+    song_num = 60
+    album_num = 60
+    top_songs, top_albums = models.getTopSongsAndAlbums(start, end, 
+                                                        song_num, album_num)
     posts = models.getLastPosts(3)
-    events = models.getEventsAfter(datetime.datetime.now() - datetime.timedelta(days=1), 3)
+    events = models.getEventsAfter(datetime.datetime.now() - 
+                                   datetime.timedelta(days=1), 3)
     template_values = {
       'flash': self.flash,
       'session': self.sess,
@@ -57,27 +59,28 @@ class MainPage(webapp.RequestHandler):
       'top_albums': top_albums,
       'posts': posts,
       'events': events,
-    }
-    self.response.out.write(template.render(getPath("index.html"), template_values))
+      }
+    self.response.out.write(template.render(getPath("index.html"), 
+                                            template_values))
 
 class DjComplete(webapp.RequestHandler):
   def get(self):
     q = self.request.get("query")
     djs = models.djAutocomplete(q)
     self.response.out.write(simplejson.dumps({
-      'query': q,
-      'suggestions': [dj.fullname for dj in djs],
-      'data': [str(dj.key()) for dj in djs],
-    }))
+          'query': q,
+          'suggestions': [dj.fullname for dj in djs],
+          'data': [str(dj.key()) for dj in djs],
+          }))
 
 class ArtistComplete(webapp.RequestHandler):
   def get(self):
     q = self.request.get("query")
     artists = models.artistAutocomplete(q)
     self.response.out.write(simplejson.dumps({
-      'query': q,
-      'suggestions': [ar.artist_name for ar in artists],      
-    }))
+          'query': q,
+          'suggestions': [ar.artist_name for ar in artists],      
+          }))
 
 class AlbumTable(webapp.RequestHandler):
   def post(self):
@@ -86,15 +89,15 @@ class AlbumTable(webapp.RequestHandler):
       page = int(page)
     except ValueError:
       self.response.out.write(simplejson.dumps({
-        'err': "Unable to parse requested page."
-      }))
+            'err': "Unable to parse requested page."
+            }))
       return
     album_table_html = memcache.get("album_table_html")
     if album_table_html is None:
       albums = models.getNewAlbums(100, page)
       template_values = {
         'album_list': albums,
-      }
+        }
       album_table_html = template.render(getPath("newalbums.html"), template_values)
       memcache.set("album_table_html", album_table_html)
     self.response.out.write(album_table_html)
@@ -110,14 +113,14 @@ class AlbumInfo(webapp.RequestHandler):
     # datetime.datetime.now().strftime("%Y-%m-%dT%H:%M%:%SZ")
     items = amazon.productSearch(keywords)
     json_data = {'items': [{
-      'small_pic': i.getElementsByTagName("SmallImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
-      'large_pic': i.getElementsByTagName("LargeImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
-      'medium_pic': i.getElementsByTagName("MediumImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
-      'artist': i.getElementsByTagName("Artist")[0].firstChild.nodeValue,
-      'title': i.getElementsByTagName("Title")[0].firstChild.nodeValue,
-      'asin': i.getElementsByTagName("ASIN")[0].firstChild.nodeValue,
-      'tracks': [t.firstChild.nodeValue for t in i.getElementsByTagName("Track")],
-    } for i in items]}
+          'small_pic': i.getElementsByTagName("SmallImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
+          'large_pic': i.getElementsByTagName("LargeImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
+          'medium_pic': i.getElementsByTagName("MediumImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
+          'artist': i.getElementsByTagName("Artist")[0].firstChild.nodeValue,
+          'title': i.getElementsByTagName("Title")[0].firstChild.nodeValue,
+          'asin': i.getElementsByTagName("ASIN")[0].firstChild.nodeValue,
+          'tracks': [t.firstChild.nodeValue for t in i.getElementsByTagName("Track")],
+          } for i in items]}
     updatehtml = template.render(getPath("addalbumupdate.html"), json_data)
     json_data['updatehtml'] = updatehtml
     self.response.headers['Content-Type'] = 'text/json'
@@ -128,7 +131,7 @@ class Setup(webapp.RequestHandler):
   def get(self):
     self.flash = flash.Flash()
     labels = ["Manage DJs", "Manage Programs", "Manage Permissions", 
-      "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
+              "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
     for l in labels:
       if not models.getPermission(l):
         permission = models.Permission(title=l, dj_list=[])
@@ -138,7 +141,7 @@ class Setup(webapp.RequestHandler):
       seth = models.Dj(fullname='Seth Glickman', lowername='seth glickman', email='seth.glickman@gmail.com', username='seth', password_hash='testme')
       seth.put()
       program = models.Program(title='Seth\'s Show', slug='seth', desc='This is the show where Seth plays his favorite music.',
-        dj_list=[seth.key()], page_html='a <b>BOLD</b> show!')
+                               dj_list=[seth.key()], page_html='a <b>BOLD</b> show!')
       program.put()
     for l in labels:
       permission = models.getPermission(l)
@@ -167,7 +170,7 @@ class Setup(webapp.RequestHandler):
       "Benji Hughes",
       "Club 8",
       "Crayon Fields",
-    ]
+      ]
     for a in artists:
       if not models.ArtistName.all().filter("artist_name =", a).fetch(1):
         ar = models.ArtistName(artist_name=a, lowercase_name=a.lower(), search_names=models.artistSearchName(a).split())
@@ -188,7 +191,7 @@ class BlogDisplay(webapp.RequestHandler):
       return
     template_values = {
       'post': post,
-    }
+      }
     self.response.out.write(template.render("blog_post.html", template_values))
 
 class AlbumDisplay(webapp.RequestHandler):
@@ -214,13 +217,13 @@ class UpdateInfo(webapp.RequestHandler):
     recent_songs = models.getLastNPlays(3)
     self.response.headers["Content-Type"] = "text/json"
     self.response.out.write(simplejson.dumps({
-      'song_string': song_string,
-      'program_title': program.title,
-      'program_desc': program.desc,
-      'program_slug': program.slug,
-      'top_played': "Top artists: " + ", ".join([a for a in program.top_artists[:3]]),
-      'recent_songs_html': template.render(getPath("recent_songs.html"), {'plays': recent_songs}),
-    }))
+          'song_string': song_string,
+          'program_title': program.title,
+          'program_desc': program.desc,
+          'program_slug': program.slug,
+          'top_played': "Top artists: " + ", ".join([a for a in program.top_artists[:3]]),
+          'recent_songs_html': template.render(getPath("recent_songs.html"), {'plays': recent_songs}),
+          }))
 
 
 class SongList(webapp.RequestHandler):
@@ -230,27 +233,27 @@ class SongList(webapp.RequestHandler):
     songlist_html = memcache.get("songlist_html_" + album_key)
     if songlist_html:
       self.response.out.write(simplejson.dumps({
-      'songListHtml': songlist_html,
-      'generated': 'memcache',
-      }))
+            'songListHtml': songlist_html,
+            'generated': 'memcache',
+            }))
       return
     album = models.Album.get(album_key)
     self.response.headers["Content-Type"] = "text/json"
     if not album:
       self.response.out.write(simplejson.dumps({
-        'err': "An error occurred and the specified album could not be found.  Please try again."
-      }))
+            'err': "An error occurred and the specified album could not be found.  Please try again."
+            }))
       return
     songlist_html = template.render(getPath("ajax_songlist.html"), {
-      'songList': [models.Song.get(k) for k in album.songList],
-    })
+        'songList': [models.Song.get(k) for k in album.songList],
+        })
     memcache.set("songlist_html_" + album_key, songlist_html)
     self.response.out.write(simplejson.dumps({
-      'songListHtml': template.render(getPath("ajax_songlist.html"), {
-        'songList': [models.Song.get(k) for k in album.songList],
-      }),
-      'generated': 'generated',
-    }))
+          'songListHtml': template.render(getPath("ajax_songlist.html"), {
+              'songList': [models.Song.get(k) for k in album.songList],
+              }),
+          'generated': 'generated',
+          }))
     
 
 
@@ -263,13 +266,15 @@ class EventPage(webapp.RequestHandler):
     template_values = {
       'events': events,
       'logged_in': self.sess.has_key('dj'),
-    }
-    self.response.out.write(template.render(getPath("events.html"), template_values))
+      }
+    self.response.out.write(template.render(getPath("events.html"), 
+                                            template_values))
 
 class SchedulePage(webapp.RequestHandler):
   def get(self):
     template_values = {}
-    self.response.out.write(template.render(getPath("schedule.html"), template_values))
+    self.response.out.write(template.render(getPath("schedule.html"), 
+                                            template_values))
 
 class PlaylistPage(webapp.RequestHandler):
   def get(self):
@@ -279,6 +284,7 @@ class PlaylistPage(webapp.RequestHandler):
     slug = self.request.get("show")
     datestring = self.request.get("programdate")
     selected_date = None
+
     if datestring:
       try:
         selected_date = datetime.datetime.strptime(datestring, "%m/%d/%Y")
@@ -287,6 +293,7 @@ class PlaylistPage(webapp.RequestHandler):
         self.flash.msg = "The date provided could not be parsed."
         self.redirect("/")
         return
+
     if slug:
       selected_program = models.getProgramBySlug(slug)
       if not selected_program:
@@ -295,15 +302,18 @@ class PlaylistPage(webapp.RequestHandler):
         return
       if selected_date:
         plays = models.getPlaysBetween(program=selected_program, 
-                                       after=selected_date - datetime.timedelta(hours=24), 
-                                       before=selected_date + datetime.timedelta(hours=24))
+                                       after=(selected_date - 
+                                              datetime.timedelta(hours=24)), 
+                                       before=(selected_date + 
+                                               datetime.timedelta(hours=24)))
       else:
         lastplay = models.getLastPlays(program=selected_program, num=1)
         if lastplay:
           lastplay = lastplay[0]
           last_date = lastplay.play_date
           plays = models.getPlaysBetween(program=selected_program,
-                                         after=last_date - datetime.timedelta(days=1))
+                                         after=(last_date - 
+                                                datetime.timedelta(days=1)))
         else:
           plays = []
     else:
@@ -313,12 +323,14 @@ class PlaylistPage(webapp.RequestHandler):
       'plays': plays,
       'shows': shows,
       }
-    self.response.out.write(template.render(getPath("playlist.html"), template_values))
+    self.response.out.write(template.render(getPath("playlist.html"), 
+                                            template_values))
 
 class FunPage(webapp.RequestHandler):
   def get(self):
     template_values = {}
-    self.response.out.write(template.render(getPath("fun.html"), template_values))
+    self.response.out.write(template.render(getPath("fun.html"), 
+                                            template_values))
 
 class ChartsPage(webapp.RequestHandler):
   def get(self):
@@ -389,7 +401,7 @@ class ProgramPage(webapp.RequestHandler):
                       for dj in program.dj_list) if program.dj_list
                 else None),
       'posts': posts,
-    }
+      }
     self.response.out.write(template.render(getPath("show.html"), template_values))
 
 
@@ -430,7 +442,7 @@ def real_main():
       ('/searchnames/?', ConvertArtistNames),
       ('/convertplays/?', ConvertPlays),
       ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
-                                       ],
+      ],
                                        debug=True)
   util.run_wsgi_app(application)
 

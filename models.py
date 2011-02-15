@@ -243,7 +243,8 @@ def getPostBySlug(post_date, slug):
     return None
 
 def getTopSongsAndAlbums(start, end, song_num, album_num):
-  cached = memcache.get("topsongsandalbums")
+  #cached = memcache.get("topsongsandalbums")
+  cached = None
   if cached:
     if cached[0]:
       return cached

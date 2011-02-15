@@ -13,6 +13,7 @@
   	  </label>
   	  <label for="show">Show:
   		<select id="show" name="show">
+		  <option value="">All shows</option>
   		  {% for s in shows %}<option value={{ s.slug }}>{{ s.title }}</option>{% endfor %}
   		</select>
   	  </label>
