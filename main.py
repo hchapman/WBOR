@@ -317,7 +317,16 @@ class PlaylistPage(webapp.RequestHandler):
         else:
           plays = []
     else:
-      plays = models.getLastNPlays(60)
+      if not selected_date:
+        lastplay = models.getLastPlay()
+        if lastplay:
+          selected_date = lastplay.play_date
+
+      if selected_date:
+        plays = models.getPlaysForDate(selected_date)
+      else:
+        plays = []
+      #plays = models.getLastNPlays(60)
     
     template_values = {
       'plays': plays,
