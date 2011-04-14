@@ -267,19 +267,9 @@ class ChartSong(webapp.RequestHandler):
       # whether or not the song is new, save it.
       play.put()
       memcache_key = "playlist_html_" + str(program.key())
-      playlist_html = memcache.get(memcache_key)
-      if not playlist_html:
-        playlist_html = template.render("dj_chartsong_playlist_div.html",
-          {'playlist': models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))}
-        )
-      playlist_html = "<li id='" + \
-        str(play.key()) + \
-        "'>" + \
-        play.song.title + \
-        " &mdash; " + \
-        play.song.artist + \
-        " <a href='#'>[x]</a></li>\n" + \
-        playlist_html
+      playlist_html = template.render("dj_chartsong_playlist_div.html",
+      {'playlist': models.getLastPlays(program=self.sess["program"], after=datetime.datetime.now() - datetime.timedelta(days=1))}
+      )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
       if not models.getArtist(track_artist):
         # this is for autocomplete purposes. if the artist hasn't been charted
