@@ -152,6 +152,20 @@ def getLastNPlays(num):
   plays = Play.all().order("-play_date").fetch(num)
   return plays
 
+def getPlaysForDate(date, program=None):
+  plays = Play.all().order("-play_date")
+  if program:
+    plays.filter("program =", program)
+
+  after = date - datetime.timedelta(hours=24) 
+  before = date + datetime.timedelta(hours=24)
+  plays = plays.filter("play_date >=", after)\
+      .filter("play_date <=", before)
+  plays = plays.order("-play_date").fetch(1000)
+
+  return plays
+    
+
 def getPlaysBetween(program, before=None, after=None):
   plays = Play.all().filter("program =", program)
   if after:
@@ -170,7 +184,7 @@ def getLastPlays(program, after=None, num=1000):
 
 def getLastPsa():
   psa = Psa.all().order("-play_date").fetch(1)
-  if len(psa) > 0:
+  if psa:
     return psa[0]
   else:
     return None
@@ -249,7 +263,8 @@ def getPostBySlug(post_date, slug):
     return None
 
 def getTopSongsAndAlbums(start, end, song_num, album_num):
-  cached = memcache.get("topsongsandalbums")
+  #cached = memcache.get("topsongsandalbums")
+  cached = None
   if cached:
     if cached[0]:
       return cached
