@@ -25,14 +25,17 @@ import time
 import pylast
 import amazon
 import logging
+import random
+import string
 from xml.dom import minidom
 from google.appengine.api import urlfetch
 from google.appengine.ext.webapp import template
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import util
+from google.appengine.api import mail
 from django.utils import simplejson
 from google.appengine.api import memcache
-from passwd_crypto import hash_password
+from passwd_crypto import hash_password, check_password
 
 # This is a decoration for making sure that the user
 # is logged in before they view the page.
@@ -131,7 +134,7 @@ class Login(webapp.RequestHandler):
     self.sess["dj"] = dj
     programList = models.getProgramsByDj(dj)
     if not programList:
-      self.flash.msg = "You have successfully logged in, but you have no associated programs.  You will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:hchaps@gmail.com'>Harrison</a> immediately."
+      self.flash.msg = "You have successfully logged in, but you have no associated programs.  You will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately."
       # self.sess['program'] = None
       self.redirect('/dj/')
       return
@@ -143,7 +146,114 @@ class Login(webapp.RequestHandler):
     else:
       self.redirect("/dj/selectprogram/")
       return
-  
+
+# Lets a DJ reset his password (to a randomly generated code)
+# get(): display a username entry form
+# post(): submit the username entry form and send an email to the dj.
+class RequestPassword(webapp.RequestHandler):
+  def get(self):
+    self.sess = sessions.Session()
+    self.flash = flash.Flash()
+    # If we have a reset_key, then try to reset the password.
+    reset_key = self.request.get("reset_key")
+    if reset_key:
+      username = self.request.get("username")
+      reset_dj = models.getDjByUsername(username)
+      if not reset_dj:
+        self.flash.msg = "There is no user by that name"
+        self.redirect("/dj/reset/")
+        return
+      if (not reset_dj.pw_reset_expire or
+          not reset_dj.pw_reset_hash or
+          datetime.datetime.now() > reset_dj.pw_reset_expire):
+        self.flash.msg = "This request is no longer valid, request a new reset."
+        self.redirect("/dj/reset")
+        return
+      if check_password(reset_dj.pw_reset_hash, reset_key):
+        self.sess["dj"] = reset_dj
+        programList = models.getProgramsByDj(reset_dj)
+        if not programList:
+          self.flash.msg = "You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nYou will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately."
+          # self.sess['program'] = None
+          self.redirect('/dj/myself')
+          return
+        elif len(programList) == 1:
+          self.sess['program'] = programList[0]
+          self.flash.msg = "You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nLogged in with program " + programList[0].title + "."
+          self.redirect("/dj/myself")
+          return
+        else:
+          self.flash.msg = "You have been temporarily logged in. Please change your password so that you may log in in the future!"
+          self.redirect("/dj/myself")
+          return
+      else:
+        self.flash.msg = "Error, this is not a valid password reset URL."
+        self.redirect("/dj/reset/")
+    else:
+      if self.sess.has_key("dj"):
+        self.redirect("/dj/")
+      template_values = {
+        'session': self.sess,
+        'flash': self.flash,
+        }
+      self.response.out.write(template.render(getPath("dj_reset_password.html"), 
+                                              template_values))
+
+  def post(self):
+    self.sess = sessions.Session()
+    self.flash = flash.Flash()
+    if self.request.get("submit") != "Request Reset":
+      self.flash.msg = "There was an error, please try again"
+      self.redirect("/dj/reset/")
+      return
+    
+    # Check that the user exists and information is valid
+    username = self.request.get("username")
+    email = self.request.get("email")
+    reset_dj = None
+    if username:
+      reset_dj = models.getDjByUsername(username)
+    if not reset_dj:
+      self.flash.msg = "Requested user does not exist"
+      self.redirect("/dj/reset/")
+      return
+    if "@" not in email:
+      email = email + "@bowdoin.edu"
+    if email[-1] == "@":
+      email = email + "bowdoin.edu"
+    if reset_dj.email.strip() != email.strip():
+      self.flash.msg = "Username and email do not match"
+      self.redirect("/dj/reset/")
+      return
+
+    # Generate a key to be sent to the user and add the
+    # new password request to the database
+    reset_key = ''.join(random.choice(string.ascii_letters +
+                                      string.digits) for x in range(20))
+    reset_url="http://www.wbor.org/dj/reset/?username=%s&reset_key=%s"%(
+      username,reset_key)
+    reset_dj.pw_reset_expire=datetime.datetime.now() + datetime.timedelta(2)
+    reset_dj.pw_reset_hash=hash_password(reset_key)
+    reset_dj.put()
+    mail.send_mail(
+      sender="WBOR.org Password Reset <do-not-reply@wbor-brunswick.appspotmail.com>",
+      to=email.strip(),
+      subject="Your password reset instructions",
+      body="""
+Hello!
+
+Someone has requested to reset your password for wbor.org. In order to do so,
+please click on the following link or paste it into your address bar:
+%s
+
+If you were not who requested this password reset, then please just ignore
+this email.
+
+Thank you!
+The WBOR.org Team
+"""%reset_url)
+    self.flash.msg = "Request successfully sent! Check your mail, and be sure to doublecheck the spam folder in case."
+    self.redirect("/")
 
 # Lets the user select which program they've logged in as
 class SelectProgram(webapp.RequestHandler):
@@ -1198,6 +1308,7 @@ def main():
       ('/dj/myself/?', MySelf),
       ('/dj/removeplay/?', RemovePlay),
       ('/dj/event/([^/]*)/?', EditEvent),
+      ('/dj/reset/?.*', RequestPassword),
                                        ],
                                        debug=True)
   util.run_wsgi_app(application)

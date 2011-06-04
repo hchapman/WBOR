@@ -12,6 +12,8 @@ class Dj(db.Model):
   email = db.StringProperty()
   username = db.StringProperty()
   password_hash = db.StringProperty()
+  pw_reset_expire = db.DateTimeProperty()
+  pw_reset_hash = db.StringProperty()
 
 class Program(db.Model):
   title = db.StringProperty()
