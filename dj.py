@@ -233,8 +233,8 @@ class RequestPassword(webapp.RequestHandler):
     # new password request to the database
     reset_key = ''.join(random.choice(string.ascii_letters +
                                       string.digits) for x in range(20))
-    reset_url="http://www.wbor.org/dj/reset/?username=%s&reset_key=%s"%(
-      username,reset_key)
+    reset_url="%s/dj/reset/?username=%s&reset_key=%s"%(
+      self.request.host_url,username,reset_key)
     reset_dj.pw_reset_expire=datetime.datetime.now() + datetime.timedelta(2)
     reset_dj.pw_reset_hash=hash_password(reset_key)
     reset_dj.put()
