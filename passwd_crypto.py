@@ -25,6 +25,7 @@ def hash_password(plain_password):
   # return the salt and hashed password, encoded in base64 and split with ","
   return salt.encode("base64").strip() + "," + hashed_password.encode("base64").strip()
 
+# Checks a password against its hash.
 def check_password(saved_password_entry, plain_password):
   salt, hashed_password = saved_password_entry.split(",")
   salt = salt.decode("base64")
