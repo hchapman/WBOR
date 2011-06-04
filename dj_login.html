@@ -3,6 +3,7 @@
 {% block top_row %}
     <div class='grid_12 top_row'>
           <div class='loginbox'>
+	    <h4>DJ Login</h4>
             <form method='post' action='/dj/login/'>
                 <table>
                     <tr>
@@ -15,7 +16,8 @@
                     </tr>
                 </table>
                 <input type='submit' name='submit' value="Log in">
-            </form>
+            </form><br/>
+	Having trouble logging in?<br/><a href="/dj/reset/">Request a password change.</a>
         </div>
     </div>
 {% endblock %}

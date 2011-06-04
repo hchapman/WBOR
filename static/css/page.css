@@ -530,6 +530,11 @@ form table td {
   margin-left: 300px;
   text-align: center;
 }
+.resetbox {
+  width: 400px;
+  margin-left: 250px;
+  text-align: center;
+}
 
 #voicewidget {
     padding-top: 20px;
@@ -546,4 +551,16 @@ form table td {
 #playlistsearch label {
     display: block;
     margin-bottom: 15px;
+}
+
+td.formlabel {
+    text-align: right;
+    width: 0%;
+}
+td.forminput {
+    text-align: left;
+    width: 100%;
+}
+td.forminput input{
+    width: 100%;
 }

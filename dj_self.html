@@ -22,7 +22,11 @@
                 </tr>
                 <tr>
                     <td><label for='password'>Password: </label></td>
-                    <td><input id='password' type='text' name='password' value='{{ dj.password_hash|escape }}' /></td>
+                    <td><input id='password' type='password' name='password' value='' /></td>
+                </tr>
+                <tr>
+                    <td><label for='password'>Confirm Password: </label></td>
+                    <td><input id='confirm' type='password' name='confirm' value=''  /></td>
                 </tr>
             </table>
             <input type='submit' name='submit' value="Save">

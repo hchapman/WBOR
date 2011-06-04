@@ -171,6 +171,9 @@ class RequestPassword(webapp.RequestHandler):
         return
       if check_password(reset_dj.pw_reset_hash, reset_key):
         self.sess["dj"] = reset_dj
+        reset_dj.pw_reset_expire = datetime.datetime.now()
+        reset_dj.pw_reset_hash = None
+        reset_dj.put()
         programList = models.getProgramsByDj(reset_dj)
         if not programList:
           self.flash.msg = "You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nYou will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately."
@@ -236,9 +239,9 @@ class RequestPassword(webapp.RequestHandler):
     reset_dj.pw_reset_hash=hash_password(reset_key)
     reset_dj.put()
     mail.send_mail(
-      sender="WBOR.org Password Reset <do-not-reply@wbor-brunswick.appspotmail.com>",
+      sender="WBOR <password-reset@wbor-brunswick.appspotmail.com>",
       to=email.strip(),
-      subject="Your password reset instructions",
+      subject="You've requested to reset your password!",
       body="""
 Hello!
 
@@ -647,6 +650,7 @@ class EditDJ(webapp.RequestHandler):
       self.flash.msg = "There was an error processing your request.  Please try again."
     elif self.request.get("submit") == "Edit DJ":
       dj.fullname = self.request.get("fullname")
+      dj.lowername = dj.fullname.lower()
       dj.email = self.request.get("email")
       if dj.email[-1] == "@":
         dj.email = dj.email + "bowdoin.edu"
@@ -789,6 +793,10 @@ class MySelf(webapp.RequestHandler):
     if duplicate_dj and str(duplicate_dj.key()) != str(dj.key()):
       errors += "The email specified is already in use by another DJ.  Please enter a unique one."
     dj.email = email
+    if dj.email[-1] == "@":
+      dj.email = dj.email + "bowdoin.edu"
+    if "@" not in dj.email:
+      dj.email = dj.email + "@bowdoin.edu"
     username = self.request.get("username")
     duplicate_dj = models.getDjByUsername(username)
     if duplicate_dj and str(duplicate_dj.key()) != str(dj.key()):
@@ -798,7 +806,13 @@ class MySelf(webapp.RequestHandler):
       self.flash.msg = errors
       self.redirect("/dj/myself")
       return
-    dj.password_hash = hash_password(self.request.get("password"))
+    if self.request.get("password"):
+      if not self.request.get("password") == self.request.get("confirm"):
+        self.flash.msg = "New passwords do not match."
+        self.redirect("/dj/myself")
+        return
+      else:
+        dj.password_hash = hash_password(self.request.get("password"))
     dj.put()
     self.flash.msg = "You have successfully updated your profile."
     self.redirect("/dj/")

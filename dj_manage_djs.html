@@ -18,11 +18,11 @@
 			<input id='username' name='username' type='text' value='{{ dj.username|escape }}'/><br />
 			
 			
-			<label for='password'>New Password: </label>
+			<label for='password'>Change Password: </label>
 			<input id='password' name='password' type='password'/><br />
 			
 			
-			<label for='confirm'>Confirm New Password: </label>
+			<label for='confirm'>Confirm Change Password: </label>
 			<input id='confirm' name='confirm' type='password'/><br />
 
 			<input type='submit' name='submit' value="{% if dj %}Edit{% else %}Add{% endif %} DJ" />
