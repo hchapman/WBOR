@@ -60,13 +60,13 @@
     </div>
     <ol class='charttable' id='songtable'>
         {% for song in top_songs %}
-        <li>{{ song.0 }}: {{ song.1 }}, {{ song.2 }}, <i>{{ song.3 }}</i>
+        <li>{{ song.1 }}, {{ song.2 }}, <i>{{ song.3 }}</i>
         {% endfor %}
     </ol>
     
     <ol class='charttable' id='albumtable'>
         {% for album in top_albums %}
-        <li>{{ album.0 }}: <i>{{ album.1 }}</i>, {{ album.2 }}
+        <li><i>{{ album.1 }}</i>, {{ album.2 }}
         {% endfor %}
     </ol>
 </div>

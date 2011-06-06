@@ -1253,7 +1253,9 @@ class ManageAlbums(webapp.RequestHandler):
     elif action == "manual":
       # The user has typed in the title, the artist, all track names,
       # and provided a cover image URL.
-      tracks = self.request.get_all("track")
+      tracks = self.request.get("track-list")
+      tracks = [line.strip() for line in tracks.splitlines() if
+                len(line.strip())>0]
       cover_url = self.request.get("cover_url")
       if not cover_url:
         cover_url = "/static/images/noalbumart.png"
