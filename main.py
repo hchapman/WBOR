@@ -366,6 +366,14 @@ class HistoryPage(webapp.RequestHandler):
 
 class ContactPage(webapp.RequestHandler):
   def get(self):
+    position_html = "<p class='contact_entry'><strong>%s</strong>: %s</p>"
+    dj_html = "<a href='mailto:%s'>%s</a>%s%s"
+    for position in ContactPosition.all():
+      ','.join(dj_html%(mgmt.dj.email,mgmt.dj.fullname,
+                        "**" if mgmt.abroad, else '',
+                        " (%s) "%mgmt.phone if mgmt.phone else '')
+               for mgmt in position.mgmt_list)
+        
     template_values = {}
     self.response.out.write(template.render(getPath("contact.html"), template_values))
 

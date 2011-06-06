@@ -15,6 +15,11 @@ class Dj(db.Model):
   pw_reset_expire = db.DateTimeProperty()
   pw_reset_hash = db.StringProperty()
 
+class Mgmt(db.Model):
+  dj = db.ReferenceProperty(Dj)
+  phone = db.StringProperty()
+  abroad = db.BooleanProperty()
+
 class Program(db.Model):
   title = db.StringProperty()
   slug = db.StringProperty()
@@ -80,6 +85,10 @@ class Event(db.Model):
   event_date = db.DateTimeProperty()
   desc = db.TextProperty()
   url = db.StringProperty()
+
+class ContactPosition(db.Model):
+  title = db.StringProperty()
+  mgmt_list = db.ListProperty(db.Mgmt)
 
 def getEventsAfter(start, num=1000):
   return Event.all().filter("event_date >=", start).order("event_date").fetch(num)
