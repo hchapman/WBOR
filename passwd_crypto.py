@@ -27,7 +27,10 @@ def hash_password(plain_password):
 
 # Checks a password against its hash.
 def check_password(saved_password_entry, plain_password):
-  salt, hashed_password = saved_password_entry.split(",")
+  try: 
+    salt, hashed_password = saved_password_entry.split(",")
+  except e:
+    return False
   salt = salt.decode("base64")
   hashed_password = hashed_password.decode("base64")
 
