@@ -143,10 +143,18 @@ class Setup(webapp.RequestHandler):
                        email='seth.glickman@gmail.com', username='seth', 
                        password_hash=hash_password('testme'))
       seth.put()
-      program = models.Program(title='Seth\'s Show', slug='seth', 
-                               desc='This is the show where Seth plays his favorite music.',
+      program = models.Program(
+        title='Seth\'s Show', slug='seth', 
+        desc='This is the show where Seth plays his favorite music.',
         dj_list=[seth.key()], page_html='a <b>BOLD</b> show!')
       program.put()
+      smgmt = models.Mgmt(dj=seth, phone="555 555-5555", abroad=False)
+      if not models.Mgmt.all().filter("dj =", seth):
+        smgmt.put()
+      positions = [("Station Manager", seth), ("Music Director", seth)]
+      for pos in positions:
+        if not models.ContactPosition.all().filter("title =", pos[0]):
+          p = models.ContactPosition()
     for l in labels:
       permission = models.getPermission(l)
       if seth.key() not in permission.dj_list:
@@ -179,6 +187,7 @@ class Setup(webapp.RequestHandler):
       if not models.ArtistName.all().filter("artist_name =", a).fetch(1):
         ar = models.ArtistName(artist_name=a, lowercase_name=a.lower(), search_names=models.artistSearchName(a).split())
         ar.put()
+
     self.flash.msg = "Permissions set up, ArtistNames set up, Blog posts set up, DJ Seth entered."
     self.redirect('/')
   
@@ -371,14 +380,19 @@ class ContactPage(webapp.RequestHandler):
   def get(self):
     position_html = "<p class='contact_entry'><strong>%s</strong>: %s</p>"
     dj_html = "<a href='mailto:%s'>%s</a>%s%s"
-    for position in ContactPosition.all():
-      ','.join(dj_html%(mgmt.dj.email,mgmt.dj.fullname,
-                        "**" if mgmt.abroad, else '',
-                        " (%s) "%mgmt.phone if mgmt.phone else '')
-               for mgmt in position.mgmt_list)
-        
-    template_values = {}
-    self.response.out.write(template.render(getPath("contact.html"), template_values))
+    contact_html = "\n".join(
+      position_html%(
+        position.title,
+        ','.join(dj_html%(mgmt.dj.email,mgmt.dj.fullname,
+                          "**" if mgmt.abroad else '',
+                          " (%s) "%mgmt.phone if mgmt.phone else '')
+                 for mgmt in [models.Mgmt.get(key) for key in position.mgmt_list])) 
+        for position in models.ContactPosition.all())
+    template_values = {
+      'contact_html': contact_html,
+      }
+    self.response.out.write(template.render(
+        getPath("contact.html"), template_values))
 
 class ConvertArtistNames(webapp.RequestHandler):
   def get(self):

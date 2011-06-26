@@ -88,7 +88,7 @@ class Event(db.Model):
 
 class ContactPosition(db.Model):
   title = db.StringProperty()
-  mgmt_list = db.ListProperty(db.Mgmt)
+  mgmt_list = db.ListProperty(db.Key)
 
 def getEventsAfter(start, num=1000):
   return Event.all().filter("event_date >=", start).order("event_date").fetch(num)

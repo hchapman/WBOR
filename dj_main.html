@@ -9,6 +9,7 @@
         {% endif %}
         <ul>
             {% if manage_djs %}<li><a href='/dj/djs'>Manage DJs</a></li>{% endif %}
+	    {% if manage_djs %}<li><a href='/dj/mgmt'>Manage Contacts</a></li>{% endif %}
             {% if manage_programs %}<li><a href='/dj/programs'>Manage Programs</a></li>{% endif %}
             {% if manage_albums %}<li><a href='/dj/albums'>Manage Albums</a></li>{% endif %}
             {% if manage_events %}<li><a href='/dj/event'>New Event</a></li>{% endif %}
