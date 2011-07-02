@@ -11,21 +11,20 @@
     <table class='big-chart-songs'>
       <thead>
         <tr>
-          <th scope='col'>Count</th>
-          <th scope='col'>Song Title</th>
+	  <th scope='col'>#</th>
+          {% if login %}<th scope='col'>Count</th>
+          {% endif %}<th scope='col'>Song Title</th>
           <th scope='col'>Artist</th>
           <th scope='col'>Album</th>
         </tr>
       </thead>
-      <tbody>
-        {% for s in songs %}
+      <tbody>{% for s in songs %}
         <tr>
-          {% for entry in s %}
+	  <td>{{ forloop.counter }}{% 
+	  for entry in s %}{% if login or not forloop.first %}
           <td>{{ entry }}</td>
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
+        {% endif %}{% endfor %}</tr>
+      {% endfor %}</tbody>
     </table>
     {% else %}
     <center><b>No plays were found.  Is this date in the future or in the distant past?</b></center>
@@ -38,18 +37,19 @@
   <table class='big-chart-albums'>
     <thead>
       <tr>
-        <th scope='col'>Count</th>
-        <th scope='col'>Album</th>
+	<th scope='col'>#</th>
+        {% if login %}<th scope='col'>Count</th>
+        {% endif %}<th scope='col'>Album</th>
         <th scope='col'>Artist</th>
       </tr>
     </thead>
     <tbody>
       {% for a in albums %}
       <tr>
-        {% for entry in a %}
+      <td>{{ forloop.counter }}{% 
+        for entry in a %}{% if login or not forloop.first %}
         <td>{{ entry }}</td>
-        {% endfor %}
-      </tr>
+      {% endif %}{% endfor %}</tr>
       {% endfor %}
     </tbody>
   </table>

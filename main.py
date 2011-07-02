@@ -33,6 +33,7 @@ from django.utils import simplejson
 from google.appengine.api import memcache
 from google.appengine.runtime import DeadlineExceededError
 from passwd_crypto import hash_password
+from dj import check_login
 
 def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
@@ -345,6 +346,7 @@ class FunPage(webapp.RequestHandler):
                                             template_values))
 
 class ChartsPage(webapp.RequestHandler):
+  @check_login
   def get(self):
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
@@ -356,6 +358,7 @@ class ChartsPage(webapp.RequestHandler):
       'albums': albums,
       'start': start,
       'end': end,
+      'login': self.dj_login,
       }
     self.response.out.write(template.render(getPath("charts.html"), template_values))
 

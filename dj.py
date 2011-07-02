@@ -50,6 +50,15 @@ def login_required(func):
       self.redirect("/dj/login")
   return wrapper
 
+# This is a decoration which checks if the user is logged in,
+# and informs the function of this status.
+def check_login(func):
+  def wrapper(self, *args, **kw):
+    self.sess = sessions.Session()
+    self.dj_login = self.sess.has_key("dj")
+    func(self, *args, **kw)
+  return wrapper
+
 # This is a decoration for making sure that the user has
 # the appropriate permissions for viewing the page.
 def authorization_required(label):
