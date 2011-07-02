@@ -58,17 +58,21 @@
     <div class='chart-toggler'>
         Albums
     </div>
-    <ol class='charttable' id='songtable'>
+    {% if top_songs %}<ol class='charttable' id='songtable'>
         {% for song in top_songs %}
         <li>{{ song.1 }}, {{ song.2 }}, <i>{{ song.3 }}</i>
         {% endfor %}
-    </ol>
+    </ol>{% else %}<div class='charttable' id='songtable'>
+        There are no recent charts off the new shelf.
+    </div>{% endif %}
     
-    <ol class='charttable' id='albumtable'>
+    {% if top_albums %}<ol class='charttable' id='albumtable'>
         {% for album in top_albums %}
         <li><i>{{ album.1 }}</i>, {{ album.2 }}
         {% endfor %}
-    </ol>
+    </ol>{% else %}<div class='charttable' id='albumtable'>
+        There are no recent charts off the new shelf.
+    </div>{% endif %}
 </div>
 
 <div id='newalbums'>

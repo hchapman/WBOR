@@ -332,7 +332,7 @@ class PlaylistPage(webapp.RequestHandler):
         plays = []
       #plays = models.getLastNPlays(60)
     
-    template_values = {
+        template_values = {
       'plays': plays,
       'shows': shows,
       }

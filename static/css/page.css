@@ -355,11 +355,19 @@ label { display: block; }
 	backgroun-color: #66F;
 }
 
-table.charttable, ol.charttable {
+table.charttable, ol.charttable, div.charttable {
     background-color: #66F;
     width: ;
-    padding: 5px;
+    padding: 1em;
     color: white;
+}
+
+div.charttable {
+    margin: 0;
+    -moz-border-radius-topright: 0;
+    -moz-border-radius-topleft: 0;
+    -webkit-border-top-left-radius: 0;
+    -webkit-border-top-right-radius: 0;
 }
 
 #topsongs table, #topalbums table {
