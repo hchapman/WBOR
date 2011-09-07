@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block extra_scripts %}
+<script type='text/javascript'>
+$(function() {
+    $(".positions-sortable").sortable();
+    $("#add-new-position").live(
+	'click', 
+	function() {
+	    var li = $($(this.parentNode).find("li")[0]);
+	    var li2 = li.clone();
+	    li2.insertBefore($(this));
+	}
+    );
+});
+</script>
+{% endblock %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block left_column %}
+<style type='text/css'>
+  ul.positions-sortable {
+  list-style-type: none;
+  margin: 0;
+  padding: .2em;
+  background: #ccc;
+  }
+
+  ul.positions-sortable li {
+  border: 1px solid #44f;
+  margin: .2em;
+  background: #aaf;
+  padding: .5em;
+  }
+
+  ul.positions-sortable label {
+  display: inline;
+  }
+
+  ul.djs-sortable {
+  list-style-type: none;
+  margin: 0;
+  padding: .2em;
+  }
+  
+  ul.djs-sortable li {
+  margin: .2em;
+  padding: .3em;
+  border: 0;
+  }
+  
+  ul.djs-sortable input {
+  width: 100%;
+  }
+
+  div.position-djs-list {
+  padding: .2em;
+  margin-left: 1em;
+  }
+  
+  ul.positions-sortable li label {
+  color: #fff;
+  font-weight: bold;
+  }
+</style>
+
+    <div id='edit-contact'>
+        <h4>Edit Station Contact Information</h4>
+        <form action='/dj/mgmt' method='post'>
+	  <ul class='positions-sortable'>
+	    <li>
+	      <label for='pos01'>Position Title</label>
+	      <input type='text' id='pos01' 
+		     class='position-edit' name='position' />
+	      <div class='position-djs-list'>
+		<label>DJs</label>
+		<ul class='djs-sortable'>
+		  <li>
+		    <input type='text' id='pos01dj01'
+			   class='position-dj-edit' name='dj' />
+		  </li>
+		</ul>
+	      </div>
+	    </li>
+	    <input type='button' 
+		   id='add-new-position' 
+		   value='Add a new contact position' />
+	  </ul>
+	</form>
+    </div>
+{% endblock %}
+
+{% block right_column %}
+    <div>
+        <a href='/dj/'>Return to main index</a>
+    </div>
+    {% include "last_n_posts.html" %}
+{% endblock %}

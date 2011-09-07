@@ -266,6 +266,15 @@ The WBOR.org Team
 """%reset_url)
     self.flash.msg = "Request successfully sent! Check your mail, and be sure to doublecheck the spam folder in case."
     self.redirect("/")
+  
+class EditContact(webapp.RequestHandler):
+  def get(self):
+    template_values = dict()
+    self.response.out.write(template.render(getPath("dj_edit_contacts.html"),
+                                            template_values))
+
+  def post(self):
+    pass
 
 # Lets the user select which program they've logged in as
 class SelectProgram(webapp.RequestHandler):
@@ -1334,6 +1343,7 @@ def main():
       ('/dj/removeplay/?', RemovePlay),
       ('/dj/event/([^/]*)/?', EditEvent),
       ('/dj/reset/?.*', RequestPassword),
+      ('/dj/mgmt/?', EditContact),
                                        ],
                                        debug=True)
   util.run_wsgi_app(application)
