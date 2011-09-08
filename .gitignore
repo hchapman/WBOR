@@ -3,3 +3,4 @@
 \#*\#
 google_appengine/
 .ropeproject
+.DS_Store
