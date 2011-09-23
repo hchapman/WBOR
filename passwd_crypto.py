@@ -13,7 +13,7 @@ def random_bytes(num_bytes):
 def pbkdf_sha256(password, salt, iterations):
   result = password
   for i in xrange(iterations):
-    result = HMAC(result, salt, sha256).digest() # use HMAC to apply the salt
+    result = HMAC(bytes(result), salt, sha256).digest() # use HMAC to apply the salt
   return result
 
 NUM_ITERATIONS = 1732
