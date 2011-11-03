@@ -30,7 +30,7 @@ import string
 from xml.dom import minidom
 from google.appengine.api import urlfetch
 from google.appengine.ext.webapp import template
-from google.appengine.ext import webapp
+import webapp2
 from google.appengine.ext.webapp import util
 from google.appengine.api import mail
 from django.utils import simplejson
@@ -85,7 +85,7 @@ def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
 
 # http://www.wbor.org/dj/
-class MainPage(webapp.RequestHandler):
+class MainPage(webapp2.RequestHandler):
   @login_required
   def get(self):
     dj = self.sess["dj"]
@@ -105,7 +105,7 @@ class MainPage(webapp.RequestHandler):
   
 
 # Logs the user out
-class Logout(webapp.RequestHandler):
+class Logout(webapp2.RequestHandler):
   def get(self):
     self.sess = sessions.Session()
     self.flash = flash.Flash()
@@ -118,7 +118,7 @@ class Logout(webapp.RequestHandler):
 # Logs the user in
 # get(): the login form
 # post(): setting cookies etc.
-class Login(webapp.RequestHandler):
+class Login(webapp2.RequestHandler):
   def get(self):
     self.sess = sessions.Session()
     self.flash = flash.Flash()
@@ -159,7 +159,7 @@ class Login(webapp.RequestHandler):
 # Lets a DJ reset his password (to a randomly generated code)
 # get(): display a username entry form
 # post(): submit the username entry form and send an email to the dj.
-class RequestPassword(webapp.RequestHandler):
+class RequestPassword(webapp2.RequestHandler):
   def get(self):
     self.sess = sessions.Session()
     self.flash = flash.Flash()
@@ -268,7 +268,7 @@ The WBOR.org Team
     self.redirect("/")
 
 # Lets the user select which program they've logged in as
-class SelectProgram(webapp.RequestHandler):
+class SelectProgram(webapp2.RequestHandler):
   @login_required
   def get(self):
     dj = self.sess['dj']
@@ -302,7 +302,7 @@ class SelectProgram(webapp.RequestHandler):
 # The main portion of what a DJ sees on the website
 # get(): the form for charting a song; displays current playlist under form.
 # post(): charts the song/psa/stationID
-class ChartSong(webapp.RequestHandler):
+class ChartSong(webapp2.RequestHandler):
   @login_required
   def get(self):
     if not self.sess.has_key("program"):
@@ -474,7 +474,7 @@ class ChartSong(webapp.RequestHandler):
 # Displays the top-played songs for a given period.
 # get(): Print log for the last week, display form for choosing endpoint.
 # post(): Print log of week-long period.
-class ViewCharts(webapp.RequestHandler):  
+class ViewCharts(webapp2.RequestHandler):  
   @login_required
   def get(self):
     default_songs = 20
@@ -522,7 +522,7 @@ class ViewCharts(webapp.RequestHandler):
 # /dj/logs/?
 # get(): Print log for the last two weeks, display form for choosing endpoint.
 # post(): Print log of two-week period.
-class ViewLogs(webapp.RequestHandler):
+class ViewLogs(webapp2.RequestHandler):
   @login_required
   def get(self):
     start = datetime.datetime.now() - datetime.timedelta(weeks=2)
@@ -565,7 +565,7 @@ class ViewLogs(webapp.RequestHandler):
 # For administration, manages the DJs in the system.
 # get(): Displays list of current DJs for editing/deletion
 # post(): Adds a new DJ
-class ManageDJs(webapp.RequestHandler):
+class ManageDJs(webapp2.RequestHandler):
   @authorization_required("Manage DJs")
   def get(self):
     dj_list = models.Dj.all().order("fullname")
@@ -634,7 +634,7 @@ class ManageDJs(webapp.RequestHandler):
 # Displays and edits a DJ's details in the datastore
 # get(): Display DJ's details
 # post(): Save changes to DJ's details
-class EditDJ(webapp.RequestHandler):
+class EditDJ(webapp2.RequestHandler):
   @authorization_required("Manage DJs")
   def get(self, dj_key):
     dj = models.Dj.get(dj_key)
@@ -684,7 +684,7 @@ class EditDJ(webapp.RequestHandler):
 # Displays current programs and adds new programs
 # get(): display current programs
 # post(): add new program
-class ManagePrograms(webapp.RequestHandler):
+class ManagePrograms(webapp2.RequestHandler):
   @authorization_required("Manage Programs")
   def get(self):
     program_list = models.Program.all().order("title")
@@ -738,7 +738,7 @@ class ManagePrograms(webapp.RequestHandler):
   
 
 # Displays and edits details of a program.
-class EditProgram(webapp.RequestHandler):
+class EditProgram(webapp2.RequestHandler):
   @authorization_required("Manage Programs")
   def get(self, program_key):
     program = models.Program.get(program_key)
@@ -775,7 +775,7 @@ class EditProgram(webapp.RequestHandler):
     self.redirect("/dj/programs/")
   
 
-class MySelf(webapp.RequestHandler):
+class MySelf(webapp2.RequestHandler):
   @login_required
   def get(self):
     dj = models.Dj.get(self.sess['dj'].key())
@@ -827,7 +827,7 @@ class MySelf(webapp.RequestHandler):
     self.redirect("/dj/")
 
 # Lets a DJ edit the description etc. of their show.
-class MyShow(webapp.RequestHandler):
+class MyShow(webapp2.RequestHandler):
   @login_required
   def get(self):
     program = self.sess['program']
@@ -865,7 +865,7 @@ class MyShow(webapp.RequestHandler):
 # How DJs with the appropriate permissions can create a blog post
 # get(): Display "new blog post" form
 # post(): Save as post, redirect to home page to display their hard work
-class NewBlogPost(webapp.RequestHandler):
+class NewBlogPost(webapp2.RequestHandler):
   @authorization_required("Manage Blog")
   def get(self):
     posts = models.getLastPosts(2)
@@ -903,7 +903,7 @@ class NewBlogPost(webapp.RequestHandler):
 
 
 
-class EditBlogPost(webapp.RequestHandler):
+class EditBlogPost(webapp2.RequestHandler):
   @authorization_required("Manage Blog")
   def get(self, date_string, slug):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
@@ -966,7 +966,7 @@ class EditBlogPost(webapp.RequestHandler):
       self.redirect("/")
 
 
-class RemovePlay(webapp.RequestHandler):
+class RemovePlay(webapp2.RequestHandler):
   @login_required
   def post(self):
     self.response.headers['Content-Type'] = 'text/json'
@@ -984,7 +984,7 @@ class RemovePlay(webapp.RequestHandler):
         'status': "Successfully deleted play."
       }))
 
-class NewEvent(webapp.RequestHandler):
+class NewEvent(webapp2.RequestHandler):
   @authorization_required("Manage Events")
   def get(self):
     posts = models.getLastPosts(2)
@@ -1019,7 +1019,7 @@ class NewEvent(webapp.RequestHandler):
     self.redirect("/dj/")
 
 
-class EditEvent(webapp.RequestHandler):
+class EditEvent(webapp2.RequestHandler):
   @authorization_required("Manage Events")
   def get(self, event_key):
     event = models.Event.get(event_key)
@@ -1079,7 +1079,7 @@ class EditEvent(webapp.RequestHandler):
 # Rules for who can access what.
 # get(): Display permissions along with DJs
 # post(): AJAXically adding/removing DJs to permissions.
-class ManagePermissions(webapp.RequestHandler):
+class ManagePermissions(webapp2.RequestHandler):
   @authorization_required("Manage Permissions")
   def get(self):
     permissions = models.getPermissions()
@@ -1145,7 +1145,7 @@ class ManagePermissions(webapp.RequestHandler):
 #     - makeNew: AJAXically adds "new" status back to an album if made old by mistake
 #     - manual: NOT AJAX - adds an album which has been typed in by hand.
 
-class ManageAlbums(webapp.RequestHandler):
+class ManageAlbums(webapp2.RequestHandler):
   @authorization_required("Manage Albums")
   def get(self):
     new_album_list = None
@@ -1311,34 +1311,27 @@ class ManageAlbums(webapp.RequestHandler):
       self.redirect("/dj/albums/")
 
 
-def main():
-  application = webapp.WSGIApplication([
-      ('/dj/?', MainPage),
-      ('/dj/login/?', Login),
-      ('/dj/logout/?', Logout),
-      ('/dj/djs/?', ManageDJs),
-      ('/dj/djs/([^/]*)/?', EditDJ),
-      ('/dj/programs/?', ManagePrograms),
-      ('/dj/programs/([^/]*)/?', EditProgram),
-      ('/dj/chartsong/?', ChartSong),
-      ('/dj/albums/?', ManageAlbums),
-      ('/dj/selectprogram/?', SelectProgram),
-      ('/dj/logs/?', ViewLogs),
-      ('/dj/permissions/?', ManagePermissions),
-      ('/dj/myshow/?', MyShow),
-      ('/dj/charts/?', ViewCharts),
-      ('/blog/([^/]*)/([^/]*)/edit/?', EditBlogPost),
-      ('/dj/newpost/?', NewBlogPost),
-      ('/dj/event/?', NewEvent),
-      ('/dj/myself/?', MySelf),
-      ('/dj/removeplay/?', RemovePlay),
-      ('/dj/event/([^/]*)/?', EditEvent),
-      ('/dj/reset/?.*', RequestPassword),
-                                       ],
-                                       debug=True)
-  util.run_wsgi_app(application)
-
-
-if __name__ == '__main__':
-  main()
-
+app = webapp2.WSGIApplication([
+    ('/dj/?', MainPage),
+    ('/dj/login/?', Login),
+    ('/dj/logout/?', Logout),
+    ('/dj/djs/?', ManageDJs),
+    ('/dj/djs/([^/]*)/?', EditDJ),
+    ('/dj/programs/?', ManagePrograms),
+    ('/dj/programs/([^/]*)/?', EditProgram),
+    ('/dj/chartsong/?', ChartSong),
+    ('/dj/albums/?', ManageAlbums),
+    ('/dj/selectprogram/?', SelectProgram),
+    ('/dj/logs/?', ViewLogs),
+    ('/dj/permissions/?', ManagePermissions),
+    ('/dj/myshow/?', MyShow),
+    ('/dj/charts/?', ViewCharts),
+    ('/blog/([^/]*)/([^/]*)/edit/?', EditBlogPost),
+    ('/dj/newpost/?', NewBlogPost),
+    ('/dj/event/?', NewEvent),
+    ('/dj/myself/?', MySelf),
+    ('/dj/removeplay/?', RemovePlay),
+    ('/dj/event/([^/]*)/?', EditEvent),
+    ('/dj/reset/?.*', RequestPassword),
+    ],
+                             debug=True)

@@ -27,7 +27,7 @@ import amazon
 import logging
 from google.appengine.api import urlfetch
 from google.appengine.ext.webapp import template
-from google.appengine.ext import webapp
+import webapp2
 from google.appengine.ext.webapp import util
 from django.utils import simplejson
 from google.appengine.api import memcache
@@ -38,7 +38,7 @@ from dj import check_login
 def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
 
-class MainPage(webapp.RequestHandler):
+class MainPage(webapp2.RequestHandler):
   def get(self):
     self.sess = sessions.Session()
     self.flash = flash.Flash()
@@ -64,7 +64,7 @@ class MainPage(webapp.RequestHandler):
     self.response.out.write(template.render(getPath("index.html"), 
                                             template_values))
 
-class DjComplete(webapp.RequestHandler):
+class DjComplete(webapp2.RequestHandler):
   def get(self):
     q = self.request.get("query")
     djs = models.djAutocomplete(q)
@@ -74,7 +74,7 @@ class DjComplete(webapp.RequestHandler):
           'data': [str(dj.key()) for dj in djs],
           }))
 
-class ArtistComplete(webapp.RequestHandler):
+class ArtistComplete(webapp2.RequestHandler):
   def get(self):
     q = self.request.get("query")
     artists = models.artistAutocomplete(q)
@@ -83,7 +83,7 @@ class ArtistComplete(webapp.RequestHandler):
           'suggestions': [ar.artist_name for ar in artists],      
           }))
 
-class AlbumTable(webapp.RequestHandler):
+class AlbumTable(webapp2.RequestHandler):
   def post(self):
     page = self.request.get('page')
     try:
@@ -103,7 +103,7 @@ class AlbumTable(webapp.RequestHandler):
       memcache.set("album_table_html", album_table_html)
     self.response.out.write(album_table_html)
 
-class AlbumInfo(webapp.RequestHandler):
+class AlbumInfo(webapp2.RequestHandler):
   def get(self):    
     artist = self.request.get('artist')
     album = self.request.get('album')
@@ -128,7 +128,7 @@ class AlbumInfo(webapp.RequestHandler):
     self.response.out.write(simplejson.dumps(json_data))
   
 
-class Setup(webapp.RequestHandler):
+class Setup(webapp2.RequestHandler):
   def get(self):
     self.flash = flash.Flash()
     labels = ["Manage DJs", "Manage Programs", "Manage Permissions", 
@@ -184,7 +184,7 @@ class Setup(webapp.RequestHandler):
   
 
 
-class BlogDisplay(webapp.RequestHandler):
+class BlogDisplay(webapp2.RequestHandler):
   def get(self, date_string, post_slug):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
     post = models.getPostBySlug(post_date, post_slug)
@@ -198,7 +198,7 @@ class BlogDisplay(webapp.RequestHandler):
       }
     self.response.out.write(template.render("blog_post.html", template_values))
 
-class AlbumDisplay(webapp.RequestHandler):
+class AlbumDisplay(webapp2.RequestHandler):
   def get(self, key_id, size):
     album = models.Album.get(key_id)
     if not album:
@@ -213,7 +213,7 @@ class AlbumDisplay(webapp.RequestHandler):
       self.response.out.write(image_blob)
 
 
-class UpdateInfo(webapp.RequestHandler):
+class UpdateInfo(webapp2.RequestHandler):
   def get(self):
     lastPlay = models.getLastPlay()
     song, program = lastPlay.song, lastPlay.program
@@ -230,7 +230,7 @@ class UpdateInfo(webapp.RequestHandler):
           }))
 
 
-class SongList(webapp.RequestHandler):
+class SongList(webapp2.RequestHandler):
   def get(self):
     self.response.headers["Content-Type"] = "text/json"
     album_key = self.request.get("album_key")
@@ -261,7 +261,7 @@ class SongList(webapp.RequestHandler):
     
 
 
-class EventPage(webapp.RequestHandler):
+class EventPage(webapp2.RequestHandler):
   def get(self):
     start_date = datetime.datetime.now() - datetime.timedelta(days=2)
     events = models.getEventsAfter(start_date)
@@ -274,13 +274,13 @@ class EventPage(webapp.RequestHandler):
     self.response.out.write(template.render(getPath("events.html"), 
                                             template_values))
 
-class SchedulePage(webapp.RequestHandler):
+class SchedulePage(webapp2.RequestHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("schedule.html"), 
                                             template_values))
 
-class PlaylistPage(webapp.RequestHandler):
+class PlaylistPage(webapp2.RequestHandler):
   def get(self):
     shows = models.getPrograms()
     self.sess = sessions.Session()
@@ -339,13 +339,13 @@ class PlaylistPage(webapp.RequestHandler):
     self.response.out.write(template.render(getPath("playlist.html"), 
                                             template_values))
 
-class FunPage(webapp.RequestHandler):
+class FunPage(webapp2.RequestHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("fun.html"), 
                                             template_values))
 
-class ChartsPage(webapp.RequestHandler):
+class ChartsPage(webapp2.RequestHandler):
   @check_login
   def get(self):
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
@@ -362,17 +362,17 @@ class ChartsPage(webapp.RequestHandler):
       }
     self.response.out.write(template.render(getPath("charts.html"), template_values))
 
-class HistoryPage(webapp.RequestHandler):
+class HistoryPage(webapp2.RequestHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("history.html"), template_values))
 
-class ContactPage(webapp.RequestHandler):
+class ContactPage(webapp2.RequestHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("contact.html"), template_values))
 
-class ConvertArtistNames(webapp.RequestHandler):
+class ConvertArtistNames(webapp2.RequestHandler):
   def get(self):
     an = models.ArtistName.all().fetch(2000)
     total = 0
@@ -387,7 +387,7 @@ class ConvertArtistNames(webapp.RequestHandler):
       self.response.out.write("converted %d artist names, incomplete." % total)
     
 
-class ConvertPlays(webapp.RequestHandler):
+class ConvertPlays(webapp2.RequestHandler):
   def get(self):
     pc = models.Play.all().fetch(2000)
     total = 0
@@ -398,7 +398,7 @@ class ConvertPlays(webapp.RequestHandler):
         p.put()
     self.response.out.write("converted %d plays." % total)
 
-class ProgramPage(webapp.RequestHandler):
+class ProgramPage(webapp2.RequestHandler):
   def get(self, slug):
     self.flash = flash.Flash()
     self.sess = sessions.Session()
@@ -435,32 +435,26 @@ def profile_main():
   # stats.print_callers()
   logging.info("Profile data:\n%s", stream.getvalue())
 
-def real_main():
-  application = webapp.WSGIApplication([
-      ('/', MainPage),
-      ('/updateinfo/?', UpdateInfo),
-      ('/ajax/albumtable/?', AlbumTable),
-      ('/ajax/albuminfo/?', AlbumInfo),
-      ('/ajax/artistcomplete/?', ArtistComplete),
-      ('/ajax/getSongList/?', SongList),
-      ('/ajax/djcomplete/?', DjComplete),
-      ('/setup/?', Setup),
-      ('/blog/([^/]*)/([^/]*)/?', BlogDisplay),
-      ('/programs?/([^/]*)/?', ProgramPage),
-      ('/schedule/?', SchedulePage),
-      ('/playlists/?', PlaylistPage),
-      ('/fun/?', FunPage),
-      ('/charts/?', ChartsPage),
-      ('/history/?', HistoryPage),
-      ('/contact/?', ContactPage),
-      ('/events/?', EventPage),
-      ('/searchnames/?', ConvertArtistNames),
-      ('/convertplays/?', ConvertPlays),
-      ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
-      ],
-                                       debug=True)
-  util.run_wsgi_app(application)
-
-main = real_main
-if __name__ == '__main__':
-  main()
+app = webapp2.WSGIApplication([
+    ('/', MainPage),
+    ('/updateinfo/?', UpdateInfo),
+    ('/ajax/albumtable/?', AlbumTable),
+    ('/ajax/albuminfo/?', AlbumInfo),
+    ('/ajax/artistcomplete/?', ArtistComplete),
+    ('/ajax/getSongList/?', SongList),
+    ('/ajax/djcomplete/?', DjComplete),
+    ('/setup/?', Setup),
+    ('/blog/([^/]*)/([^/]*)/?', BlogDisplay),
+    ('/programs?/([^/]*)/?', ProgramPage),
+    ('/schedule/?', SchedulePage),
+    ('/playlists/?', PlaylistPage),
+    ('/fun/?', FunPage),
+    ('/charts/?', ChartsPage),
+    ('/history/?', HistoryPage),
+    ('/contact/?', ContactPage),
+    ('/events/?', EventPage),
+    ('/searchnames/?', ConvertArtistNames),
+    ('/convertplays/?', ConvertPlays),
+    ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
+    ],
+                              debug=True)
