@@ -544,7 +544,7 @@ class Session(object):
         string_cookie = os.environ.get(u"HTTP_COOKIE", u"")
         self.cookie = Cookie.SimpleCookie()
         self.output_cookie = Cookie.SimpleCookie()
-        self.cookie.load(string_cookie)
+        self.cookie.load(str(string_cookie))
         try:
             self.cookie_vals = \
                 simplejson.loads(self.cookie["%s_data" % (self.cookie_name)].value)
