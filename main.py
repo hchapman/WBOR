@@ -20,7 +20,7 @@ import models
 import urllib
 import hashlib
 import datetime
-import sessions
+#import sessions
 import time
 import flash
 import amazon
@@ -28,6 +28,7 @@ import logging
 from google.appengine.api import urlfetch
 from google.appengine.ext.webapp import template
 import webapp2
+from webapp2_extras import sessions
 from google.appengine.ext.webapp import util
 from django.utils import simplejson
 from google.appengine.api import memcache
@@ -39,10 +40,22 @@ def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
 
 class MainPage(webapp2.RequestHandler):
+  def dispatch(self):
+    self.session_store = sessions.get_store(request = self.request)
+    
+    try:
+      webapp2.RequestHandler.dispatch(self)
+    finally:
+      self.session_store.save_sessions(self.response)
+
+  @webapp2.cached_property
+  def session(self):
+    return self.session_store.get_session()
+
   def get(self):
-    self.sess = sessions.Session()
-    self.flash = flash.Flash()
     album_list = []
+    logging.info(self.session)
+    flash = self.session.get_flashes()
     # album_list = models.getNewAlbums(50)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
@@ -53,14 +66,20 @@ class MainPage(webapp2.RequestHandler):
     events = models.getEventsAfter(datetime.datetime.now() - 
                                    datetime.timedelta(days=1), 3)
     template_values = {
-      'flash': self.flash,
-      'session': self.sess,
+      'flash': flash,
+      'session': self.session,
       'album_list': album_list,
       'top_songs': top_songs,
       'top_albums': top_albums,
       'posts': posts,
       'events': events,
       }
+    visitnum = self.session.get('visitnum')
+    if visitnum is None:
+      visitnum = 0
+    self.session['visitnum'] = visitnum+1
+    self.session.add_flash("You've visited %s times!"%visitnum)
+    logging.info(self.session)
     self.response.out.write(template.render(getPath("index.html"), 
                                             template_values))
 
@@ -435,6 +454,11 @@ def profile_main():
   # stats.print_callers()
   logging.info("Profile data:\n%s", stream.getvalue())
 
+config = {}
+config['webapp2_extras.sessions'] = {
+  'secret_key': 'this-is-not-a-very-good-secret-key',
+}
+
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/updateinfo/?', UpdateInfo),
@@ -456,5 +480,4 @@ app = webapp2.WSGIApplication([
     ('/searchnames/?', ConvertArtistNames),
     ('/convertplays/?', ConvertPlays),
     ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
-    ],
-                              debug=True)
+    ], debug=True, config=config)

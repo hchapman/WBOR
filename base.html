@@ -153,8 +153,8 @@
     
     {% block main_content %}
     <div class='grid_12 flash-msg' id='msgbox'>
-      {% if flash.msg %}
-        {{ flash.msg }}
+      {% if flash %}
+        {{ flash }}
       {% endif %}
     </div>
     {% block top_row %}{% endblock %}
