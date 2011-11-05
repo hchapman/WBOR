@@ -20,9 +20,7 @@ import models
 import urllib
 import hashlib
 import datetime
-#import sessions
 import time
-import flash
 import amazon
 import logging
 from google.appengine.api import urlfetch
@@ -35,27 +33,17 @@ from google.appengine.api import memcache
 from google.appengine.runtime import DeadlineExceededError
 from passwd_crypto import hash_password
 from dj import check_login
+from handlers import BaseHandler
+
+from configuration import webapp2conf
 
 def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
 
-class MainPage(webapp2.RequestHandler):
-  def dispatch(self):
-    self.session_store = sessions.get_store(request = self.request)
-    
-    try:
-      webapp2.RequestHandler.dispatch(self)
-    finally:
-      self.session_store.save_sessions(self.response)
-
-  @webapp2.cached_property
-  def session(self):
-    return self.session_store.get_session()
-
+class MainPage(BaseHandler):
   def get(self):
     album_list = []
     logging.info(self.session)
-    flash = self.session.get_flashes()
     # album_list = models.getNewAlbums(50)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
@@ -66,7 +54,7 @@ class MainPage(webapp2.RequestHandler):
     events = models.getEventsAfter(datetime.datetime.now() - 
                                    datetime.timedelta(days=1), 3)
     template_values = {
-      'flash': flash,
+      'flashes': self.session.get_flashes(),
       'session': self.session,
       'album_list': album_list,
       'top_songs': top_songs,
@@ -83,7 +71,7 @@ class MainPage(webapp2.RequestHandler):
     self.response.out.write(template.render(getPath("index.html"), 
                                             template_values))
 
-class DjComplete(webapp2.RequestHandler):
+class DjComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
     djs = models.djAutocomplete(q)
@@ -93,7 +81,7 @@ class DjComplete(webapp2.RequestHandler):
           'data': [str(dj.key()) for dj in djs],
           }))
 
-class ArtistComplete(webapp2.RequestHandler):
+class ArtistComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
     artists = models.artistAutocomplete(q)
@@ -102,7 +90,7 @@ class ArtistComplete(webapp2.RequestHandler):
           'suggestions': [ar.artist_name for ar in artists],      
           }))
 
-class AlbumTable(webapp2.RequestHandler):
+class AlbumTable(BaseHandler):
   def post(self):
     page = self.request.get('page')
     try:
@@ -122,7 +110,7 @@ class AlbumTable(webapp2.RequestHandler):
       memcache.set("album_table_html", album_table_html)
     self.response.out.write(album_table_html)
 
-class AlbumInfo(webapp2.RequestHandler):
+class AlbumInfo(BaseHandler):
   def get(self):    
     artist = self.request.get('artist')
     album = self.request.get('album')
@@ -147,9 +135,8 @@ class AlbumInfo(webapp2.RequestHandler):
     self.response.out.write(simplejson.dumps(json_data))
   
 
-class Setup(webapp2.RequestHandler):
+class Setup(BaseHandler):
   def get(self):
-    self.flash = flash.Flash()
     labels = ["Manage DJs", "Manage Programs", "Manage Permissions", 
               "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
     for l in labels:
@@ -198,12 +185,12 @@ class Setup(webapp2.RequestHandler):
       if not models.ArtistName.all().filter("artist_name =", a).fetch(1):
         ar = models.ArtistName(artist_name=a, lowercase_name=a.lower(), search_names=models.artistSearchName(a).split())
         ar.put()
-    self.flash.msg = "Permissions set up, ArtistNames set up, Blog posts set up, DJ Seth entered."
+    self.session.add_flash("Permissions set up, ArtistNames set up, Blog posts set up, DJ Seth entered.")
     self.redirect('/')
   
 
 
-class BlogDisplay(webapp2.RequestHandler):
+class BlogDisplay(BaseHandler):
   def get(self, date_string, post_slug):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
     post = models.getPostBySlug(post_date, post_slug)
@@ -217,7 +204,7 @@ class BlogDisplay(webapp2.RequestHandler):
       }
     self.response.out.write(template.render("blog_post.html", template_values))
 
-class AlbumDisplay(webapp2.RequestHandler):
+class AlbumDisplay(BaseHandler):
   def get(self, key_id, size):
     album = models.Album.get(key_id)
     if not album:
@@ -232,7 +219,7 @@ class AlbumDisplay(webapp2.RequestHandler):
       self.response.out.write(image_blob)
 
 
-class UpdateInfo(webapp2.RequestHandler):
+class UpdateInfo(BaseHandler):
   def get(self):
     lastPlay = models.getLastPlay()
     song, program = lastPlay.song, lastPlay.program
@@ -249,7 +236,7 @@ class UpdateInfo(webapp2.RequestHandler):
           }))
 
 
-class SongList(webapp2.RequestHandler):
+class SongList(BaseHandler):
   def get(self):
     self.response.headers["Content-Type"] = "text/json"
     album_key = self.request.get("album_key")
@@ -280,7 +267,7 @@ class SongList(webapp2.RequestHandler):
     
 
 
-class EventPage(webapp2.RequestHandler):
+class EventPage(BaseHandler):
   def get(self):
     start_date = datetime.datetime.now() - datetime.timedelta(days=2)
     events = models.getEventsAfter(start_date)
@@ -293,13 +280,13 @@ class EventPage(webapp2.RequestHandler):
     self.response.out.write(template.render(getPath("events.html"), 
                                             template_values))
 
-class SchedulePage(webapp2.RequestHandler):
+class SchedulePage(BaseHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("schedule.html"), 
                                             template_values))
 
-class PlaylistPage(webapp2.RequestHandler):
+class PlaylistPage(BaseHandler):
   def get(self):
     shows = models.getPrograms()
     self.sess = sessions.Session()
@@ -358,13 +345,13 @@ class PlaylistPage(webapp2.RequestHandler):
     self.response.out.write(template.render(getPath("playlist.html"), 
                                             template_values))
 
-class FunPage(webapp2.RequestHandler):
+class FunPage(BaseHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("fun.html"), 
                                             template_values))
 
-class ChartsPage(webapp2.RequestHandler):
+class ChartsPage(BaseHandler):
   @check_login
   def get(self):
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
@@ -381,17 +368,17 @@ class ChartsPage(webapp2.RequestHandler):
       }
     self.response.out.write(template.render(getPath("charts.html"), template_values))
 
-class HistoryPage(webapp2.RequestHandler):
+class HistoryPage(BaseHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("history.html"), template_values))
 
-class ContactPage(webapp2.RequestHandler):
+class ContactPage(BaseHandler):
   def get(self):
     template_values = {}
     self.response.out.write(template.render(getPath("contact.html"), template_values))
 
-class ConvertArtistNames(webapp2.RequestHandler):
+class ConvertArtistNames(BaseHandler):
   def get(self):
     an = models.ArtistName.all().fetch(2000)
     total = 0
@@ -406,7 +393,7 @@ class ConvertArtistNames(webapp2.RequestHandler):
       self.response.out.write("converted %d artist names, incomplete." % total)
     
 
-class ConvertPlays(webapp2.RequestHandler):
+class ConvertPlays(BaseHandler):
   def get(self):
     pc = models.Play.all().fetch(2000)
     total = 0
@@ -417,7 +404,7 @@ class ConvertPlays(webapp2.RequestHandler):
         p.put()
     self.response.out.write("converted %d plays." % total)
 
-class ProgramPage(webapp2.RequestHandler):
+class ProgramPage(BaseHandler):
   def get(self, slug):
     self.flash = flash.Flash()
     self.sess = sessions.Session()
@@ -454,10 +441,7 @@ def profile_main():
   # stats.print_callers()
   logging.info("Profile data:\n%s", stream.getvalue())
 
-config = {}
-config['webapp2_extras.sessions'] = {
-  'secret_key': 'this-is-not-a-very-good-secret-key',
-}
+
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
@@ -480,4 +464,4 @@ app = webapp2.WSGIApplication([
     ('/searchnames/?', ConvertArtistNames),
     ('/convertplays/?', ConvertPlays),
     ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
-    ], debug=True, config=config)
+    ], debug=True, config=webapp2conf)

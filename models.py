@@ -85,7 +85,29 @@ def getEventsAfter(start, num=1000):
   return Event.all().filter("event_date >=", start).order("event_date").fetch(num)
 
 def getLastPlay():
-  return Play.all().order("-play_date").fetch(1)[0]
+  last_play = memcache.get("last_play")
+  if last_play is not None:
+    return last_play
+  else:
+    logging.debug("Updating last_play memcache")
+    play = Play.all().order("-play_date").get()
+    if not memcache.set("last_play", play):
+      logging.error("Memcache set last play failed")
+
+def addNewPlay(song, program, artist,
+               play_date=datetime.datetime.now(), isNew=False):
+  """
+  If a DJ starts playing a song, add it and update the memcache.
+  """
+  last_play = memcache.get("last_play")
+  play = Play(song=song,
+              program=program,
+              artist=artist,
+              play_date=play_date,
+              isNew=isNew)
+  play.put()
+  if last_play is None or play_date > last_play.play_date:
+    memcache.set("last_play", play)
 
 def getPermission(label):
   p = Permission.all().filter("title =", label).fetch(1)
@@ -118,9 +140,9 @@ def djLogin(username, password):
   else:
     return None
 
-def hasPermission(dj, label):
+def hasPermission(djkey, label):
   p = getPermission(label)
-  return dj.key() in p.dj_list
+  return djkey in p.dj_list
 
 def getLastPosts(num):
   return BlogPost.all().order("-post_date").fetch(num)
