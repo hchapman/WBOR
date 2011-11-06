@@ -5,6 +5,7 @@ from google.appengine.ext import db
 import datetime
 from google.appengine.api import memcache
 from passwd_crypto import hash_password, check_password
+import logging
 
 class Dj(db.Model):
   fullname = db.StringProperty()
@@ -108,6 +109,14 @@ def addNewPlay(song, program, artist,
   play.put()
   if last_play is None or play_date > last_play.play_date:
     memcache.set("last_play", play)
+    # since we always check last 3 plays, this is hardcoded to update that
+    # if you can come up with a better solution, please implement it (TODO)
+    last_plays = memcache.get("last_3_plays")
+    if last_plays is not None:
+        memcache.set("last_3_plays",
+                     [play] + last_plays[:2])
+
+                     
 
 def getPermission(label):
   p = Permission.all().filter("title =", label).fetch(1)
@@ -171,7 +180,15 @@ def albumAutocomplete(prefix):
   albums = Album.all().filter("lower_title >=", prefix).filter("lower_title <", prefix + u"\ufffd").fetch(30)
 
 def getLastNPlays(num):
-  plays = Play.all().order("-play_date").fetch(num)
+  last_plays = memcache.get("last_%s_plays"%num)
+  if last_plays is not None:
+    logging.info("Using memcache for last_3_plays")
+    return last_plays
+  else:
+    logging.debug("Updating last_%s_plays memcache"%num)
+    plays = Play.all().order("-play_date").fetch(num)
+    if not memcache.set("last_%s_plays"%num, plays):
+      logging.error("Memcache set last num plays failed")
   return plays
 
 def getPlaysForDate(date, program=None):
@@ -205,14 +222,15 @@ def getLastPlays(program, after=None, num=1000):
   return plays
 
 def getLastPsa():
-  psa = Psa.all().order("-play_date").fetch(1)
+  psa = Psa.all().order("-play_date").get()
   if psa:
     return psa[0]
   else:
     return None
 
 def getProgramsByDj(dj):
-  return Program.all().filter("dj_list =", dj).fetch(100)
+  # TODO - handle a case in which a DJ actually has (and needs) 10 shows
+  return Program.all().filter("dj_list =", dj).fetch(10)
 
 def getNewAlbums(num=1000, page=0, byArtist=False):
   albums = Album.all().filter("isNew =", True)

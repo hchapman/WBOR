@@ -53,7 +53,7 @@ def login_required(func):
 # and informs the function of this status.
 def check_login(func):
   def wrapper(self, *args, **kw):
-    self.dj_login = self.session.has_key("dj")
+    self.dj_login = self.session_has_login()
     func(self, *args, **kw)
   return wrapper
 
@@ -62,10 +62,8 @@ def check_login(func):
 def authorization_required(label):
   def outer_wrapper(func):
     def wrapper(self, *args, **kw):
-      self.sess = sessions.Session()
-      self.flash = flash.Flash()
-      if self.session.has_key("dj"):
-        key = self.session.get("dj").get('key')
+      if self.session_has_login():
+        key = self.dj_key
         perm = models.getPermission(label)
         if key in perm.dj_list:
           func(self, *args, **kw)
@@ -152,8 +150,6 @@ class Login(UserHandler):
 # post(): submit the username entry form and send an email to the dj.
 class RequestPassword(UserHandler):
   def get(self):
-    self.sess = sessions.Session()
-    self.flash = flash.Flash()
     # If we have a reset_key, then try to reset the password.
     reset_key = self.request.get("reset_key")
     if reset_key:
@@ -170,7 +166,7 @@ class RequestPassword(UserHandler):
         self.redirect("/dj/reset")
         return
       if check_password(reset_dj.pw_reset_hash, reset_key):
-        self.sess["dj"] = reset_dj
+        self.set_session_user(reset_dj)
         reset_dj.pw_reset_expire = datetime.datetime.now()
         reset_dj.pw_reset_hash = None
         reset_dj.put()
@@ -181,7 +177,7 @@ class RequestPassword(UserHandler):
           self.redirect('/dj/myself')
           return
         elif len(programList) == 1:
-          self.sess['program'] = programList[0]
+          self.set_session_program(programList[0])
           self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nLogged in with program " + programList[0].title + ".")
           self.redirect("/dj/myself")
           return
@@ -193,18 +189,16 @@ class RequestPassword(UserHandler):
         self.session.add_flash("Error, this is not a valid password reset URL.")
         self.redirect("/dj/reset/")
     else:
-      if self.sess.has_key("dj"):
+      if self.session_has_login():
         self.redirect("/dj/")
       template_values = {
-        'session': self.sess,
+        'session': self.session,
         'flash': self.flash,
         }
       self.response.out.write(template.render(getPath("dj_reset_password.html"), 
                                               template_values))
 
   def post(self):
-    self.sess = sessions.Session()
-    self.flash = flash.Flash()
     if self.request.get("submit") != "Request Reset":
       self.session.add_flash("There was an error, please try again")
       self.redirect("/dj/reset/")
@@ -262,15 +256,14 @@ The WBOR.org Team
 class SelectProgram(UserHandler):
   @login_required
   def get(self):
-    dj = self.sess['dj']
-    programlist = models.getProgramsByDj(dj)
+    programlist = models.getProgramsByDj(self.dj_key)
     if len(programlist) <= 1:
       self.session.add_flash("You don't have more than one radio program to choose between.")
       self.redirect("/dj/")
       return
     template_values = {
       'programlist': programlist,
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'posts': models.getLastPosts(1)
     }
@@ -285,7 +278,7 @@ class SelectProgram(UserHandler):
       self.session.add_flash("An error occurred retrieving your program.  Please try again.")
       self.redirect("/dj/")
       return
-    self.sess['program'] = program
+    self.set_session_program(program)
     self.session.add_flash("The current program has been set to " + program.title + ".")
     self.redirect("/dj/")
 
@@ -411,12 +404,13 @@ class ChartSong(UserHandler):
         scrobbler = network.get_scrobbler("tst", "1.0")
         scrobbler.scrobble(track_artist, trackname, int(time.time()),
           pylast.SCROBBLE_SOURCE_USER, pylast.SCROBBLE_MODE_PLAYED, 60)
-        self.session.add_flash(trackname + " has been charted and scrobbled to Last.FM, and should show up below.")
+        self.session.add_flash("%s has been charted and scrobbled to Last.FM, and should show up below."%trackname)
       except:
         # just catch all errors with the last.fm; it's not that important that
         # everything get scrobbled exactly; plus this is like the #1 source
         # of errors in charting songs.
-        self.session.add_flash(trackname + " has been charted, but was not scrobbled to Last.FM")
+        self.session.add_flash("%s has been charted, but was not scrobbled to Last.FM"%
+                               trackname)
       self.redirect("/dj/chartsong/")
       return
       # End of song charting.
@@ -478,7 +472,7 @@ class ViewCharts(UserHandler):
     end = datetime.datetime.now()
     songs, albums = models.getTopSongsAndAlbums(start, end, default_songs, default_albums)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'songs': songs,
       'albums': albums,
@@ -504,7 +498,7 @@ class ViewCharts(UserHandler):
       default_albums = int(self.request.get("album_num"))
     songs, albums = models.getTopSongsAndAlbums(start, end, default_songs, default_albums)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'songs': songs,
       'albums': albums,
@@ -525,7 +519,7 @@ class ViewLogs(UserHandler):
     psas = models.getPSAsInRange(start=start, end=end)
     ids = models.getIDsInRange(start=start, end=end)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'psas': psas,
       'ids': ids,
@@ -546,7 +540,7 @@ class ViewLogs(UserHandler):
     psas = models.getPSAsInRange(start=start, end=end)
     ids = models.getIDsInRange(start=start, end=end)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'psas': psas,
       'ids': ids,
@@ -566,7 +560,7 @@ class ManageDJs(UserHandler):
     dj_list = models.Dj.all().order("fullname")
     template_values = {
       'dj_list': dj_list,
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'posts': models.getLastPosts(3),
     }
@@ -641,7 +635,7 @@ class EditDJ(UserHandler):
       template_values = {
         'dj_list': dj_list,
         'dj': dj,
-        'session': self.sess,
+        'session': self.session,
         'flash': self.flash,
         'posts': models.getLastPosts(3),
       }
@@ -695,7 +689,7 @@ class ManagePrograms(UserHandler):
                                                    for dj in program.dj_list) if program.dj_list
                                               else None)}
                                for program in program_list if not program.current),
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'posts': models.getLastPosts(3),
     }
@@ -723,11 +717,11 @@ class ManagePrograms(UserHandler):
                                current=bool(self.request.get("current")))
       program.put()
 
-      self.session.add_flash(("%s was successfully created associated a program. "
+      self.session.add_flash("%s was successfully created associated a program. "
                         "Click <a href='/dj/programs/%s'>here</a> "
                         "to edit it (you probably want to do "
                         "this as there are no DJs on it currently)."% 
-                        (program.title, str(program.key()))))
+                        (program.title, str(program.key())))
 
     self.redirect('/dj/programs/')
   
@@ -744,7 +738,7 @@ class EditProgram(UserHandler):
       template_values = {
         'all_dj_list': [{'dj': dj, 'in_program': dj.key() in program.dj_list} for dj in models.Dj.all()],
         'program': program,
-        'session': self.sess,
+        'session': self.session,
         'flash': self.flash,
         'posts': models.getLastPosts(3),
       }
@@ -773,9 +767,9 @@ class EditProgram(UserHandler):
 class MySelf(UserHandler):
   @login_required
   def get(self):
-    dj = models.Dj.get(self.sess['dj'].key())
+    dj = models.Dj.get(self.dj_key)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'dj': dj,
       'posts': models.getLastPosts(1),
@@ -825,9 +819,9 @@ class MySelf(UserHandler):
 class MyShow(UserHandler):
   @login_required
   def get(self):
-    program = self.sess['program']
+    program = models.Program.get(self.program_key)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'program': program,
       'posts': models.getLastPosts(2),
@@ -852,7 +846,7 @@ class MyShow(UserHandler):
     program.desc = self.request.get("desc")
     program.page_html = self.request.get("page_html")
     program.put()
-    self.sess['program'] = program
+    self.set_session_program(program)
     self.session.add_flash("Program successfully changed.")
     self.redirect("/dj/myshow")
   
@@ -865,7 +859,7 @@ class NewBlogPost(UserHandler):
   def get(self):
     posts = models.getLastPosts(2)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'posts': posts,
     }
@@ -883,7 +877,7 @@ class NewBlogPost(UserHandler):
     if models.getPostBySlug(post_date, slug):
       errors = "Error: this post has a duplicate slug to another post from the same day.  This probably shouldn't happen often."
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'errors': errors,
       'post': post,
@@ -909,7 +903,7 @@ class EditBlogPost(UserHandler):
       return
     posts = models.getLastPosts(2)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'post': post,
       'editing': True,
@@ -946,7 +940,7 @@ class EditBlogPost(UserHandler):
     post.text = text
     posts = models.getLastPosts(2)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'errors': errors,
       'post': post,
@@ -974,7 +968,7 @@ class RemovePlay(UserHandler):
       }))
     else:
       play.delete()
-      memcache.delete("playlist_html_" + str(self.sess["program"].key()))
+      memcache.delete("playlist_html_%"%self.session.get('program').get('key'))
       self.response.out.write(simplejson.dumps({
         'status': "Successfully deleted play."
       }))
@@ -984,7 +978,7 @@ class NewEvent(UserHandler):
   def get(self):
     posts = models.getLastPosts(2)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'editing': False,
       'hours': [str(i).rjust(2, "0") for i in range(24)],
@@ -1027,7 +1021,7 @@ class EditEvent(UserHandler):
     minute = event.event_date.strftime("%M")
     posts = models.getLastPosts(2)
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'editing': True,
       'event': event,
@@ -1084,7 +1078,7 @@ class ManagePermissions(UserHandler):
         'title': p.title,
         'dj_list': [models.Dj.get(d) for d in p.dj_list],
         } for p in permissions],
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'posts': models.getLastPosts(2),
     }
@@ -1154,7 +1148,7 @@ class ManageAlbums(UserHandler):
     template_values = {
       'new_album_list': new_album_list,
       'new_album_html': new_album_html,
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
     }
     self.response.out.write(template.render(getPath("dj_manage_albums.html"), template_values))

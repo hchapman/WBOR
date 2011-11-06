@@ -15,11 +15,16 @@ class BaseHandler(webapp2.RequestHandler):
     try:
       webapp2.RequestHandler.dispatch(self)
     finally:
+      logging.info(self.session)
       self.session_store.save_sessions(self.response)
 
   @webapp2.cached_property
   def session(self):
     return self.session_store.get_session()
+
+  @property
+  def flash(self):
+    return self.session.get_flashes()
 
 class UserHandler(BaseHandler):
   """Handler facilitating a currently logged in user (i.e. a DJ) and their programs, etc.
@@ -52,10 +57,6 @@ class UserHandler(BaseHandler):
 
   def session_has_program(self):
     return self.session.has_key('program')
-
-  @property
-  def flash(self):
-    return self.session.get_flashes()
 
   @property
   def dj_key(self):

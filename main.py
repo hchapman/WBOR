@@ -33,7 +33,7 @@ from google.appengine.api import memcache
 from google.appengine.runtime import DeadlineExceededError
 from passwd_crypto import hash_password
 from dj import check_login
-from handlers import BaseHandler
+from handlers import BaseHandler, UserHandler
 
 from configuration import webapp2conf
 
@@ -43,7 +43,6 @@ def getPath(filename):
 class MainPage(BaseHandler):
   def get(self):
     album_list = []
-    logging.info(self.session)
     # album_list = models.getNewAlbums(50)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
@@ -54,7 +53,7 @@ class MainPage(BaseHandler):
     events = models.getEventsAfter(datetime.datetime.now() - 
                                    datetime.timedelta(days=1), 3)
     template_values = {
-      'flashes': self.session.get_flashes(),
+      'flash': self.flash,
       'session': self.session,
       'album_list': album_list,
       'top_songs': top_songs,
@@ -62,12 +61,6 @@ class MainPage(BaseHandler):
       'posts': posts,
       'events': events,
       }
-    visitnum = self.session.get('visitnum')
-    if visitnum is None:
-      visitnum = 0
-    self.session['visitnum'] = visitnum+1
-    self.session.add_flash("You've visited %s times!"%visitnum)
-    logging.info(self.session)
     self.response.out.write(template.render(getPath("index.html"), 
                                             template_values))
 
@@ -194,9 +187,8 @@ class BlogDisplay(BaseHandler):
   def get(self, date_string, post_slug):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
     post = models.getPostBySlug(post_date, post_slug)
-    self.flash = flash.Flash()
     if not post:
-      self.flash.msg = "The post you requested could not be found.  Please try again."
+      self.session.add_flash("The post you requested could not be found.  Please try again.")
       self.redirect('/')
       return
     template_values = {
@@ -219,12 +211,12 @@ class AlbumDisplay(BaseHandler):
       self.response.out.write(image_blob)
 
 
-class UpdateInfo(BaseHandler):
+class UpdateInfo(webapp2.RequestHandler):
   def get(self):
-    lastPlay = models.getLastPlay()
+    recent_songs = models.getLastNPlays(3)
+    lastPlay = recent_songs[0]
     song, program = lastPlay.song, lastPlay.program
     song_string = song.title + " &mdash; " + song.artist
-    recent_songs = models.getLastNPlays(3)
     self.response.headers["Content-Type"] = "text/json"
     self.response.out.write(simplejson.dumps({
           'song_string': song_string,
@@ -271,11 +263,8 @@ class EventPage(BaseHandler):
   def get(self):
     start_date = datetime.datetime.now() - datetime.timedelta(days=2)
     events = models.getEventsAfter(start_date)
-    self.sess = sessions.Session()
-    self.flash = flash.Flash()
     template_values = {
       'events': events,
-      'logged_in': self.sess.has_key('dj'),
       }
     self.response.out.write(template.render(getPath("events.html"), 
                                             template_values))
@@ -289,8 +278,6 @@ class SchedulePage(BaseHandler):
 class PlaylistPage(BaseHandler):
   def get(self):
     shows = models.getPrograms()
-    self.sess = sessions.Session()
-    self.flash = flash.Flash()
     slug = self.request.get("show")
     datestring = self.request.get("programdate")
     selected_date = None
@@ -300,14 +287,14 @@ class PlaylistPage(BaseHandler):
         selected_date = datetime.datetime.strptime(datestring, "%m/%d/%Y")
         selected_date = selected_date + datetime.timedelta(hours=12)
       except:
-        self.flash.msg = "The date provided could not be parsed."
+        self.session.add_flash("The date provided could not be parsed.")
         self.redirect("/")
         return
 
     if slug:
       selected_program = models.getProgramBySlug(slug)
       if not selected_program:
-        self.flash.msg = "There is no program for slug %s." % slug
+        self.session.add_flash("There is no program for slug %s." % slug)
         self.redirect("/")
         return
       if selected_date:
@@ -351,7 +338,7 @@ class FunPage(BaseHandler):
     self.response.out.write(template.render(getPath("fun.html"), 
                                             template_values))
 
-class ChartsPage(BaseHandler):
+class ChartsPage(UserHandler):
   @check_login
   def get(self):
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
@@ -406,16 +393,14 @@ class ConvertPlays(BaseHandler):
 
 class ProgramPage(BaseHandler):
   def get(self, slug):
-    self.flash = flash.Flash()
-    self.sess = sessions.Session()
     program = models.getProgramBySlug(slug)
     posts = models.getLastPosts(1)
     if not program:
-      self.flash.msg = "Invalid program slug specified."
+      self.session.add_flash("Invalid program slug specified.")
       self.redirect("/")
       return
     template_values = {
-      'session': self.sess,
+      'session': self.session,
       'flash': self.flash,
       'program': program,
       'djs' :  (tuple(models.Dj.get(dj) 
