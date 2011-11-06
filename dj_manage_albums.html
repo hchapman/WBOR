@@ -111,7 +111,7 @@
     <div id='new-albums'>
         <h4>On the New Shelf</h4>
         {% if new_album_html %}
-        {{ new_album_html }}
+        {{ new_album_html|safe }}
         {% else %}
         {% include "dj_manage_new_albums_list.html"}
         {% endif %}

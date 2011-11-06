@@ -233,7 +233,7 @@ class RequestPassword(UserHandler):
     reset_dj.pw_reset_hash=hash_password(reset_key)
     reset_dj.put()
     mail.send_mail(
-      sender="WBOR <password-reset@wbor-brunswick.appspotmail.com>",
+      sender="WBOR <password-reset@wbor-hr.appspotmail.com>",
       to=email.strip(),
       subject="You've requested to reset your password!",
       body="""

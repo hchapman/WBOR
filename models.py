@@ -224,7 +224,7 @@ def getLastPlays(program, after=None, num=1000):
 def getLastPsa():
   psa = Psa.all().order("-play_date").get()
   if psa:
-    return psa[0]
+    return psa
   else:
     return None
 
