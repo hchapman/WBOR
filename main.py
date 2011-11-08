@@ -85,6 +85,9 @@ class ArtistComplete(BaseHandler):
 
 class AlbumTable(BaseHandler):
   def post(self):
+    pass
+
+  def dummy(self):
     page = self.request.get('page')
     try:
       page = int(page)
@@ -95,7 +98,7 @@ class AlbumTable(BaseHandler):
       return
     album_table_html = memcache.get("album_table_html")
     if album_table_html is None:
-      albums = models.getNewAlbums(100, page)
+      albums = models.getNewAlbums(20, page)
       template_values = {
         'album_list': albums,
         }

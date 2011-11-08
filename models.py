@@ -232,7 +232,7 @@ def getProgramsByDj(dj):
   # TODO - handle a case in which a DJ actually has (and needs) 10 shows
   return Program.all().filter("dj_list =", dj).fetch(10)
 
-def getNewAlbums(num=1000, page=0, byArtist=False):
+def getNewAlbums(num=10, page=0, byArtist=False):
   albums = Album.all().filter("isNew =", True)
   if byArtist:
     albums = albums.order("artist")

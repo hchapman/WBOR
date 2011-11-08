@@ -20,7 +20,14 @@ handlers:
   script: dj.app
 - url: /.*
   script: main.app
+- url: /stats.*
+  script: google.appengine.ext.appstats.ui.app
 
 libraries:
 - name: django
   version: latest
+
+admin_console:
+  pages:
+  - name: Appstats
+    url: /stats
