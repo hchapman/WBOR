@@ -180,14 +180,14 @@ def albumAutocomplete(prefix):
   albums = Album.all().filter("lower_title >=", prefix).filter("lower_title <", prefix + u"\ufffd").fetch(30)
 
 def getLastNPlays(num):
-  last_plays = memcache.get("last_%s_plays"%num)
-  if last_plays is not None:
-    logging.info("Using memcache for last_3_plays")
-    return last_plays
+  last_plays = memcache.get("last_plays")
+  if last_plays is not None and len(last_plays) >= num:
+    logging.info("Using memcache for last_plays")
+    return last_plays[:num]
   else:
     logging.debug("Updating last_%s_plays memcache"%num)
     plays = Play.all().order("-play_date").fetch(num)
-    if not memcache.set("last_%s_plays"%num, plays):
+    if not memcache.set("last_plays", plays):
       logging.error("Memcache set last num plays failed")
   return plays
 
@@ -233,7 +233,7 @@ def getProgramsByDj(dj):
   return Program.all().filter("dj_list =", dj).fetch(10)
 
 def getNewAlbums(num=10, page=0, byArtist=False):
-  albums = Album.all().filter("isNew =", True)
+  albums = Album.all(keys_only=True).filter("isNew =", True)
   if byArtist:
     albums = albums.order("artist")
   else:

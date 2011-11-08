@@ -14,6 +14,12 @@ handlers:
   script: main.app
 - url: /static
   static_dir: static
+- url: /favicon\.png
+  static_files: static/images/favicon.png
+  upload: static/images/favicon\.png
+- url: /favicon\.ico
+  static_files: static/images/favicon.png
+  upload: static/images/favicon\.png
 - url: /dj.*
   script: dj.app
 - url: /blog/.*/edit/?

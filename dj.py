@@ -317,7 +317,8 @@ class ChartSong(UserHandler):
     if not new_song_div_html:
       new_albums = models.getNewAlbums(byArtist=True)
       if new_albums:
-        album_songs = [models.Song.get(k) for k in new_albums[0].songList]
+        album_songs = [models.Song.get(k) for k in 
+                       models.Album.get(new_albums[0]).songList]
       memcache.set("new_song_div_html",
         template.render(
           getPath("dj_chartsong_newsongdiv.html"), 
