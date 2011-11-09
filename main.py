@@ -17,6 +17,7 @@
 
 import os
 import models
+import cache
 import urllib
 import hashlib
 import datetime
@@ -216,7 +217,7 @@ class AlbumDisplay(BaseHandler):
 
 class UpdateInfo(webapp2.RequestHandler):
   def get(self):
-    recent_songs = models.getLastNPlays(3)
+    recent_songs = cache.getLastPlays(num=3)
     lastPlay = recent_songs[0]
     song, program = lastPlay.song, lastPlay.program
     song_string = song.title + " &mdash; " + song.artist
@@ -285,7 +286,7 @@ class PlaylistPage(BaseHandler):
     datestring = self.request.get("programdate")
     selected_date = None
 
-    if datestring:
+    if datestring is not None:
       try:
         selected_date = datetime.datetime.strptime(datestring, "%m/%d/%Y")
         selected_date = selected_date + datetime.timedelta(hours=12)
@@ -318,15 +319,14 @@ class PlaylistPage(BaseHandler):
           plays = []
     else:
       if not selected_date:
-        lastplay = models.getLastPlay()
+        lastplay = cache.getLastPlays()[0]
         if lastplay:
           selected_date = lastplay.play_date
 
       if selected_date:
         plays = models.getPlaysForDate(selected_date)
       else:
-        plays = []
-      #plays = models.getLastNPlays(60)
+        plays = cache.getLastPlays(60)
     
     template_values = {
       'plays': plays,

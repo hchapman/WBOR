@@ -14,6 +14,7 @@
 
 import os
 import models
+import cache
 import urllib
 import hmac
 import base64
@@ -310,7 +311,7 @@ class ChartSong(UserHandler):
          }
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
-    last_psa = models.getLastPsa()
+    last_psa = cache.getLastPsa()
     new_albums = None
     new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []
