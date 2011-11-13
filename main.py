@@ -37,6 +37,7 @@ from dj import check_login
 from handlers import BaseHandler, UserHandler
 
 from configuration import webapp2conf
+import configuration as conf
 
 def getPath(filename):
   return os.path.join(os.path.dirname(__file__), filename)
@@ -108,11 +109,13 @@ class AlbumTable(BaseHandler):
     self.response.out.write(album_table_html)
 
 class AlbumInfo(BaseHandler):
-  def get(self):    
+  def get(self):
     artist = self.request.get('artist')
     album = self.request.get('album')
     keywords = self.request.get('keywords')
-    keywords = urllib.quote(keywords) + "%20" + urllib.quote(artist) + "%20" + urllib.quote(album)
+
+    keywords = (urllib.quote(keywords) + "%20" + 
+                urllib.quote(artist) + "%20" + urllib.quote(album))
     # AKIAJIXECWA77X5XX4DQ
     # 6oYjAsiXTz8xZzpKZC8zkqXnkYV72CNuCRh9hUsQ
     # datetime.datetime.now().strftime("%Y-%m-%dT%H:%M%:%SZ")
@@ -218,6 +221,7 @@ class AlbumDisplay(BaseHandler):
 class UpdateInfo(webapp2.RequestHandler):
   def get(self):
     recent_songs = cache.getLastPlays(num=3)
+    logging.error(recent_songs)
     lastPlay = recent_songs[0]
     song, program = lastPlay.song, lastPlay.program
     song_string = song.title + " &mdash; " + song.artist

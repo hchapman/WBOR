@@ -305,9 +305,10 @@ class ChartSong(UserHandler):
     playlist_html = memcache.get(memcache_key)
     if not playlist_html:
       playlist_html = template.render("dj_chartsong_playlist_div.html",
-        {'playlist': models.getLastPlays(program=self.program_key, 
-                                         after=(datetime.datetime.now() - 
-                                                datetime.timedelta(days=1))),
+        {'playlist': cache.getLastPlays(num=50,
+                                        program=self.program_key,
+                                        after=(datetime.datetime.now() - 
+                                               datetime.timedelta(days=1))),
          }
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
@@ -419,7 +420,7 @@ class ChartSong(UserHandler):
     elif self.request.get("submit") == "Station ID":
       # If the DJ has recorded a station ID
       station_id = models.StationID(program=self.program_key, 
-        play_date=datetime.datetime.now())
+                                    play_date=datetime.datetime.now())
       station_id.put()
       self.session.add_flash("Station ID recorded.")
       self.redirect("/dj/chartsong/")
@@ -427,9 +428,7 @@ class ChartSong(UserHandler):
     elif self.request.get("submit") == "PSA":
       # If the DJ has recorded a PSA play
       psa_desc = self.request.get("psa_desc")
-      psa = models.Psa(desc=psa_desc, program=self.program_key, 
-        play_date=datetime.datetime.now())
-      psa.put()
+      cache.addNewPsa(desc=psa_desc, program=self.program_key)
       self.session.add_flash("PSA recorded.")
       self.redirect("/dj/chartsong/")
       return
@@ -961,19 +960,11 @@ class RemovePlay(UserHandler):
   @login_required
   def post(self):
     self.response.headers['Content-Type'] = 'text/json'
-    play = models.Play.get(self.request.get("play_key"))
-    errors = ""
-    if not play:
-      errors = "An error occurred.  The play could not be found... please try again."
-      self.response.out.write(simplejson.dumps({
-        'err': errors,
-      }))
-    else:
-      play.delete()
-      memcache.delete("playlist_html_%"%self.session.get('program').get('key'))
-      self.response.out.write(simplejson.dumps({
-        'status': "Successfully deleted play."
-      }))
+    cache.deletePlay(self.request.get("play_key"), self.program_key)
+    memcache.delete("playlist_html_%s"%self.program_key)
+    self.response.out.write(simplejson.dumps({
+          'status': "Successfully deleted play."
+          }))
 
 class NewEvent(UserHandler):
   @authorization_required("Manage Events")
