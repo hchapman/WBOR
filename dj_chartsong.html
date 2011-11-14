@@ -103,7 +103,8 @@ $(function() {
         <a href='/dj/'>Return to main index</a>
     </div>
     <div id='psa-status'>
-        The last PSA (<i>{{ last_psa.desc }}</i>) was played at {{ last_psa.play_date|date:"h:i" }}, or {{ last_psa.play_date|timesince }} ago.
+        {% if last_psa %} The last PSA (<i>{{ last_psa.desc }}</i>) was played at {{ last_psa.play_date|date:"h:i" }}, or {{ last_psa.play_date|timesince }} ago.
+	{% else %} There have been no PSAs played. {% endif %}
         <br>
         <form action='/dj/chartsong/' method='post'>
             <input type='submit' name='submit' value='Station ID'>

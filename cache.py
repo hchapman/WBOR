@@ -23,13 +23,23 @@ import models
 # Global python imports
 import datetime
 import logging
+import itertools
 
+LMC_SET_DEBUG = "Memcache set (%s, %s) required"
 LMC_SET_FAIL = "Memcache set(%s, %s) failed"
 LMC_DEL_ERROR = "Memcache delete(%s) failed with error code %s"
 
 def mcset(value, cache_key, *args):
+  logging.debug(LMC_SET_DEBUG %(cache_key %args, value))
   if not memcache.set(cache_key %args, value):
     logging.error(LMC_SET_FAIL % (cache_key %args, value))
+  return value
+
+def mcset_t(value, time, cache_key, *args):
+  logging.debug(LMC_SET_DEBUG %(cache_key %args, value))
+  if not memcache.set(cache_key %args, value, time=time):
+    logging.error(LMC_SET_FAIL % (cache_key %args, value))
+  return value
 
 def mcdelete(cache_key, *args):
   response = memcache.delete(cache_key %args)
@@ -67,12 +77,13 @@ def getLastPlayKeys(num=1,
   # We currently don't cache last plays for before/after queries.
   if before is None and after is None:
     last_plays = memcache.get(lp_mc_key)
+    if last_plays is not None and None in last_plays:
+      last_plays = [play for play in last_plays if play is not None]
   else:
     last_plays = None
 
-  logging.error(last_plays)
   if last_plays is None or num > len(last_plays):
-    logging.info("Have to update %s memcache"%lp_mc_key)
+    logging.debug("Have to update %s memcache"%lp_mc_key)
     play_query = models.Play.all(keys_only=True).order("-play_date")
 
     # Add additional filters to the query, if applicable.
@@ -98,6 +109,9 @@ def getLastPlayKeys(num=1,
 
 def getPlay(key):
   """Get a play from its db key."""
+  if key is None:
+    return None
+
   play = memcache.get(PLAY_ENTRY %key)
   if play is None:
     logging.info("Have to update %s memcache" %PLAY_ENTRY%key)
@@ -107,14 +121,11 @@ def getPlay(key):
 
 def getLastPlays(num=1,
                  program=None, before=None, after=None):
-  """Get the last plays, rather than their keys. Please do not use
-  this function unless you are trying to debug something rediculous,
-  rapidly prototype some functionality, or you improve this 
-  implementation
-
-  ***HACK***"""
-  return [getPlay(key) for key in getLastPlayKeys(num=num, program=program,
-                                                  before=before, after=after)]
+  """Get the last plays, rather than their keys."""
+  
+  return filter(None, [getPlay(key) for key in
+                       getLastPlayKeys(num=num, program=program,
+                                       before=before, after=after)])
 
 def addNewPlay(song, program, artist,
                play_date=None, isNew=False):
@@ -171,6 +182,9 @@ def getLastPsaKey():
   return psa
 
 def getPsa(key):
+  if key is None:
+    return None
+
   psa = memcache.get(PSA_ENTRY %key)
   if psa is None:
     logging.debug("Have to update %s memcache"%PSA_ENTRY%key)
@@ -192,4 +206,127 @@ def addNewPsa(desc, program, play_date=None):
   if last_psa is None or play_date > last_psa.play_date:
     mcset(psa.key(), LAST_PSA)
   
+## Functions for getting and setting Songs
+SONG_ENTRY = "song_key%s"
 
+def getSong(key):
+  cached = memcache.get(SONG_ENTRY %key)
+  if cached is not None:
+    return cached
+  return mcset(db.get(key), SONG_ENTRY %key)
+
+## Functions for getting and setting Programs
+PROGRAM_ENTRY = "program_key%s"
+PROGRAM_EXPIRE = 360  # Program cache lasts for one hour maximum
+
+def getProgram(key):
+  cached = memcache.get(PROGRAM_ENTRY %key)
+  if cached is not None:
+    return cached
+  return mcset_t(db.get(key), PROGRAM_EXPIRE, PROGRAM_ENTRY, key)
+
+## Functions for getting and setting Albums
+NEW_ALBUMS = "new_albums"
+ALBUM_ENTRY = "album_key%s"
+
+## Functions for getting and setting Artists,
+## Specifically, caching artist name autocompletion 
+ARTIST_COMPLETE = "artist_pref%s"
+ARTIST_ENTRY = "artist_key%s"
+
+# Minimum number of entries in the cache with which we would even consider
+# not rechecking the datastore. Figit with this number to balance reads and
+# autocomplete functionality. Possibly consider algorithmically determining
+# a score for artist names and prefixes?
+ARTIST_MIN_AC_CACHE = 10
+ARTIST_MIN_AC_RESULTS = 5
+
+# Another suggestion: implement a "search accuracy" probabilistic system by
+# which results repeatedly based off of previous cache results have less
+# and less validity and more likeliness to not "Be everything"
+
+def getArtist(key):
+  cached = memcache.get(ARTIST_ENTRY %key)
+  if cached is not None:
+    return cached
+  return mcset(db.get(key), ARTIST_ENTRY %key)
+
+# Replace with batch get of uncached database entities
+def getArtists(keys):
+  return filter(None,
+                [getArtist(key) for key in keys if key is not None])
+
+def artistAutocomplete(prefix):
+  prefix = prefix.lower()
+  # First, see if we have anything already cached for us in memstore.
+  # We start with the most specific prefix, and widen our search
+  cache_prefix = prefix
+  cached_results = None
+  perfect_hit = True
+  while cached_results is None:
+    if len(cache_prefix) > 0:
+      cached_results = memcache.get(ARTIST_COMPLETE %cache_prefix)
+      if cached_results is None:
+        cache_prefix = cache_prefix[:-1]
+        perfect_hit = False
+    else:
+      cached_results = {"recache_count": -1,
+                        "max_results": False,
+                        "artists": None,}
+
+  # If we have a sufficient number of cached results OR we 
+  #    have all possible results, search in 'em.
+  logging.debug(cache_prefix)
+  logging.debug(cached_results)
+  logging.debug(perfect_hit)
+  if (cached_results["recache_count"] >= 0 and 
+      (cached_results["max_results"] or
+       len(cached_results["artists"]) >= ARTIST_MIN_AC_CACHE)):
+    logging.debug("Trying to use cached results")
+
+    cache_artists = sorted(cached_results["artists"],
+                           key=lambda x: getArtist(x).search_name)
+
+    # If the cache is perfect (exact match!), just return it
+    if perfect_hit:
+      # There is no need to update the cache in this case.
+      return getArtists(cache_artists)
+
+    # Otherwise we're going to have to search in the cache.
+    results = filter(lambda a: (getArtist(a).lowercase_name.startswith(prefix) or
+                                (getArtist(a).search_name is not None and 
+                                 getArtist(a).search_name.startswith(prefix))),
+                     cache_artists)
+    if cached_results["max_results"]:
+      # We're as perfect as we can be, so cache the results
+      cached_results["recache_count"] += 1
+      cached_results["artists"] = results
+      mcset(cached_results, ARTIST_COMPLETE, prefix)
+      return results
+    elif len(results) > ARTIST_MIN_AC_RESULTS:
+      if len(results) > ARTIST_MIN_AC_CACHE:
+        cached_results["recache_count"] += 1
+        cached_results["artists"] = results
+        mcset(cached_results, ARTIST_COMPLETE, prefix)
+        return getArtists(results)
+      return getArtists(results)
+  
+  artists_full = models.ArtistName.all(keys_only=True).filter("lowercase_name >=", prefix
+             ).filter("lowercase_name <", prefix + u"\ufffd").fetch(10)
+  artists_sn = models.ArtistName.all(keys_only=True).filter("search_name >=", prefix
+             ).filter("search_name <", prefix + u"\ufffd").fetch(10)
+  max_results = len(artists_full) < 10 and len(artists_sn) < 10
+  artist_dict = {}
+  all_artists = getArtists(artists_full + artists_sn)
+  for a in all_artists:
+    artist_dict[a.artist_name] = a
+  artists = []
+  for a in artist_dict:
+    artists.append(artist_dict[a])
+  artists = sorted(artists, key=lambda x: x.search_name)
+
+  results_dict = {"recache_count": 0,
+                  "max_results": max_results,
+                  "artists": [artist.key() for artist in artists]}
+  mcset(results_dict, ARTIST_COMPLETE, prefix)
+  return artists

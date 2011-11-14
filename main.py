@@ -44,6 +44,7 @@ def getPath(filename):
 
 class MainPage(BaseHandler):
   def get(self):
+    ## Album list disabled until it is further optimized.
     album_list = []
     # album_list = models.getNewAlbums(50)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
@@ -79,7 +80,7 @@ class DjComplete(BaseHandler):
 class ArtistComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
-    artists = models.artistAutocomplete(q)
+    artists = cache.artistAutocomplete(q)
     self.response.out.write(simplejson.dumps({
           'query': q,
           'suggestions': [ar.artist_name for ar in artists],      
@@ -206,13 +207,14 @@ class BlogDisplay(BaseHandler):
 class AlbumDisplay(BaseHandler):
   def get(self, key_id, size):
     album = models.Album.get(key_id)
+    cover = models.CoverArt.get(album)
     if not album:
       return
-    image_blob = album.small_cover
-    image_type = album.small_filetype
+    image_blob = cover.small_cover
+    image_type = cover.small_filetype
     if size == "l":
-      image_blob = album.large_cover
-      image_type = album.large_filetype
+      image_blob = cover.large_cover
+      image_type = cover.large_filetype
     if image_blob and image_type:
       self.response.headers["Content-Type"] = "image/" + image_type
       self.response.out.write(image_blob)
@@ -222,16 +224,29 @@ class UpdateInfo(webapp2.RequestHandler):
   def get(self):
     recent_songs = cache.getLastPlays(num=3)
     logging.error(recent_songs)
-    lastPlay = recent_songs[0]
-    song, program = lastPlay.song, lastPlay.program
-    song_string = song.title + " &mdash; " + song.artist
+    if recent_songs is not None and len(recent_songs) > 0:
+      last_play = recent_songs[0]
+      song, program = (cache.getSong(last_play.song_key), 
+                       cache.getProgram(last_play.program_key))
+      song_string = song.title + " &mdash; " + song.artist
+      program_title, program_desc, program_slug = (program.title,
+                                                   program.desc,
+                                                   program.slug)
+    else:
+      song, program = None, None
+      song_string = "Nothing is playing"
+      program_title, program_desc, program_slug = ("No show",
+                                                   "No description",
+                                                   "")
+
     self.response.headers["Content-Type"] = "text/json"
     self.response.out.write(simplejson.dumps({
           'song_string': song_string,
-          'program_title': program.title,
-          'program_desc': program.desc,
-          'program_slug': program.slug,
-          'top_played': "Top artists: " + ", ".join([a for a in program.top_artists[:3]]),
+          'program_title': program_title,
+          'program_desc': program_desc,
+          'program_slug': program_slug,
+          'top_played': ("Top artists: " + ", ".join([a for a in program.top_artists[:3]]) if
+                         program is not None else None),
           'recent_songs_html': template.render(getPath("recent_songs.html"), {'plays': recent_songs}),
           }))
 

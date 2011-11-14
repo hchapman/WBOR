@@ -316,11 +316,15 @@ class ChartSong(UserHandler):
     new_albums = None
     new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []
+    new_song_div_html = None
     if not new_song_div_html:
-      new_albums = models.getNewAlbums(byArtist=True)
+      new_albums = []
+      #new_albums = models.getNewAlbums(byArtist=True)
       if new_albums:
+        new_albums = models.Album.get(new_albums)
+        logging.debug(new_albums)
         album_songs = [models.Song.get(k) for k in 
-                       models.Album.get(new_albums[0]).songList]
+                       new_albums[0].songList]
       memcache.set("new_song_div_html",
         template.render(
           getPath("dj_chartsong_newsongdiv.html"), 
@@ -1133,7 +1137,8 @@ class ManageAlbums(UserHandler):
     new_album_list = None
     new_album_html = memcache.get("manage_new_albums_html")
     if not new_album_html:
-      new_album_list = models.getNewAlbums()
+      new_album_list = []
+      #new_album_list = models.getNewAlbums()
       new_album_html = template.render(
         getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
       )
@@ -1191,16 +1196,20 @@ class ManageAlbums(UserHandler):
       smallCover = urlfetch.fetch(json_data['small_pic']).content
       small_filetype = json_data['small_pic'][-4:].strip('.')
       # create the actual objects and store them
+      cover = models.CoverArt(
+        large_filetype=large_filetype,
+        small_filetype=small_filetype,
+        large_cover=largeCover,
+        small_cover=smallCover,
+        )
+      cover.put()
       album = models.Album(
         title=json_data['title'],
         lower_title=json_data['title'].lower(),
         artist=json_data['artist'],
         add_date=datetime.datetime.now(),
         isNew=True,
-        large_filetype=large_filetype,
-        small_filetype=small_filetype,
-        large_cover=largeCover,
-        small_cover=smallCover,
+        cover_art=cover,
         asin=asin,
       )
       album.put()
@@ -1266,17 +1275,21 @@ class ManageAlbums(UserHandler):
         return
       cover_filetype = cover_url[-4:].strip('.')
       artist = self.request.get('artist')
+      cover = models.CoverArt(
+        large_cover=cover,
+        small_cover=cover,
+        large_filetype=cover_filetype,
+        small_filetype=cover_filetype
+        )
+      cover.put()
       album = models.Album(
         title=self.request.get("title"),
         lower_title=self.request.get("title").lower(),
         artist=artist,
         add_date=datetime.datetime.now(),
         isNew=True,
-        large_cover=cover,
-        small_cover=cover,
-        large_filetype=cover_filetype,
-        small_filetype=cover_filetype
-      )
+        cover=cover
+        )
       album.put()
       memcache.flush_all()
       songlist = [models.Song(title=trackname, artist=artist, album=album) for trackname in tracks]

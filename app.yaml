@@ -1,5 +1,5 @@
 application: wbor-hr
-version: 1-5-alpha
+version: 1-5-beta2
 runtime: python27
 api_version: 1
 threadsafe: true

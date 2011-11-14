@@ -38,6 +38,12 @@ class BlogPost(db.Model):
   post_date = db.DateTimeProperty()
   slug = db.StringProperty()
 
+class CoverArt(db.Model):
+  large_cover = db.BlobProperty()
+  small_cover = db.BlobProperty()
+  large_filetype = db.StringProperty()
+  small_filetype = db.StringProperty()
+
 class Album(db.Model):
   title = db.StringProperty()
   asin = db.StringProperty()
@@ -45,11 +51,8 @@ class Album(db.Model):
   artist = db.StringProperty()
   add_date = db.DateTimeProperty()
   isNew = db.BooleanProperty()
-  large_cover = db.BlobProperty()
-  small_cover = db.BlobProperty()
-  large_filetype = db.StringProperty()
-  small_filetype = db.StringProperty()
   songList = db.ListProperty(db.Key)
+  cover_art = db.ReferenceProperty(CoverArt)
 
 class Song(db.Model):
   title = db.StringProperty()
@@ -62,6 +65,13 @@ class Play(db.Model):
   play_date = db.DateTimeProperty()
   isNew = db.BooleanProperty()
   artist = db.StringProperty()
+
+  @property
+  def program_key(self):
+    return Play.program.get_value_for_datastore(self)
+  @property
+  def song_key(self):
+    return Play.song.get_value_for_datastore(self)
 
 class Psa(db.Model):
   desc = db.StringProperty()
@@ -158,8 +168,8 @@ def getLastPosts(num):
 
 def artistAutocomplete(prefix):
   prefix = prefix.lower()
-  artists_full = ArtistName.all().filter("lowercase_name >=", prefix).filter("lowercase_name <", prefix + u"\ufffd").fetch(20)
-  artists_sn = ArtistName.all().filter("search_name >=", prefix).filter("search_name <", prefix + u"\ufffd").fetch(20)
+  artists_full = ArtistName.all().filter("lowercase_name >=", prefix).filter("lowercase_name <", prefix + u"\ufffd").fetch(10)
+  artists_sn = ArtistName.all().filter("search_name >=", prefix).filter("search_name <", prefix + u"\ufffd").fetch(10)
   artist_dict = {}
   all_artists = artists_full + artists_sn
   for a in all_artists:
@@ -232,7 +242,7 @@ def getProgramsByDj(dj):
   # TODO - handle a case in which a DJ actually has (and needs) 10 shows
   return Program.all().filter("dj_list =", dj).fetch(10)
 
-def getNewAlbums(num=10, page=0, byArtist=False):
+def getNewAlbums(num=1000, page=0, byArtist=False):
   albums = Album.all(keys_only=True).filter("isNew =", True)
   if byArtist:
     albums = albums.order("artist")
