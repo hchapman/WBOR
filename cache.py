@@ -302,7 +302,7 @@ def artistAutocomplete(prefix):
       cached_results["recache_count"] += 1
       cached_results["artists"] = results
       mcset(cached_results, ARTIST_COMPLETE, prefix)
-      return results
+      return getArtists(results)
     elif len(results) > ARTIST_MIN_AC_RESULTS:
       if len(results) > ARTIST_MIN_AC_CACHE:
         cached_results["recache_count"] += 1
