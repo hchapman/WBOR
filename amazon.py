@@ -8,7 +8,6 @@ import hashlib
 import logging
 from xml.dom import minidom
 from google.appengine.api import urlfetch
-from boto.ecs import ECSConnection
 
 def productSearch(keywords):
   # Amazon is kind of obnoxious with the API and there's very little available online to help.
