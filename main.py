@@ -223,7 +223,7 @@ class AlbumDisplay(BaseHandler):
 class UpdateInfo(webapp2.RequestHandler):
   def get(self):
     recent_songs = cache.getLastPlays(num=3)
-    logging.error(recent_songs)
+    logging.debug(recent_songs)
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
       song, program = (cache.getSong(last_play.song_key), 

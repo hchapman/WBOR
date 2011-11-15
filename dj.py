@@ -377,9 +377,10 @@ class ChartSong(UserHandler):
           self.session.add_flash("Missing track information, please fill out both fields.")
           self.redirect("/dj/chartsong/")
           return
-        song = models.Song(title=trackname, artist=track_artist)
+        song = cache.putSong(title=trackname, artist=track_artist)
         song.put()
-        models.addNewPlay(song=song, program=self.program_key, 
+        
+        cache.addNewPlay(song=song, program=self.program_key, 
                           play_date=datetime.datetime.now(), isNew=False, 
                           artist=track_artist)
       memcache_key = "playlist_html_%s"%self.session.get('program').get('key')

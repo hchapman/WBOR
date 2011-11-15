@@ -111,6 +111,8 @@ def getPlay(key):
   """Get a play from its db key."""
   if key is None:
     return None
+  if isinstance(key, models.Play):
+    return key
 
   play = memcache.get(PLAY_ENTRY %key)
   if play is None:
@@ -132,7 +134,7 @@ def addNewPlay(song, program, artist,
   """If a DJ starts playing a song, add it and update the memcache."""
   if play_date is None:
     play_date = datetime.datetime.now()
-  last_play = memcache.get(LAST_PLAYS)
+  last_plays = memcache.get(LAST_PLAYS)
   play = models.Play(song=song,
                      program=program,
                      artist=artist,
@@ -142,9 +144,10 @@ def addNewPlay(song, program, artist,
   mcset(play, PLAY_ENTRY, play.key())
   if last_plays is None: 
     mcset([play], LAST_PLAYS)
-  elif play_date > last_plays[0].play_date:
-    last_plays.insert(0, play)
+  elif play_date > getPlay(last_plays[0]).play_date:
+    last_plays.insert(0, play.key())
     mcset(last_plays, LAST_PLAYS)
+  return play
 
 def deletePlay(play_key, program=None):
   """Delete a play, and update appropriate memcaches"""
@@ -184,6 +187,8 @@ def getLastPsaKey():
 def getPsa(key):
   if key is None:
     return None
+  if isinstance(key, models.Psa):
+    return key
 
   psa = memcache.get(PSA_ENTRY %key)
   if psa is None:
@@ -210,16 +215,31 @@ def addNewPsa(desc, program, play_date=None):
 SONG_ENTRY = "song_key%s"
 
 def getSong(key):
+  if key is None:
+    return None
+  if isinstance(key, models.Song):
+    return key
+
   cached = memcache.get(SONG_ENTRY %key)
   if cached is not None:
     return cached
   return mcset(db.get(key), SONG_ENTRY %key)
+
+def putSong(title, artist):
+  song = models.Song(title=title, artist=artist)
+  song.put()
+  return mcset(song, SONG_ENTRY %song.key())
 
 ## Functions for getting and setting Programs
 PROGRAM_ENTRY = "program_key%s"
 PROGRAM_EXPIRE = 360  # Program cache lasts for one hour maximum
 
 def getProgram(key):
+  if key is None:
+    return None
+  if isinstance(key, models.Program):
+    return key
+
   cached = memcache.get(PROGRAM_ENTRY %key)
   if cached is not None:
     return cached
@@ -246,6 +266,11 @@ ARTIST_MIN_AC_RESULTS = 5
 # and less validity and more likeliness to not "Be everything"
 
 def getArtist(key):
+  if key is None:
+    return None
+  if isinstance(key, models.ArtistName):
+    return key
+
   cached = memcache.get(ARTIST_ENTRY %key)
   if cached is not None:
     return cached
