@@ -153,9 +153,9 @@
     
     {% block main_content %}
     <div class='grid_12 flash-msg' id='msgbox'>
-      {% if flash.msg %}
-        {{ flash.msg }}
-      {% endif %}
+      {% for msg in flash %}
+        {{ msg.0|safe }}
+      {% endfor %}
     </div>
     {% block top_row %}{% endblock %}
     <div class='grid_7 left'><!-- Left-hand column on front page -->

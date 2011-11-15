@@ -1,356 +1,357 @@
-# -*- coding: utf-8 -*-
-"""
-Copyright (c) 2008, appengine-utilities project
-All rights reserved.
+#!/usr/bin/env python
+#
+# Written by Harrison Chapman,
+#  based off code primarily by Seth Glickman
+#
+##############################
+#   Any actual calls by the more forward-ends to access database
+# elements should be through this file, as it is in this file that
+# we cache items. This is critical now with the GAE's more strict
+# database read quotas.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-- Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-- Neither the name of the appengine-utilities project nor the names of its
-  contributors may be used to endorse or promote products derived from this
-  software without specific prior written permission.
+# This module is by no means threadsafe. Race conditions may occur
+# TODO make this module work despite possible race conditions
+#  e.g. implement memcache.Client() gets and cas functionality
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""
-
-# main python imports
-import datetime
-import pickle
-import random
-import sys
-
-# google appengine import
-from google.appengine.ext import db
+# GAE Imports
 from google.appengine.api import memcache
+from google.appengine.ext import db
 
-# settings
-try:
-    import settings
-except:
-    import settings_default as settings
+# Local module imports
+import models
+
+# Global python imports
+import datetime
+import logging
+import itertools
+
+LMC_SET_DEBUG = "Memcache set (%s, %s) required"
+LMC_SET_FAIL = "Memcache set(%s, %s) failed"
+LMC_DEL_ERROR = "Memcache delete(%s) failed with error code %s"
+
+def mcset(value, cache_key, *args):
+  logging.debug(LMC_SET_DEBUG %(cache_key %args, value))
+  if not memcache.set(cache_key %args, value):
+    logging.error(LMC_SET_FAIL % (cache_key %args, value))
+  return value
+
+def mcset_t(value, time, cache_key, *args):
+  logging.debug(LMC_SET_DEBUG %(cache_key %args, value))
+  if not memcache.set(cache_key %args, value, time=time):
+    logging.error(LMC_SET_FAIL % (cache_key %args, value))
+  return value
+
+def mcdelete(cache_key, *args):
+  response = memcache.delete(cache_key %args)
+  if response < 2:
+    logging.debug(LMC_DEL_ERROR %(cache_key, response))
+
+## Functions generally for getting and setting new Plays.
+### Constants representing key templates for the memcache.
+LAST_PLAYS = "last_plays"
+LAST_PLAYS_SHOW = "last_plays_show%s"
+
+LAST_PSA = "last_psa"
+
+PLAY_ENTRY = "play_key%s"
+PSA_ENTRY = "psa_key%s"
+
+
+def getLastPlayKeys(num=1, 
+                    program=None, before=None, after=None):
+  """Get the last num plays' keys. If num=1, return only the last play.
+  Otherwise, return a list of plays.
+
+  TODO: If we have k plays in memcache and want to get n > k plays,
+  we should only need to read the latter k-n plays. Implement some sort
+  of pagination to do this, if possible"""
+  if num < 1: 
+    return None
+  
+  # Determine whether we are working with a program or not and get mc entry
+  if program is None:
+    lp_mc_key = LAST_PLAYS
+  else:
+    lp_mc_key = LAST_PLAYS_SHOW %program
+  
+  # We currently don't cache last plays for before/after queries.
+  if before is None and after is None:
+    last_plays = memcache.get(lp_mc_key)
+    if last_plays is not None and None in last_plays:
+      last_plays = [play for play in last_plays if play is not None]
+  else:
+    last_plays = None
+
+  if last_plays is None or num > len(last_plays):
+    logging.debug("Have to update %s memcache"%lp_mc_key)
+    play_query = models.Play.all(keys_only=True).order("-play_date")
+
+    # Add additional filters to the query, if applicable.
+    # We do not currently cache before/after last plays
+    should_cache = True
+    if program is not None:
+      play_query.filter("program =", program)
+    if before is not None:
+      play_query.filter("play_date <=", before)
+      should_cache = False
+    if after is not None:
+      play_query.filter("play_date >=", after)
+      should_cache = False
+
+    if num == 1:
+      last_plays = [play_query.get()]
+    else:
+      last_plays = play_query.fetch(num)
     
-class _AppEngineUtilities_Cache(db.Model):
-    cachekey = db.StringProperty()
-    createTime = db.DateTimeProperty(auto_now_add=True)
-    timeout = db.DateTimeProperty()
-    value = db.BlobProperty()
+    if should_cache:
+      mcset(last_plays, lp_mc_key)
+  return last_plays[:num]
 
+def getPlay(key):
+  """Get a play from its db key."""
+  if key is None:
+    return None
+  if isinstance(key, models.Play):
+    return key
 
-class Cache(object):
-    """
-    Cache is used for storing pregenerated output and/or objects in the Big
-    Table datastore to minimize the amount of queries needed for page
-    displays. The idea is that complex queries that generate the same
-    results really should only be run once. Cache can be used to store
-    pregenerated value made from queries (or other calls such as
-    urlFetch()), or the query objects themselves.
+  play = memcache.get(PLAY_ENTRY %key)
+  if play is None:
+    logging.info("Have to update %s memcache" %PLAY_ENTRY%key)
+    play = db.get(key)
+    mcset(play, PLAY_ENTRY, key)
+  return play
 
-    Cache is a standard dictionary object and can be used as such. It attesmpts
-    to store data in both memcache, and the datastore. However, should a
-    datastore write fail, it will not try again. This is for performance
-    reasons.
-    """
+def getLastPlays(num=1,
+                 program=None, before=None, after=None):
+  """Get the last plays, rather than their keys."""
+  
+  return filter(None, [getPlay(key) for key in
+                       getLastPlayKeys(num=num, program=program,
+                                       before=before, after=after)])
 
-    def __init__(self, clean_check_percent = settings.cache["CLEAN_CHECK_PERCENT"],
-      max_hits_to_clean = settings.cache["MAX_HITS_TO_CLEAN"],
-        default_timeout = settings.cache["DEFAULT_TIMEOUT"]):
-        """
-        Initializer
+def addNewPlay(song, program, artist,
+               play_date=None, isNew=False):
+  """If a DJ starts playing a song, add it and update the memcache."""
+  if play_date is None:
+    play_date = datetime.datetime.now()
+  last_plays = memcache.get(LAST_PLAYS)
+  play = models.Play(song=song,
+                     program=program,
+                     artist=artist,
+                     play_date=play_date,
+                     isNew=isNew)
+  play.put()
+  mcset(play, PLAY_ENTRY, play.key())
+  if last_plays is None: 
+    mcset([play], LAST_PLAYS)
+  elif play_date > getPlay(last_plays[0]).play_date:
+    last_plays.insert(0, play.key())
+    mcset(last_plays, LAST_PLAYS)
+  return play
 
-        Args:
-            clean_check_percent: how often cache initialization should
-                run the cache cleanup
-            max_hits_to_clean: maximum number of stale hits to clean
-            default_timeout: default length a cache item is good for
-        """
-        self.clean_check_percent = clean_check_percent
-        self.max_hits_to_clean = max_hits_to_clean
-        self.default_timeout = default_timeout
+def deletePlay(play_key, program=None):
+  """Delete a play, and update appropriate memcaches"""
+  # This is what you get when you find a stranger in the alps...
+  # sorry, I mean don't link a program to this delete play call
+  if program is None:
+    play = getPlay(play_key).program.key()
 
-        if random.randint(1, 100) < self.clean_check_percent:
-            self._clean_cache()
+  try_delete_keys = [LAST_PLAYS]
+  if program is not None:
+    try_delete_keys.append(LAST_PLAYS_SHOW %program)
+  
+  for key in try_delete_keys:
+    entry = memcache.get(key)
+    if entry is not None:
+      try:
+        entry.remove(db.Key(encoded=play_key))
+        mcset(entry, key)
+        logging.info(len(entry))
+      except:
+        logging.error("%s not found in %s"%(db.Key(play_key), entry))
+        pass
 
-        if 'AEU_Events' in sys.modules['__main__'].__dict__:
-            sys.modules['__main__'].AEU_Events.fire_event('cacheInitialized')
+  # We've removed any other references to this play, so delete it
+  db.delete(play_key)
+  mcdelete(PLAY_ENTRY, play_key)
 
-    def _clean_cache(self):
-        """
-        _clean_cache is a routine that is run to find and delete cache
-        items that are old. This helps keep the size of your over all
-        datastore down.
+def getLastPsaKey():
+  psa = memcache.get(LAST_PSA)
+  if psa is None:
+    logging.debug("Have to updates %s memcache" %LAST_PSA)
+    psa = models.Psa.all(keys_only=True).order("-play_date").get()
+    if psa:
+      mcset(psa, LAST_PSA)
+  return psa
 
-        It only deletes the max_hits_to_clean per attempt, in order
-        to maximize performance. Default settings are 20 hits, 50%
-        of requests. Generally less hits cleaned on more requests will
-        give you better performance.
+def getPsa(key):
+  if key is None:
+    return None
+  if isinstance(key, models.Psa):
+    return key
 
-        Returns True on completion
-        """
-        query = _AppEngineUtilities_Cache.all()
-        query.filter('timeout < ', datetime.datetime.now())
-        results = query.fetch(self.max_hits_to_clean)
-        db.delete(results)
+  psa = memcache.get(PSA_ENTRY %key)
+  if psa is None:
+    logging.debug("Have to update %s memcache"%PSA_ENTRY%key)
+    psa = db.get(key)
+    mcset(psa, PSA_ENTRY, key)
+  return psa
+    
+def getLastPsa():
+  return getPsa(getLastPsaKey())
 
-        return True
+def addNewPsa(desc, program, play_date=None):
+  """If a DJ charts a PSA, be sure to update the memcache"""
+  if play_date is None:
+    play_date = datetime.datetime.now()
+  last_psa = getLastPsa()
+  psa = models.Psa(desc=desc, program=program, play_date=play_date)
+  psa.put()
+  mcset(psa, PSA_ENTRY, psa.key())
+  if last_psa is None or play_date > last_psa.play_date:
+    mcset(psa.key(), LAST_PSA)
+  
+## Functions for getting and setting Songs
+SONG_ENTRY = "song_key%s"
 
-    def _validate_key(self, key):
-        """
-        Internal method for key validation. This can be used by a superclass
-        to introduce more checks on key names.
-        
-        Args:
-            key: Key name to check
+def getSong(key):
+  if key is None:
+    return None
+  if isinstance(key, models.Song):
+    return key
 
-        Returns True is key is valid, otherwise raises KeyError.
-        """
-        if key == None:
-            raise KeyError
-        return True
+  cached = memcache.get(SONG_ENTRY %key)
+  if cached is not None:
+    return cached
+  return mcset(db.get(key), SONG_ENTRY %key)
 
-    def _validate_value(self, value):
-        """
-        Internal method for value validation. This can be used by a superclass
-        to introduce more checks on key names.
+def putSong(title, artist):
+  song = models.Song(title=title, artist=artist)
+  song.put()
+  return mcset(song, SONG_ENTRY %song.key())
 
-        Args:
-            value: value to check
+## Functions for getting and setting Programs
+PROGRAM_ENTRY = "program_key%s"
+PROGRAM_EXPIRE = 360  # Program cache lasts for one hour maximum
 
-        Returns True is value is valid, otherwise raises ValueError.
-        """
-        if value == None:
-            raise ValueError
-        return True
+def getProgram(key):
+  if key is None:
+    return None
+  if isinstance(key, models.Program):
+    return key
 
-    def _validate_timeout(self, timeout):
-        """
-        Internal method to validate timeouts. If no timeout
-        is passed, then the default_timeout is used.
+  cached = memcache.get(PROGRAM_ENTRY %key)
+  if cached is not None:
+    return cached
+  return mcset_t(db.get(key), PROGRAM_EXPIRE, PROGRAM_ENTRY, key)
 
-        Args:
-            timeout: datetime.datetime format
+## Functions for getting and setting Albums
+NEW_ALBUMS = "new_albums"
+ALBUM_ENTRY = "album_key%s"
 
-        Returns the timeout
-        """
-        if timeout == None:
-            timeout = datetime.datetime.now() +\
-            datetime.timedelta(seconds=self.default_timeout)
-        if type(timeout) == type(1):
-            timeout = datetime.datetime.now() + \
-                datetime.timedelta(seconds = timeout)
-        if type(timeout) != datetime.datetime:
-            raise TypeError
-        if timeout < datetime.datetime.now():
-            raise ValueError
+## Functions for getting and setting Artists,
+## Specifically, caching artist name autocompletion 
+ARTIST_COMPLETE = "artist_pref%s"
+ARTIST_ENTRY = "artist_key%s"
 
-        return timeout
+# Minimum number of entries in the cache with which we would even consider
+# not rechecking the datastore. Figit with this number to balance reads and
+# autocomplete functionality. Possibly consider algorithmically determining
+# a score for artist names and prefixes?
+ARTIST_MIN_AC_CACHE = 10
+ARTIST_MIN_AC_RESULTS = 5
 
-    def add(self, key = None, value = None, timeout = None):
-        """
-        Adds an entry to the cache, if one does not already exist. If they key
-        already exists, KeyError will be raised.
+# Another suggestion: implement a "search accuracy" probabilistic system by
+# which results repeatedly based off of previous cache results have less
+# and less validity and more likeliness to not "Be everything"
 
-        Args:
-            key: Key name of the cache object
-            value: Value of the cache object
-            timeout: timeout value for the cache object.
+def getArtist(key):
+  if key is None:
+    return None
+  if isinstance(key, models.ArtistName):
+    return key
 
-        Returns the cache object.
-        """
-        self._validate_key(key)
-        self._validate_value(value)
-        timeout = self._validate_timeout(timeout)
+  cached = memcache.get(ARTIST_ENTRY %key)
+  if cached is not None:
+    return cached
+  return mcset(db.get(key), ARTIST_ENTRY %key)
 
-        if key in self:
-            raise KeyError
+# Replace with batch get of uncached database entities
+def getArtists(keys):
+  return filter(None,
+                [getArtist(key) for key in keys if key is not None])
 
-        cacheEntry = _AppEngineUtilities_Cache()
-        cacheEntry.cachekey = key
-        cacheEntry.value = pickle.dumps(value)
-        cacheEntry.timeout = timeout
+def artistAutocomplete(prefix):
+  prefix = prefix.lower()
+  # First, see if we have anything already cached for us in memstore.
+  # We start with the most specific prefix, and widen our search
+  cache_prefix = prefix
+  cached_results = None
+  perfect_hit = True
+  while cached_results is None:
+    if len(cache_prefix) > 0:
+      cached_results = memcache.get(ARTIST_COMPLETE %cache_prefix)
+      if cached_results is None:
+        cache_prefix = cache_prefix[:-1]
+        perfect_hit = False
+    else:
+      cached_results = {"recache_count": -1,
+                        "max_results": False,
+                        "artists": None,}
 
-        # try to put the entry, if it fails silently pass
-        # failures may happen due to timeouts, the datastore being read
-        # only for maintenance or other applications. However, cache
-        # not being able to write to the datastore should not
-        # break the application
-        try:
-            cacheEntry.put()
-        except:
-            pass
+  # If we have a sufficient number of cached results OR we 
+  #    have all possible results, search in 'em.
+  logging.debug(cache_prefix)
+  logging.debug(cached_results)
+  logging.debug(perfect_hit)
+  if (cached_results["recache_count"] >= 0 and 
+      (cached_results["max_results"] or
+       len(cached_results["artists"]) >= ARTIST_MIN_AC_CACHE)):
+    logging.debug("Trying to use cached results")
 
-        memcache_timeout = timeout - datetime.datetime.now()
-        memcache.set('cache-%s' % (key), value, int(memcache_timeout.seconds))
+    cache_artists = sorted(cached_results["artists"],
+                           key=lambda x: getArtist(x).search_name)
 
-        if 'AEU_Events' in sys.modules['__main__'].__dict__:
-            sys.modules['__main__'].AEU_Events.fire_event('cacheAdded')
+    # If the cache is perfect (exact match!), just return it
+    if perfect_hit:
+      # There is no need to update the cache in this case.
+      return getArtists(cache_artists)
 
-        return self.get(key)
+    # Otherwise we're going to have to search in the cache.
+    results = filter(lambda a: (getArtist(a).lowercase_name.startswith(prefix) or
+                                (getArtist(a).search_name is not None and 
+                                 getArtist(a).search_name.startswith(prefix))),
+                     cache_artists)
+    if cached_results["max_results"]:
+      # We're as perfect as we can be, so cache the results
+      cached_results["recache_count"] += 1
+      cached_results["artists"] = results
+      mcset(cached_results, ARTIST_COMPLETE, prefix)
+      return getArtists(results)
+    elif len(results) > ARTIST_MIN_AC_RESULTS:
+      if len(results) > ARTIST_MIN_AC_CACHE:
+        cached_results["recache_count"] += 1
+        cached_results["artists"] = results
+        mcset(cached_results, ARTIST_COMPLETE, prefix)
+        return getArtists(results)
+      return getArtists(results)
+  
+  artists_full = models.ArtistName.all(keys_only=True).filter("lowercase_name >=", prefix
+             ).filter("lowercase_name <", prefix + u"\ufffd").fetch(10)
+  artists_sn = models.ArtistName.all(keys_only=True).filter("search_name >=", prefix
+             ).filter("search_name <", prefix + u"\ufffd").fetch(10)
+  max_results = len(artists_full) < 10 and len(artists_sn) < 10
+  artist_dict = {}
+  all_artists = getArtists(artists_full + artists_sn)
+  for a in all_artists:
+    artist_dict[a.artist_name] = a
+  artists = []
+  for a in artist_dict:
+    artists.append(artist_dict[a])
+  artists = sorted(artists, key=lambda x: x.search_name)
 
-    def set(self, key = None, value = None, timeout = None):
-        """
-        Sets an entry to the cache, overwriting an existing value
-        if one already exists.
-
-        Args:
-            key: Key name of the cache object
-            value: Value of the cache object
-            timeout: timeout value for the cache object.
-
-        Returns the cache object.
-        """
-        self._validate_key(key)
-        self._validate_value(value)
-        timeout = self._validate_timeout(timeout)
-
-        cacheEntry = self._read(key)
-        if not cacheEntry:
-            cacheEntry = _AppEngineUtilities_Cache()
-            cacheEntry.cachekey = key
-        cacheEntry.value = pickle.dumps(value)
-        cacheEntry.timeout = timeout
-
-        try:
-            cacheEntry.put()
-        except:
-            pass
-
-        memcache_timeout = timeout - datetime.datetime.now()
-        memcache.set('cache-%s' % (key), value, int(memcache_timeout.seconds))
-
-        if 'AEU_Events' in sys.modules['__main__'].__dict__:
-            sys.modules['__main__'].AEU_Events.fire_event('cacheSet')
-
-        return self.get(key)
-
-    def _read(self, key = None):
-        """
-        _read is an internal method that will get the cache entry directly
-        from the datastore, and return the entity. This is used for datastore
-        maintenance within the class.
-
-        Args:
-            key: The key to retrieve
-
-        Returns the cache entity
-        """
-        query = _AppEngineUtilities_Cache.all()
-        query.filter('cachekey', key)
-        query.filter('timeout > ', datetime.datetime.now())
-        results = query.fetch(1)
-        if len(results) is 0:
-            return None
-
-        if 'AEU_Events' in sys.modules['__main__'].__dict__:
-            sys.modules['__main__'].AEU_Events.fire_event('cacheReadFromDatastore')
-        if 'AEU_Events' in sys.modules['__main__'].__dict__:
-            sys.modules['__main__'].AEU_Events.fire_event('cacheRead')
-
-        return results[0]
-
-    def delete(self, key = None):
-        """
-        Deletes a cache object.
-
-        Args:
-            key: The key of the cache object to delete.
-
-        Returns True.
-        """
-        memcache.delete('cache-%s' % (key))
-        result = self._read(key)
-        if result:
-            if 'AEU_Events' in sys.modules['__main__'].__dict__:
-                sys.modules['__main__'].AEU_Events.fire_event('cacheDeleted')
-            result.delete()
-        return True
-
-    def get(self, key):
-        """
-        Used to return the cache value associated with the key passed.
-
-        Args:
-            key: The key of the value to retrieve.
-
-        Returns the value of the cache item.
-        """
-        mc = memcache.get('cache-%s' % (key))
-        if mc:
-            if 'AEU_Events' in sys.modules['__main__'].__dict__:
-                sys.modules['__main__'].AEU_Events.fire_event('cacheReadFromMemcache')
-            if 'AEU_Events' in sys.modules['__main__'].__dict__:
-                sys.modules['__main__'].AEU_Events.fire_event('cacheRead')
-            return mc
-        result = self._read(key)
-        if result:
-            timeout = result.timeout - datetime.datetime.now()
-            memcache.set('cache-%s' % (key), pickle.loads(result.value),
-               int(timeout.seconds))
-            if 'AEU_Events' in sys.modules['__main__'].__dict__:
-                sys.modules['__main__'].AEU_Events.fire_event('cacheRead')
-            return pickle.loads(result.value)
-        else:
-            raise KeyError
-
-    def get_many(self, keys):
-        """
-        Returns a dict mapping each key in keys to its value. If the given
-        key is missing, it will be missing from the response dict.
-
-        Args:
-            keys: A list of keys to retrieve.
-
-        Returns a dictionary of key/value pairs.
-        """
-        dict = {}
-        for key in keys:
-            value = self.get(key)
-            if value is not None:
-                dict[key] = value
-        return dict
-
-    def __getitem__(self, key):
-        """
-        __getitem__ is necessary for this object to emulate a container.
-        """
-        return self.get(key)
-
-    def __setitem__(self, key, value):
-        """
-        __setitem__ is necessary for this object to emulate a container.
-        """
-        return self.set(key, value)
-
-    def __delitem__(self, key):
-        """
-        Implement the 'del' keyword
-        """
-        return self.delete(key)
-
-    def __contains__(self, key):
-        """
-        Implements "in" operator
-        """
-        try:
-            self.__getitem__(key)
-        except KeyError:
-            return False
-        return True
-
-    def has_key(self, keyname):
-        """
-        Equivalent to k in a, use that form in new code
-        """
-        return self.__contains__(keyname)
+  results_dict = {"recache_count": 0,
+                  "max_results": max_results,
+                  "artists": [artist.key() for artist in artists]}
+  mcset(results_dict, ARTIST_COMPLETE, prefix)
+  return artists

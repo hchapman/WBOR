@@ -5,6 +5,7 @@ from google.appengine.ext import db
 import datetime
 from google.appengine.api import memcache
 from passwd_crypto import hash_password, check_password
+import logging
 
 class Dj(db.Model):
   fullname = db.StringProperty()
@@ -37,6 +38,12 @@ class BlogPost(db.Model):
   post_date = db.DateTimeProperty()
   slug = db.StringProperty()
 
+class CoverArt(db.Model):
+  large_cover = db.BlobProperty()
+  small_cover = db.BlobProperty()
+  large_filetype = db.StringProperty()
+  small_filetype = db.StringProperty()
+
 class Album(db.Model):
   title = db.StringProperty()
   asin = db.StringProperty()
@@ -44,11 +51,8 @@ class Album(db.Model):
   artist = db.StringProperty()
   add_date = db.DateTimeProperty()
   isNew = db.BooleanProperty()
-  large_cover = db.BlobProperty()
-  small_cover = db.BlobProperty()
-  large_filetype = db.StringProperty()
-  small_filetype = db.StringProperty()
   songList = db.ListProperty(db.Key)
+  cover_art = db.ReferenceProperty(CoverArt)
 
 class Song(db.Model):
   title = db.StringProperty()
@@ -61,6 +65,13 @@ class Play(db.Model):
   play_date = db.DateTimeProperty()
   isNew = db.BooleanProperty()
   artist = db.StringProperty()
+
+  @property
+  def program_key(self):
+    return Play.program.get_value_for_datastore(self)
+  @property
+  def song_key(self):
+    return Play.song.get_value_for_datastore(self)
 
 class Psa(db.Model):
   desc = db.StringProperty()
@@ -85,7 +96,37 @@ def getEventsAfter(start, num=1000):
   return Event.all().filter("event_date >=", start).order("event_date").fetch(num)
 
 def getLastPlay():
-  return Play.all().order("-play_date").fetch(1)[0]
+  last_play = memcache.get("last_play")
+  if last_play is not None:
+    return last_play
+  else:
+    logging.debug("Updating last_play memcache")
+    play = Play.all().order("-play_date").get()
+    if not memcache.set("last_play", play):
+      logging.error("Memcache set last play failed")
+
+def addNewPlay(song, program, artist,
+               play_date=datetime.datetime.now(), isNew=False):
+  """
+  If a DJ starts playing a song, add it and update the memcache.
+  """
+  last_play = memcache.get("last_play")
+  play = Play(song=song,
+              program=program,
+              artist=artist,
+              play_date=play_date,
+              isNew=isNew)
+  play.put()
+  if last_play is None or play_date > last_play.play_date:
+    memcache.set("last_play", play)
+    # since we always check last 3 plays, this is hardcoded to update that
+    # if you can come up with a better solution, please implement it (TODO)
+    last_plays = memcache.get("last_3_plays")
+    if last_plays is not None:
+        memcache.set("last_3_plays",
+                     [play] + last_plays[:2])
+
+                     
 
 def getPermission(label):
   p = Permission.all().filter("title =", label).fetch(1)
@@ -118,17 +159,17 @@ def djLogin(username, password):
   else:
     return None
 
-def hasPermission(dj, label):
+def hasPermission(djkey, label):
   p = getPermission(label)
-  return dj.key() in p.dj_list
+  return djkey in p.dj_list
 
 def getLastPosts(num):
   return BlogPost.all().order("-post_date").fetch(num)
 
 def artistAutocomplete(prefix):
   prefix = prefix.lower()
-  artists_full = ArtistName.all().filter("lowercase_name >=", prefix).filter("lowercase_name <", prefix + u"\ufffd").fetch(20)
-  artists_sn = ArtistName.all().filter("search_name >=", prefix).filter("search_name <", prefix + u"\ufffd").fetch(20)
+  artists_full = ArtistName.all().filter("lowercase_name >=", prefix).filter("lowercase_name <", prefix + u"\ufffd").fetch(10)
+  artists_sn = ArtistName.all().filter("search_name >=", prefix).filter("search_name <", prefix + u"\ufffd").fetch(10)
   artist_dict = {}
   all_artists = artists_full + artists_sn
   for a in all_artists:
@@ -149,7 +190,15 @@ def albumAutocomplete(prefix):
   albums = Album.all().filter("lower_title >=", prefix).filter("lower_title <", prefix + u"\ufffd").fetch(30)
 
 def getLastNPlays(num):
-  plays = Play.all().order("-play_date").fetch(num)
+  last_plays = memcache.get("last_plays")
+  if last_plays is not None and len(last_plays) >= num:
+    logging.info("Using memcache for last_plays")
+    return last_plays[:num]
+  else:
+    logging.debug("Updating last_%s_plays memcache"%num)
+    plays = Play.all().order("-play_date").fetch(num)
+    if not memcache.set("last_plays", plays):
+      logging.error("Memcache set last num plays failed")
   return plays
 
 def getPlaysForDate(date, program=None):
@@ -183,17 +232,18 @@ def getLastPlays(program, after=None, num=1000):
   return plays
 
 def getLastPsa():
-  psa = Psa.all().order("-play_date").fetch(1)
+  psa = Psa.all().order("-play_date").get()
   if psa:
-    return psa[0]
+    return psa
   else:
     return None
 
 def getProgramsByDj(dj):
-  return Program.all().filter("dj_list =", dj).fetch(100)
+  # TODO - handle a case in which a DJ actually has (and needs) 10 shows
+  return Program.all().filter("dj_list =", dj).fetch(10)
 
 def getNewAlbums(num=1000, page=0, byArtist=False):
-  albums = Album.all().filter("isNew =", True)
+  albums = Album.all(keys_only=True).filter("isNew =", True)
   if byArtist:
     albums = albums.order("artist")
   else:
