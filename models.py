@@ -1,9 +1,13 @@
 #Secret Access Key: 6oYjAsiXTz8xZzpKZC8zkqXnkYV72CNuCRh9hUsQ
 #Access Key ID: AKIAJIXECWA77X5XX4DQ
 
-from google.appengine.ext import db
+from __future__ import with_statement
+
 import datetime
 from google.appengine.api import memcache
+from google.appengine.ext import db
+from google.appengine.ext import blobstore
+from google.appengine.api import files
 from passwd_crypto import hash_password, check_password
 import logging
 
@@ -38,12 +42,6 @@ class BlogPost(db.Model):
   post_date = db.DateTimeProperty()
   slug = db.StringProperty()
 
-class CoverArt(db.Model):
-  large_cover = db.BlobProperty()
-  small_cover = db.BlobProperty()
-  large_filetype = db.StringProperty()
-  small_filetype = db.StringProperty()
-
 class Album(db.Model):
   title = db.StringProperty()
   asin = db.StringProperty()
@@ -52,7 +50,8 @@ class Album(db.Model):
   add_date = db.DateTimeProperty()
   isNew = db.BooleanProperty()
   songList = db.ListProperty(db.Key)
-  cover_art = db.ReferenceProperty(CoverArt)
+  cover_small = blobstore.BlobReferenceProperty()
+  cover_large = blobstore.BlobReferenceProperty()
 
 class Song(db.Model):
   title = db.StringProperty()
@@ -91,6 +90,41 @@ class Event(db.Model):
   event_date = db.DateTimeProperty()
   desc = db.TextProperty()
   url = db.StringProperty()
+
+## The following should never need to run again
+# However, the idea is that it will remain for educational purposes
+# i.e. another example of how we use the Blobstore
+# it is somewhat hackish; in order to give the covers a filename
+# it is generally bad, bad practice to use underscore-prefixed
+# things in other people's code. This is a warning.
+def moveCoverToBlobstore(album):
+  if not album.small_filetype:
+    return
+
+  from slughifi import slughifi
+  fn = "%s_%s"%(slughifi(album.artist), slughifi(album.title))
+  small_file = files.blobstore.create(mime_type=album.small_filetype,
+                                      _blobinfo_uploaded_filename="%s_small.png"%fn)
+  large_file = files.blobstore.create(mime_type=album.large_filetype,
+                                      _blobinfo_uploaded_filename="%s_big.png"%fn)
+  
+  with files.open(small_file, 'a') as small:
+    small.write(album.small_cover)
+  with files.open(large_file, 'a') as large:
+    large.write(album.large_cover)
+  
+  files.finalize(small_file)
+  files.finalize(large_file)
+
+  album.cover_small = files.blobstore.get_blob_key(small_file)
+  album.cover_large = files.blobstore.get_blob_key(large_file)
+  
+  del album.small_cover
+  del album.large_cover
+  del album.large_filetype
+  del album.small_filetype
+
+  album.put()
 
 def getEventsAfter(start, num=1000):
   return Event.all().filter("event_date >=", start).order("event_date").fetch(num)

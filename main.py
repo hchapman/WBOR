@@ -16,25 +16,32 @@
 #
 
 import os
-import models
 import cache
 import urllib
 import hashlib
 import datetime
 import time
-import amazon
+import json
 import logging
+
+import amazon
+import models
+
 from google.appengine.api import urlfetch
-from google.appengine.ext.webapp import template
+from google.appengine.api import memcache
+from google.appengine.ext import blobstore
+from google.appengine.runtime import DeadlineExceededError
+
 import webapp2
 from webapp2_extras import sessions
+
+from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
-from django.utils import simplejson
-from google.appengine.api import memcache
-from google.appengine.runtime import DeadlineExceededError
+from google.appengine.ext.webapp import blobstore_handlers
+
 from passwd_crypto import hash_password
-from dj import check_login
 from handlers import BaseHandler, UserHandler
+from dj import check_login
 
 from configuration import webapp2conf
 import configuration as conf
@@ -71,7 +78,7 @@ class DjComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
     djs = models.djAutocomplete(q)
-    self.response.out.write(simplejson.dumps({
+    self.response.out.write(json.dumps({
           'query': q,
           'suggestions': [dj.fullname for dj in djs],
           'data': [str(dj.key()) for dj in djs],
@@ -81,7 +88,7 @@ class ArtistComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
     artists = cache.artistAutocomplete(q)
-    self.response.out.write(simplejson.dumps({
+    self.response.out.write(json.dumps({
           'query': q,
           'suggestions': [ar.artist_name for ar in artists],      
           }))
@@ -95,7 +102,7 @@ class AlbumTable(BaseHandler):
     try:
       page = int(page)
     except ValueError:
-      self.response.out.write(simplejson.dumps({
+      self.response.out.write(json.dumps({
             'err': "Unable to parse requested page."
             }))
       return
@@ -133,7 +140,7 @@ class AlbumInfo(BaseHandler):
     updatehtml = template.render(getPath("addalbumupdate.html"), json_data)
     json_data['updatehtml'] = updatehtml
     self.response.headers['Content-Type'] = 'text/json'
-    self.response.out.write(simplejson.dumps(json_data))
+    self.response.out.write(json.dumps(json_data))
   
 
 class Setup(BaseHandler):
@@ -240,7 +247,7 @@ class UpdateInfo(webapp2.RequestHandler):
                                                    "")
 
     self.response.headers["Content-Type"] = "text/json"
-    self.response.out.write(simplejson.dumps({
+    self.response.out.write(json.dumps({
           'song_string': song_string,
           'program_title': program_title,
           'program_desc': program_desc,
@@ -257,7 +264,7 @@ class SongList(BaseHandler):
     album_key = self.request.get("album_key")
     songlist_html = memcache.get("songlist_html_" + album_key)
     if songlist_html:
-      self.response.out.write(simplejson.dumps({
+      self.response.out.write(json.dumps({
             'songListHtml': songlist_html,
             'generated': 'memcache',
             }))
@@ -265,7 +272,7 @@ class SongList(BaseHandler):
     album = models.Album.get(album_key)
     self.response.headers["Content-Type"] = "text/json"
     if not album:
-      self.response.out.write(simplejson.dumps({
+      self.response.out.write(json.dumps({
             'err': "An error occurred and the specified album could not be found.  Please try again."
             }))
       return
@@ -273,7 +280,7 @@ class SongList(BaseHandler):
         'songList': [models.Song.get(k) for k in album.songList],
         })
     memcache.set("songlist_html_" + album_key, songlist_html)
-    self.response.out.write(simplejson.dumps({
+    self.response.out.write(json.dumps({
           'songListHtml': template.render(getPath("ajax_songlist.html"), {
               'songList': [models.Song.get(k) for k in album.songList],
               }),
@@ -432,6 +439,42 @@ class ProgramPage(BaseHandler):
       }
     self.response.out.write(template.render(getPath("show.html"), template_values))
 
+## There should never be a need to use the following handler in the future.
+# However, it remains for educational purposes.
+# Be aware that it's somewhat hackishly written
+class SecretPortCoversPage(blobstore_handlers.BlobstoreDownloadHandler):
+  def get(self):
+    cursor = self.request.get('cursor', None)
+    query = models.Album.all()
+    if cursor:
+      logging.debug("cursor get!")
+      query.with_cursor(start_cursor=cursor)
+    album = query.get()
+    if album:
+      new_cursor = query.cursor()
+      new_url = '/secret12345qwerty?cursor=%s' % new_cursor
+      album = album
+      try:
+        models.moveCoverToBlobstore(album)
+      except:
+        pass
+      self.response.out.write("""
+<html>
+<head>
+  <meta http-equiv="refresh" content="0;url=%s"/>
+</head>
+<body>
+  <h3>Update Datastore</h3>
+  <ul>
+    <li>Cursor: %s</li>
+    <li>LastCursor: %s</li>
+    <li>Updated: %s</li>
+  </ul>
+</body>
+</html>
+    """%(new_url, new_cursor, cursor, album.title))
+      return
+    self.response.out.write("Done")
 
 def profile_main():
   # This is the main function for profiling

@@ -21,21 +21,28 @@ import base64
 import hashlib
 import datetime
 import time
-import pylast
-import amazon
 import logging
 import random
 import string
+import json
+
 from xml.dom import minidom
+
 from google.appengine.api import urlfetch
-from google.appengine.ext.webapp import template
-import webapp2
-from google.appengine.ext.webapp import util
 from google.appengine.api import mail
-from django.utils import simplejson
 from google.appengine.api import memcache
-from passwd_crypto import hash_password, check_password
+from google.appengine.api import images
+from google.appengine.api import files
+
+import webapp2
+from google.appengine.ext.webapp import template
+from google.appengine.ext.webapp import util
+
+import amazon
+import pylast
 from handlers import BaseHandler, UserHandler
+from passwd_crypto import hash_password, check_password
+from slughifi import slughifi
 
 from configuration import webapp2conf
 
@@ -967,7 +974,7 @@ class RemovePlay(UserHandler):
     self.response.headers['Content-Type'] = 'text/json'
     cache.deletePlay(self.request.get("play_key"), self.program_key)
     memcache.delete("playlist_html_%s"%self.program_key)
-    self.response.out.write(simplejson.dumps({
+    self.response.out.write(json.dumps({
           'status': "Successfully deleted play."
           }))
 
@@ -1095,7 +1102,7 @@ class ManagePermissions(UserHandler):
     if not permission:
       errors = "Unable to find permission."
     if errors:
-      self.response.out.write(simplejson.dumps({
+      self.response.out.write(json.dumps({
         'err': errors,
       }))
       return
@@ -1113,12 +1120,12 @@ class ManagePermissions(UserHandler):
         permission.dj_list.remove(dj.key())
         status = "Successfully removed " + dj.fullname + " from " + permission.title + " permission list."
     if errors:
-      self.response.out.write(simplejson.dumps({
+      self.response.out.write(json.dumps({
         'err': errors,
       }))
     else:
       permission.put()
-      self.response.out.write(simplejson.dumps({
+      self.response.out.write(json.dumps({
         'err': '',
         'msg': status
       }))
@@ -1156,6 +1163,7 @@ class ManageAlbums(UserHandler):
   def post(self):
     self.response.headers['Content-Type'] = 'text/json'
     action = self.request.get("action")
+
     if action == "add":
       self.response.headers['Content-Type'] = 'text/json'
       # asin is Amazon's special ID number.
@@ -1167,17 +1175,17 @@ class ManageAlbums(UserHandler):
       if album:
         album.isNew = True
         album.put()
-        memcache.flush_all()
-        self.response.out.write(simplejson.dumps({
+        self.response.out.write(json.dumps({
           'msg': "Success, already existed. The album was re-set to new."
         }))
         return
+
       # Grab the product details from Amazon to save to our datastore.
       i = amazon.productSearch(asin)
       try:
         i = i[0]
       except IndexError:
-        self.response.out.write(simplejson.dumps({
+        self.response.out.write(json.dumps({
           'err': "An error occurred.  Please try again, or if this keeps happening, select a different album."
         }))
         return
@@ -1185,8 +1193,10 @@ class ManageAlbums(UserHandler):
       # the album we're adding.  It pulls the appropriate values from the
       # XML received.
       json_data = {
-        'small_pic': i.getElementsByTagName("SmallImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
-        'large_pic': i.getElementsByTagName("LargeImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
+        'small_pic': i.getElementsByTagName(
+          "SmallImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
+        'large_pic': i.getElementsByTagName(
+          "LargeImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
         'artist': i.getElementsByTagName("Artist")[0].firstChild.nodeValue,
         'title': i.getElementsByTagName("Title")[0].firstChild.nodeValue,
         'asin': i.getElementsByTagName("ASIN")[0].firstChild.nodeValue,
@@ -1196,115 +1206,110 @@ class ManageAlbums(UserHandler):
       large_filetype = json_data['large_pic'][-4:].strip('.')
       smallCover = urlfetch.fetch(json_data['small_pic']).content
       small_filetype = json_data['small_pic'][-4:].strip('.')
-      # create the actual objects and store them
-      cover = models.CoverArt(
-        large_filetype=large_filetype,
-        small_filetype=small_filetype,
-        large_cover=largeCover,
-        small_cover=smallCover,
-        )
-      cover.put()
-      album = models.Album(
-        title=json_data['title'],
-        lower_title=json_data['title'].lower(),
-        artist=json_data['artist'],
-        add_date=datetime.datetime.now(),
-        isNew=True,
-        cover_art=cover,
-        asin=asin,
-      )
-      album.put()
-      artist_name = json_data['artist']
-      if not models.getArtist(artist_name):
-        an = models.ArtistName(artist_name=artist_name, 
-          lowercase_name=artist_name.lower(),
-          search_names=models.artistSearchName(artist_name).split())
-        an.put()
-      songlist = [models.Song(title=t, artist=json_data['artist'], album=album) for t in json_data['tracks']]
-      for s in songlist:
-        s.put()
-      album.songList = [s.key() for s in songlist]
-      album.put()
-      memcache.flush_all()
-      self.response.out.write(simplejson.dumps({'msg': "Album successfully added."}))
+
+      title = json_data['title']
+      artist = json_data['artist']
+      tracks = json_data['tracks']
+
+      songlist = [cache.putSong(title=t, 
+                                artist=json_data['artist'], 
+                                album=album).key() for t in json_data['tracks']]
+
     elif action == "makeNew":
       # We're marking an existing album as "new" again
       self.response.headers['Content-Type'] = 'text/json'
       key = self.request.get("key")
-      album = models.Album.get(key)
-      if not album:
-        self.response.out.write(simplejson.dumps({'err': "Album not found. Please try again."}))
+      if not cache.setAlbumIsNew(key, is_new=True):
+        self.response.out.write(json.dumps({'err': "Album not found. Please try again."}))
         return
-      album.isNew = True
-      album.put()
-      memcache.flush_all()
-      self.response.out.write(simplejson.dumps({'msg': "Made new."}))
+      self.response.out.write(json.dumps({'msg': "Made new."}))
+      return
+
     elif action == "makeOld":
       # We're removing the "new" marking from an album
       self.response.headers['Content-Type'] = 'text/json'
       key = self.request.get("key")
       album = models.Album.get(key)
-      if not album:
-        self.response.out.write(simplejson.dumps({'err': "Album not found. Please try again."}))
+      if not cache.setAlbumIsNew(key, is_new=False):
+        self.response.out.write(json.dumps({'err': "Album not found. Please try again."}))
         return
-      album.isNew = False
-      album.put()
-      memcache.flush_all()
-      self.response.out.write(simplejson.dumps({'msg': "Made old."}))
+      self.response.out.write(json.dumps({'msg': "Made old."}))
+      return
+
     elif action == "manual":
       # The user has typed in the title, the artist, all track names,
       # and provided a cover image URL.
       tracks = self.request.get("track-list")
       tracks = [line.strip() for line in tracks.splitlines() if
-                len(line.strip())>0]
+                len(line.strip()) > 0]
       cover_url = self.request.get("cover_url")
       if not cover_url:
         cover_url = "/static/images/noalbumart.png"
+
+      # Try to fetch the cover art, if possible
       try:
-        cover = urlfetch.fetch(cover_url).content
+        largeCover = urlfetch.fetch(cover_url).content
       except urlfetch.ResponseTooLargeError:
-        self.session.add_flash("The image you provided was too large.  There is a 1MB limit on cover artwork.  Try a different version with a reasonable size.")
+        self.session.add_flash("The image you provided was too large. "
+                               "There is a 1MB limit on cover artwork. "
+                               "Try a different version with a reasonable size.")
         self.redirect("/dj/albums/")
         return
       except urlfetch.InvalidURLError:
-        self.session.add_flash("The URL you provided could not be downloaded.  Hit back and try again.")
+        self.session.add_flash("The URL you provided could not be downloaded. "
+                               "Hit back and try again.")
         self.redirect("/dj/albums/")
         return
       except urlfetch.DownloadError:
-        self.session.add_flash("The URL you provided could not be downloaded.  Hit back and try again.")
+        self.session.add_flash("The URL you provided could not be downloaded. "
+                               "Hit back and try again.")
         self.redirect("/dj/albums/")
         return
-      cover_filetype = cover_url[-4:].strip('.')
+
+      large_filetype = cover_url[-4:].strip('.')
+      smallCover = images.resize(largeCover, 100, 100)
+      small_filetype = large_filetype
+
+      title = self.request.get('title')
       artist = self.request.get('artist')
-      cover = models.CoverArt(
-        large_cover=cover,
-        small_cover=cover,
-        large_filetype=cover_filetype,
-        small_filetype=cover_filetype
-        )
-      cover.put()
-      album = models.Album(
-        title=self.request.get("title"),
-        lower_title=self.request.get("title").lower(),
-        artist=artist,
-        add_date=datetime.datetime.now(),
-        isNew=True,
-        cover=cover
-        )
-      album.put()
-      memcache.flush_all()
-      songlist = [models.Song(title=trackname, artist=artist, album=album) for trackname in tracks]
-      for s in songlist:
-        s.put()
-      album.songList = [s.key() for s in songlist]
-      album.put()
-      if not models.getArtist(artist):
-        an = models.ArtistName(artist_name=artist, 
-          lowercase_name=artist.lower(),
-          search_names=models.artistSearchName(artist).split())
-        an.put()
-      self.session.add_flash(self.request.get("title") + " added.")
-      self.redirect("/dj/albums/")
+      asin = None
+
+
+    ## Create the actual objects and store them
+    fn = "%s_%s"%(slughifi(artist), slughifi(title))
+    # Create the file nodes in the blobstore
+    # _blobinfo_uploaed_filename WILL change in the future.
+    small_file = files.blobstore.create(
+      mime_type=small_filetype,
+      _blobinfo_uploaded_filename="%s_small.png"%fn)
+    large_file = files.blobstore.create(
+      mime_type=large_filetype,
+      _blobinfo_uploaded_filename="%s_big.png"%fn)
+
+    # Write the images
+    with files.open(small_file, 'a') as small:
+      small.write(smallCover)
+    with files.open(large_file, 'a') as large:
+      large.write(largeCover)
+
+    files.finalize(small_file)
+    files.finalize(large_file)
+    
+    cover_small=files.blobstore.get_blob_key(small_file)
+    cover_large=files.blobstore.get_blob_key(large_file)
+
+    # Finally, create the album
+    cache.putAlbum(title=title,
+                   artist=artist,
+                   tracks=tracks,
+                   asin=asin,
+                   cover_small=cover_small,
+                   cover_large=cover_large)
+
+    self.response.out.write(
+      json.dumps({
+          'msg': "Album successfully added.",
+          'result': 0,}))
 
 
 app = webapp2.WSGIApplication([

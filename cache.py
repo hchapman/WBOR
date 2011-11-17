@@ -225,8 +225,10 @@ def getSong(key):
     return cached
   return mcset(db.get(key), SONG_ENTRY %key)
 
-def putSong(title, artist):
+def putSong(title, artist, album=None):
   song = models.Song(title=title, artist=artist)
+  if album is not None:
+    song.album = album
   song.put()
   return mcset(song, SONG_ENTRY %song.key())
 
@@ -249,6 +251,57 @@ def getProgram(key):
 NEW_ALBUMS = "new_albums"
 ALBUM_ENTRY = "album_key%s"
 
+def putAlbum(title, artist, tracks, add_date=None, asin=None, 
+             cover_small=None, cover_large=None, isNew=True):
+  if add_date is None:
+    add_date = datetime.datetime.now()
+
+  album = models.Album(
+    title=title,
+    lower_title=title.lower(),
+    artist=artist,
+    add_date=add_date,
+    isNew=isNew,
+    )
+
+  album.put()
+  songlist = [putSong(title=trackname, 
+                      artist=artist, 
+                      album=album).key() for trackname in tracks]
+  album.songList = songlist
+
+  if cover_small is not None:
+    album.cover_small = cover_small
+  if cover_large is not None:
+    album.cover_large = cover_large
+  if asin is not None:
+    album.asin = asin
+
+  tryPutArtist(artist)
+
+  album.put()
+  return mcset(album, ALBUM_ENTRY, album.key())
+
+def setAlbumIsNew(key, is_new=True):
+  album = getAlbum(key)
+  if album is not None:
+    album.isNew = is_new
+    album.put()
+    mcset(album, ALBUM_ENTRY, key)
+    return True
+  return False
+
+def getAlbum(key):
+  if key is None:
+    return None
+  if isinstance(key, models.Album):
+    return key
+
+  cached = memcache.get(ALBUM_ENTRY %key)
+  if cached is not None:
+    return cached
+  return mcset(db.get(key), ALBUM_ENTRY, key)
+
 ## Functions for getting and setting Artists,
 ## Specifically, caching artist name autocompletion 
 ARTIST_COMPLETE = "artist_pref%s"
@@ -265,6 +318,29 @@ ARTIST_MIN_AC_RESULTS = 5
 # which results repeatedly based off of previous cache results have less
 # and less validity and more likeliness to not "Be everything"
 
+def tryPutArtist(artist_name):
+  # See if the artist is in the datastore already
+  key = getArtistKey(artist_name)
+  if key:
+    # We have a new album, so we might as well memcache the artist.
+    return getArtist(key)
+  
+  artist = models.ArtistName(
+    artist_name=artist_name,
+    lowercase_name=artist_name.lower(),
+    search_names=models.artistSearchName(artist_name).split())
+  artist.put()
+  mcset(artist, ARTIST_ENTRY, artist.key())
+  injectArtistAutocomplete(artist)
+  return artist
+
+def getArtistKey(a_name=None):
+  artist = models.ArtistName.all(keys_only=True).filter(
+    "lowercase_name =", a_name.lower()).get()
+  if artist:
+    return artist
+  return None
+
 def getArtist(key):
   if key is None:
     return None
@@ -280,6 +356,12 @@ def getArtist(key):
 def getArtists(keys):
   return filter(None,
                 [getArtist(key) for key in keys if key is not None])
+
+def injectArtistAutocomplete(artist):
+  # I don't know if it's a good idea or not to
+  # flood memcache with a new artist; if it ends up being that
+  # way then write this function
+  pass
 
 def artistAutocomplete(prefix):
   prefix = prefix.lower()
