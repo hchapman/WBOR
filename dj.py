@@ -325,12 +325,10 @@ class ChartSong(UserHandler):
     album_songs = []
     new_song_div_html = None
     if not new_song_div_html:
-      new_albums = []
-      #new_albums = models.getNewAlbums(byArtist=True)
+      new_albums = cache.getNewAlbums() #byArtist=True)
       if new_albums:
-        new_albums = models.Album.get(new_albums)
         logging.debug(new_albums)
-        album_songs = [models.Song.get(k) for k in 
+        album_songs = [cache.getSong(k) for k in 
                        new_albums[0].songList]
       memcache.set("new_song_div_html",
         template.render(

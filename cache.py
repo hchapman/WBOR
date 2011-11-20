@@ -307,7 +307,6 @@ def getNewAlbumKeys(num=50):
     new_albums = album_query.fetch(num)
     mcset(new_albums, NEW_ALBUMS)
 
-  logging.error(new_albums)
   return new_albums[:num]
 
 def getAlbum(key):

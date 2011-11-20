@@ -53,7 +53,7 @@ class MainPage(BaseHandler):
   def get(self):
     ## Album list disabled until it is further optimized.
     album_list = []
-    # album_list = models.getNewAlbums(50)
+    #album_list = cache.getNewAlbums()
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
     song_num = 10
@@ -211,20 +211,15 @@ class BlogDisplay(BaseHandler):
       }
     self.response.out.write(template.render("blog_post.html", template_values))
 
-class AlbumDisplay(BaseHandler):
+class AlbumDisplay(blobstore_handlers.BlobstoreDownloadHandler):
   def get(self, key_id, size):
-    album = models.Album.get(key_id)
-    cover = models.CoverArt.get(album)
+    album = cache.getAlbum(key_id)
     if not album:
       return
-    image_blob = cover.small_cover
-    image_type = cover.small_filetype
     if size == "l":
-      image_blob = cover.large_cover
-      image_type = cover.large_filetype
-    if image_blob and image_type:
-      self.response.headers["Content-Type"] = "image/" + image_type
-      self.response.out.write(image_blob)
+      self.send_blob(album.cover_large)
+    else:
+      self.send_blob(album.cover_small)
 
 
 class UpdateInfo(webapp2.RequestHandler):
@@ -269,7 +264,7 @@ class SongList(BaseHandler):
             'generated': 'memcache',
             }))
       return
-    album = models.Album.get(album_key)
+    album = cache.getAlbum(album_key)
     self.response.headers["Content-Type"] = "text/json"
     if not album:
       self.response.out.write(json.dumps({
@@ -277,12 +272,12 @@ class SongList(BaseHandler):
             }))
       return
     songlist_html = template.render(getPath("ajax_songlist.html"), {
-        'songList': [models.Song.get(k) for k in album.songList],
+        'songList': [cache.getSong(k) for k in album.songList],
         })
     memcache.set("songlist_html_" + album_key, songlist_html)
     self.response.out.write(json.dumps({
           'songListHtml': template.render(getPath("ajax_songlist.html"), {
-              'songList': [models.Song.get(k) for k in album.songList],
+              'songList': [cache.getSong(k) for k in album.songList],
               }),
           'generated': 'generated',
           }))
