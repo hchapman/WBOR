@@ -1143,14 +1143,13 @@ class ManageAlbums(UserHandler):
   @authorization_required("Manage Albums")
   def get(self):
     new_album_list = None
-    new_album_html = memcache.get("manage_new_albums_html")
-    if not new_album_html:
-      new_album_list = []
-      #new_album_list = models.getNewAlbums()
-      new_album_html = template.render(
-        getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
+ #   new_album_html = memcache.get("manage_new_albums_html")
+ #   if not new_album_html:
+    new_album_list = cache.getNewAlbums()
+    new_album_html = template.render(
+      getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
       )
-      memcache.set("manage_new_albums_html", new_album_html)
+    memcache.set("manage_new_albums_html", new_album_html)
     template_values = {
       'new_album_list': new_album_list,
       'new_album_html': new_album_html,
@@ -1250,22 +1249,44 @@ class ManageAlbums(UserHandler):
       try:
         largeCover = urlfetch.fetch(cover_url).content
       except urlfetch.ResponseTooLargeError:
-        self.session.add_flash("The image you provided was too large. "
-                               "There is a 1MB limit on cover artwork. "
-                               "Try a different version with a reasonable size.")
-        self.redirect("/dj/albums/")
+        if self.request.get("ajax"):
+          self.response.out.write(
+            json.dumps({
+                'msg': ("The image you provided was too large. "
+                        "There is a 1MB limit on cover artwork. "
+                        "Try a different version with a reasonable size."),
+                'result': 1,}))
+        else:
+          self.session.add_flash("The image you provided was too large. "
+                                 "There is a 1MB limit on cover artwork. "
+                                 "Try a different version with a reasonable size.")
+          self.redirect("/dj/albums/")
         return
       except urlfetch.InvalidURLError:
-        self.session.add_flash("The URL you provided could not be downloaded. "
-                               "Hit back and try again.")
-        self.redirect("/dj/albums/")
+        if self.request.get("ajax"):
+          self.response.out.write(
+            json.dumps({
+                'msg': ("The URL you provided could not be downloaded. "
+                        "Hit back and try again."),
+                'result': 1,}))
+        else:
+          self.session.add_flash("The URL you provided could not be downloaded. "
+                                 "Hit back and try again.")
+          self.redirect("/dj/albums/")
         return
       except urlfetch.DownloadError:
-        self.session.add_flash("The URL you provided could not be downloaded. "
-                               "Hit back and try again.")
-        self.redirect("/dj/albums/")
+        if self.request.get("ajax"):
+          self.response.out.write(
+            json.dumps({
+              'msg': ("The URL you provided could not be downloaded. "
+                      "Hit back and try again."),
+              'result': 1,}))
+        else:
+          self.session.add_flash("The URL you provided could not be downloaded. "
+                                 "Hit back and try again.")
+          self.redirect("/dj/albums")
         return
-
+      
       large_filetype = cover_url[-4:].strip('.')
       smallCover = images.resize(largeCover, 100, 100)
       small_filetype = large_filetype
@@ -1306,10 +1327,11 @@ class ManageAlbums(UserHandler):
                    cover_small=cover_small,
                    cover_large=cover_large)
 
-    self.response.out.write(
-      json.dumps({
-          'msg': "Album successfully added.",
-          'result': 0,}))
+    if self.request.get("ajax"):
+      self.response.out.write(
+        json.dumps({
+            'msg': "Album successfully added.",
+            'result': 0,}))
 
 
 app = webapp2.WSGIApplication([

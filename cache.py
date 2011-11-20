@@ -291,6 +291,25 @@ def setAlbumIsNew(key, is_new=True):
     return True
   return False
 
+def getNewAlbumKeys(num=50):
+  """Get the last num new albums. Returns a list of album keys."""
+  if num < 1: 
+    return None
+  
+  new_albums = memcache.get(NEW_ALBUMS)
+  if new_albums is not None and None in new_albums:
+    new_albums = [album for album in new_albums if album is not None]
+
+  if new_albums is None or num > len(new_albums):
+    logging.debug("Have to update %s memcache"%NEW_ALBUMS)
+    album_query = models.Album.all(keys_only=True).order("-add_date")
+
+    new_albums = album_query.fetch(num)
+    mcset(new_albums, NEW_ALBUMS)
+
+  logging.error(new_albums)
+  return new_albums[:num]
+
 def getAlbum(key):
   if key is None:
     return None
@@ -301,6 +320,10 @@ def getAlbum(key):
   if cached is not None:
     return cached
   return mcset(db.get(key), ALBUM_ENTRY, key)
+
+def getNewAlbums(num=50):
+  return filter(None, [getAlbum(key) for key in
+                       getNewAlbumKeys(num=num)])
 
 ## Functions for getting and setting Artists,
 ## Specifically, caching artist name autocompletion 
