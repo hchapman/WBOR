@@ -53,6 +53,14 @@ class Album(db.Model):
   cover_small = blobstore.BlobReferenceProperty()
   cover_large = blobstore.BlobReferenceProperty()
 
+  @property
+  def cover_small_key(self):
+    return Album.cover_small.get_value_for_datastore(self)
+
+  @property
+  def cover_large_key(self):
+    return Album.cover_large.get_value_for_datastore(self)
+
 class Song(db.Model):
   title = db.StringProperty()
   artist = db.StringProperty()

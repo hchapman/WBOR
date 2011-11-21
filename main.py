@@ -52,8 +52,8 @@ def getPath(filename):
 class MainPage(BaseHandler):
   def get(self):
     ## Album list disabled until it is further optimized.
-    album_list = []
-    #album_list = cache.getNewAlbums()
+    #album_list = []
+    album_list = cache.getNewAlbums()
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
     song_num = 10
@@ -211,15 +211,27 @@ class BlogDisplay(BaseHandler):
       }
     self.response.out.write(template.render("blog_post.html", template_values))
 
-class AlbumDisplay(blobstore_handlers.BlobstoreDownloadHandler):
+class ViewCoverHandler(blobstore_handlers.BlobstoreDownloadHandler):
+  def get(self, cover_key):
+    if not cover_key:
+      self.error(404)
+    cover_key = str(urllib.unquote(cover_key))
+    self.response.headers["Cache-Control"] = "public"
+    expires_date = datetime.datetime.utcnow() + datetime.timedelta(365)
+    expires_str = expires_date.strftime("%d %b %Y %H:%M:%S GMT")
+    self.response.headers.add_header("Expires", expires_str)
+    self.send_blob(cover_key)
+
+"""class AlbumDisplay(blobstore_handlers.BlobstoreDownloadHandler):
   def get(self, key_id, size):
+    self.response.headers["Cache-Control"] = "max-age=604800"
     album = cache.getAlbum(key_id)
     if not album:
       return
     if size == "l":
       self.send_blob(album.cover_large)
     else:
-      self.send_blob(album.cover_small)
+      self.send_blob(album.cover_small)"""
 
 
 class UpdateInfo(webapp2.RequestHandler):
@@ -508,5 +520,5 @@ app = webapp2.WSGIApplication([
     ('/events/?', EventPage),
     ('/searchnames/?', ConvertArtistNames),
     ('/convertplays/?', ConvertPlays),
-    ('/albums/([^/]*)/([^/]*)/?', AlbumDisplay),
+    ('/albums/([^/]*)/?', ViewCoverHandler),
     ], debug=True, config=webapp2conf)

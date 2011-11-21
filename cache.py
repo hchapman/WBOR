@@ -320,9 +320,12 @@ def getAlbum(key):
     return cached
   return mcset(db.get(key), ALBUM_ENTRY, key)
 
-def getNewAlbums(num=50):
-  return filter(None, [getAlbum(key) for key in
-                       getNewAlbumKeys(num=num)])
+def getNewAlbums(num=50, by_artist=False):
+  albums = filter(None, [getAlbum(key) for key in
+                         getNewAlbumKeys(num=num)])
+  if by_artist:
+    return sorted(albums, key=lambda album: album.artist.lower())
+  return albums
 
 ## Functions for getting and setting Artists,
 ## Specifically, caching artist name autocompletion 

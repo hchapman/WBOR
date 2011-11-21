@@ -325,7 +325,7 @@ class ChartSong(UserHandler):
     album_songs = []
     new_song_div_html = None
     if not new_song_div_html:
-      new_albums = cache.getNewAlbums() #byArtist=True)
+      new_albums = cache.getNewAlbums(by_artist=True)
       if new_albums:
         logging.debug(new_albums)
         album_songs = [cache.getSong(k) for k in 
