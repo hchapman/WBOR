@@ -336,7 +336,7 @@ def getNewAlbums(num=50, by_artist=False):
   if by_artist:
     return sorted(albums, key=lambda album: album.artist.lower())
   else:
-    return sorted(albums, key=lambda album: album.add_date())
+    return sorted(albums, key=lambda album: album.add_date)
 
 ## Functions for getting and setting Artists,
 ## Specifically, caching artist name autocompletion 
