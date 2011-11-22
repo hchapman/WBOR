@@ -321,7 +321,7 @@ class ChartSong(UserHandler):
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
     last_psa = cache.getLastPsa()
     new_albums = None
-    new_song_div_html = memcache.get("new_song_div_html")
+    #new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []
     new_song_div_html = None
     if not new_song_div_html:
@@ -330,13 +330,14 @@ class ChartSong(UserHandler):
         logging.debug(new_albums)
         album_songs = [cache.getSong(k) for k in 
                        new_albums[0].songList]
-      memcache.set("new_song_div_html",
-        template.render(
-          getPath("dj_chartsong_newsongdiv.html"), 
-            {'new_albums': new_albums,
-             'album_songs': album_songs,}
+      new_song_div_html = template.render(
+        getPath("dj_chartsong_newsongdiv.html"), 
+        {'new_albums': new_albums,
+         'album_songs': album_songs,}
         )
-      )
+      memcache.set("new_song_div_html",
+                   new_song_div_html
+                   )
     template_values = {
       'last_psa': last_psa,
       'playlist_html': playlist_html,

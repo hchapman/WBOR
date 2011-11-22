@@ -53,7 +53,7 @@ class MainPage(BaseHandler):
   def get(self):
     ## Album list disabled until it is further optimized.
     #album_list = []
-    album_list = cache.getNewAlbums()
+    album_list = cache.getNewAlbums(num=36)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
     song_num = 10

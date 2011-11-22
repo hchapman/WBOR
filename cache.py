@@ -169,7 +169,6 @@ def deletePlay(play_key, program=None):
         logging.info(len(entry))
       except:
         logging.error("%s not found in %s"%(db.Key(play_key), entry))
-        pass
 
   # We've removed any other references to this play, so delete it
   db.delete(play_key)
@@ -285,9 +284,19 @@ def putAlbum(title, artist, tracks, add_date=None, asin=None,
 def setAlbumIsNew(key, is_new=True):
   album = getAlbum(key)
   if album is not None:
+    
     album.isNew = is_new
     album.put()
     mcset(album, ALBUM_ENTRY, key)
+    new_albums = memcache.get(NEW_ALBUMS)
+    if not new_albums:
+      mcset([key], NEW_ALBUMS)
+    elif is_new:
+      new_albums.append(key)
+      mcset(new_albums, NEW_ALBUMS)
+    else:
+      new_albums.remove(db.Key(encoded=key))
+      mcset(new_albums, NEW_ALBUMS)
     return True
   return False
 
@@ -302,7 +311,8 @@ def getNewAlbumKeys(num=50):
 
   if new_albums is None or num > len(new_albums):
     logging.debug("Have to update %s memcache"%NEW_ALBUMS)
-    album_query = models.Album.all(keys_only=True).order("-add_date")
+    album_query = models.Album.all(
+      keys_only=True).filter("isNew =", True).order("-add_date")
 
     new_albums = album_query.fetch(num)
     mcset(new_albums, NEW_ALBUMS)
@@ -325,7 +335,8 @@ def getNewAlbums(num=50, by_artist=False):
                          getNewAlbumKeys(num=num)])
   if by_artist:
     return sorted(albums, key=lambda album: album.artist.lower())
-  return albums
+  else:
+    return sorted(albums, key=lambda album: album.add_date())
 
 ## Functions for getting and setting Artists,
 ## Specifically, caching artist name autocompletion 
