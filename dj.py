@@ -1209,10 +1209,6 @@ class ManageAlbums(UserHandler):
       artist = json_data['artist']
       tracks = json_data['tracks']
 
-      songlist = [cache.putSong(title=t, 
-                                artist=json_data['artist'], 
-                                album=album).key() for t in json_data['tracks']]
-
     elif action == "makeNew":
       # We're marking an existing album as "new" again
       self.response.headers['Content-Type'] = 'text/json'

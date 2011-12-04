@@ -319,7 +319,7 @@ class PlaylistPage(BaseHandler):
     datestring = self.request.get("programdate")
     selected_date = None
 
-    if datestring is not None:
+    if datestring:
       try:
         selected_date = datetime.datetime.strptime(datestring, "%m/%d/%Y")
         selected_date = selected_date + datetime.timedelta(hours=12)
@@ -352,7 +352,7 @@ class PlaylistPage(BaseHandler):
           plays = []
     else:
       if not selected_date:
-        lastplay = cache.getLastPlays()[0]
+        lastplay = cache.getLastPlay()
         if lastplay:
           selected_date = lastplay.play_date
 
