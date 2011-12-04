@@ -171,31 +171,22 @@ def addNewPlay(song, program, artist,
                      
 
 def getPermission(label):
-  p = Permission.all().filter("title =", label).fetch(1)
-  if len(p) > 0:
-    return p[0]
-  else:
-    return None
+  p = Permission.all().filter("title =", label).get()
+  return p
 
 def getDjByEmail(email):
-  d = Dj.all().filter("email =", email).fetch(1)
-  if len(d) > 0:
-    return d[0]
-  else:
-    return None
+  d = Dj.all().filter("email =", email).get()
+  return d
 
 def getDjByUsername(username):
-  d = Dj.all().filter("username =", username).fetch(1)
-  if len(d) > 0:
-    return d[0]
-  else:
-    return None
+  d = Dj.all().filter("username =", username).get()
+  return d
 
 def djLogin(username, password):
-  d = Dj.all().filter("username =", username).fetch(1)
-  if len(d) > 0:
-    if check_password(d[0].password_hash, password):
-      return d[0]
+  d = Dj.all().filter("username =", username).get()
+  if d is not None:
+    if check_password(d.password_hash, password):
+      return d
     else:
       return None
   else:
@@ -275,10 +266,7 @@ def getLastPlays(program, after=None, num=1000):
 
 def getLastPsa():
   psa = Psa.all().order("-play_date").get()
-  if psa:
-    return psa
-  else:
-    return None
+  return psa
 
 def getProgramsByDj(dj):
   # TODO - handle a case in which a DJ actually has (and needs) 10 shows
@@ -300,26 +288,17 @@ def getLastAlbums(num):
   return Album.all().order("-add_date").fetch(num)
 
 def getAlbumByASIN(asin):
-  albums = Album.all().filter("asin =", asin).fetch(1)
-  if albums:
-    return albums[0]
-  else:
-    return None
+  albums = Album.all().filter("asin =", asin).get()
+  return albums
 
 def getArtist(artist):
-  artists = ArtistName.all().filter("lowercase_name =", artist.lower()).fetch(1)
-  if artists:
-    return artists[0]
-  else:
-    return None
+  artists = ArtistName.all().filter("lowercase_name =", artist.lower()).get()
+  return artists
 
 def getProgramBySlug(slug):
-  programs = Program.all().filter("slug =", slug).fetch(1)
-  if programs:
-    return programs[0]
-  else:
-    return None
-    
+  programs = Program.all().filter("slug =", slug).get()
+  return programs
+
 def getPSAsInRange(start, end):
   psas = Psa.all().filter("play_date >=", start).filter("play_date <=", end).fetch(1000)
   return psas
@@ -348,11 +327,8 @@ def getNewPlaysInRange(start, end):
 def getPostBySlug(post_date, slug):
   day_start = datetime.datetime(post_date.year, post_date.month, post_date.day)
   day_end = day_start + datetime.timedelta(days=1)
-  posts = BlogPost.all().filter("post_date >=", day_start).filter("post_date <=", day_end).filter("slug =", slug).fetch(1)
-  if posts:
-    return posts[0]
-  else:
-    return None
+  posts = BlogPost.all().filter("post_date >=", day_start).filter("post_date <=", day_end).filter("slug =", slug).get()
+  return posts
 
 def getTopSongsAndAlbums(start, end, song_num, album_num):
   #cached = memcache.get("topsongsandalbums")
