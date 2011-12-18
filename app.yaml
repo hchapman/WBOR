@@ -1,5 +1,5 @@
 application: wbor-hr
-version: 1-6-beta2
+version: 1-6-api1
 runtime: python27
 api_version: 1
 threadsafe: true
@@ -26,6 +26,8 @@ handlers:
   upload: static/images/favicon\.png
 - url: /dj.*
   script: dj.app
+- url: /api.?
+  script: api.app
 - url: /blog/.*/edit/?
   script: dj.app
 - url: /.*

@@ -4,7 +4,10 @@
 import json
 import webapp2
 
-class ApiGetNowPlaying(webapp2.RequestHandler):
+class ApiJsonRequestHandler(webapp2.RequestHandler):
+    pass
+
+class ApiGetNowPlaying(ApiJsonRequestHandler):
   def get(self):
     recent_songs = cache.getLastPlays(num=3)
     logging.debug(recent_songs)
@@ -37,25 +40,6 @@ class ApiGetNowPlaying(webapp2.RequestHandler):
 
 
 app = webapp2.WSGIApplication([
-    ('/', MainPage,)w
-    ('/updateinfo/?', UpdateInfo),
-    ('/ajax/albumtable/?', AlbumTable),
-    ('/ajax/albuminfo/?', AlbumInfo),
-    ('/ajax/artistcomplete/?', ArtistComplete),
-    ('/ajax/getSongList/?', SongList),
-    ('/ajax/djcomplete/?', DjComplete),
-    ('/setup/?', Setup),
-    ('/blog/([^/]*)/([^/]*)/?', BlogDisplay),
-    ('/programs?/([^/]*)/?', ProgramPage),
-    ('/schedule/?', SchedulePage),
-    ('/playlists/?', PlaylistPage),
-    ('/fun/?', FunPage),
-    ('/charts/?', ChartsPage),
-    ('/history/?', HistoryPage),
-    ('/contact/?', ContactPage),
-    ('/events/?', EventPage),
-    ('/searchnames/?', ConvertArtistNames),
-    ('/convertplays/?', ConvertPlays),
-    ('/albums/([^/]*)/?', ViewCoverHandler),
+    ('/api/nowplaying/?', ApiGetNowPlaying),
     ], debug=True, config=webapp2conf)
 
