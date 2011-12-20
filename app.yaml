@@ -26,7 +26,7 @@ handlers:
   upload: static/images/favicon\.png
 - url: /dj.*
   script: dj.app
-- url: /api.?
+- url: /api.*
   script: api.app
 - url: /blog/.*/edit/?
   script: dj.app

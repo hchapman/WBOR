@@ -4,12 +4,44 @@
 from __future__ import with_statement
 
 import datetime
+import time
+
 from google.appengine.api import memcache
 from google.appengine.ext import db
 from google.appengine.ext import blobstore
 from google.appengine.api import files
 from passwd_crypto import hash_password, check_password
 import logging
+
+# class DictModel(db.Model):
+#   SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
+#   def to_dict():
+#     output = {}
+
+#     for key, prop in self.properties().iteritems():
+#       if (isinstance(prop, db.ReferenceProperty) or
+#           isinstance(prop, blobstore.BlobReferenceProperty())):
+#         output['%s_key'%key] = getattr(self, '%s_key'%key)
+#       else:
+#         value = getattr(self, key)
+
+#         if value is None or isinstance(value, SIMPLE_TYPES):
+#           output[key] = value
+#         elif isinstance(value, datetime.date):
+#           # Convert date/datetime to ms-since-epoch ("new Date()").
+#           ms = time.mktime(value.utctimetuple()) * 1000
+#           ms += getattr(value, 'microseconds', 0) / 1000
+#           output[key] = int(ms)
+#         elif isinstance(value, db.GeoPt):
+#           output[key] = {'lat': value.lat, 'lon': value.lon}
+#         else:
+#           raise ValueError('cannot encode ' + repr(prop))
+
+#     return output
+
+class ApiModel(db.Model):
+  def to_json():
+    pass
 
 class Dj(db.Model):
   fullname = db.StringProperty()
@@ -20,7 +52,7 @@ class Dj(db.Model):
   pw_reset_expire = db.DateTimeProperty()
   pw_reset_hash = db.StringProperty()
 
-class Program(db.Model):
+class Program(ApiModel):
   title = db.StringProperty()
   slug = db.StringProperty()
   desc = db.StringProperty(multiline=True)
@@ -29,6 +61,19 @@ class Program(db.Model):
   top_artists = db.StringListProperty()
   top_playcounts = db.ListProperty(int)
   current = db.BooleanProperty(default=False)
+
+  def to_json(self):
+    return {
+      'key': str(self.key()),
+      'title': self.title,
+      'slug': self.slug,
+      'desc': self.desc,
+      'dj_list': [str(dj_key) for dj_key in self.dj_list],
+      'page_html': self.page_html,
+      'top_artists': self.top_artists,
+      'top_playcounts': self.top_playcounts,
+      'current': self.current
+      }
 
 class ArtistName(db.Model):
   artist_name = db.StringProperty()
@@ -42,7 +87,7 @@ class BlogPost(db.Model):
   post_date = db.DateTimeProperty()
   slug = db.StringProperty()
 
-class Album(db.Model):
+class Album(ApiModel):
   title = db.StringProperty()
   asin = db.StringProperty()
   lower_title = db.StringProperty()
@@ -61,12 +106,35 @@ class Album(db.Model):
   def cover_large_key(self):
     return Album.cover_large.get_value_for_datastore(self)
 
-class Song(db.Model):
+  def to_json(self):
+    return {
+      'key': str(self.key()),
+      'title': self.title,
+      'artist': self.artist,
+      'add_date': self.add_date,
+      'song_list': self.songList,
+      'cover_small_key': str(self.cover_small_key),
+      'cover_large_key': str(self.cover_large_key)
+      }
+
+class Song(ApiModel):
   title = db.StringProperty()
   artist = db.StringProperty()
   album = db.ReferenceProperty(Album)
 
-class Play(db.Model):
+  @property
+  def album_key(self):
+    return Song.album.get_value_for_datastore(self)
+
+  def to_json(self):
+    return {
+      'key': str(self.key()),
+      'title': self.title,
+      'artist': self.artist,
+      'album_key': str(self.album_key)
+      }
+
+class Play(ApiModel):
   song = db.ReferenceProperty(Song)
   program = db.ReferenceProperty(Program)
   play_date = db.DateTimeProperty()
@@ -79,6 +147,14 @@ class Play(db.Model):
   @property
   def song_key(self):
     return Play.song.get_value_for_datastore(self)
+
+  def to_json(self):
+    return {
+      'key': str(self.key()),
+      'song_key': str(self.song_key),
+      'program_key': str(self.program_key),
+      'play_date': time.mktime(self.play_date.utctimetuple()) * 1000
+      }
 
 class Psa(db.Model):
   desc = db.StringProperty()

@@ -148,7 +148,7 @@ def addNewPlay(song, program, artist,
                      isNew=isNew)
   play.put()
   mcset(play, PLAY_ENTRY, play.key())
-  if last_plays is None: 
+  if not last_plays: 
     mcset([play], LAST_PLAYS)
   elif play_date > getPlay(last_plays[0]).play_date:
     last_plays.insert(0, play.key())
