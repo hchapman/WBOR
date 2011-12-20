@@ -10,7 +10,7 @@ import cache
 from configuration import webapp2conf
 
 class ApiRequestHandler(webapp2.RequestHandler):
-  def jsonResponse(self, data):
+  def json_respond(self, data):
     self.response.headers["Content-Type"] = "text/json"
     self.response.out.write(json.dumps(data))
 
@@ -19,32 +19,49 @@ class NowPlaying(ApiRequestHandler):
   def get(self):
     last_play = cache.getLastPlay()
     if last_play is not None:
-      self.jsonResponse(last_play.to_json())
+      self.json_respond(last_play.to_json())
     else:
-      self.jsonResponse({})
+      self.json_respond({})
 
-class LastPlayed(ApiRequestHandler):
-  def playToDict(self, play):
-    song = cache.getSong(play.song_key)
-    prog = cache.getProgram(play.program_key)
-    return {'song_title': song.title,
-            'song_artist': song.artist,
-            'song_key': str(song.key()),
-            'program_title': prog.title,
-            'program_desc': prog.desc,
-            'program_slug': prog.slug,
-            'program_key': str(prog.key()),
-            }
-
+class LastPlays(ApiRequestHandler):
   def get(self):
     last_plays = cache.getLastPlays(num=20)
-    self.jsonResponse({
+    self.json_respond({
         'play_list': [play.to_json() for play in last_plays]
         })
-    
+
+class PlayHandler(ApiRequestHandler):
+  def get(self, key):
+    play = cache.getPlay(key)
+    if play:
+      self.json_respond(play.to_json())
+
+class SongHandler(ApiRequestHandler):
+  def get(self, key):
+    song = cache.getSong(key)
+    if song:
+      self.json_respond(song.to_json())
+
+class ProgramHandler(ApiRequestHandler):
+  def get(self, key):
+    program = cache.getProgram(key)
+    if program:
+      self.json_respond(program.to_json())
+
+class AlbumHandler(ApiRequestHandler):
+  def get(self, key):
+    album = cache.getAlbum(key)
+    if album:
+      self.json_respond(album.to_json())
 
 app = webapp2.WSGIApplication([
     ('/api/nowPlaying/?', NowPlaying),
-    ('/api/lastPlays/?', LastPlayed),
+    ('/api/lastPlays/?', LastPlays),
+
+    # RESTful API object handlers
+    ('/api/play/([^/]*/?)', PlayHandler),
+    ('/api/song/([^/]*/?)', SongHandler),
+    ('/api/program/([^/]*/?)', ProgramHandler),
+    ('/api/album/([^/]*/?)', AlbumHandler),
     ], debug=True, config=webapp2conf)
 

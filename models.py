@@ -39,6 +39,12 @@ import logging
 
 #     return output
 
+def str_or_none(obj):
+  if obj is not None:
+    return str(obj)
+  else:
+    return None
+
 class ApiModel(db.Model):
   def to_json():
     pass
@@ -64,11 +70,11 @@ class Program(ApiModel):
 
   def to_json(self):
     return {
-      'key': str(self.key()),
+      'key': str_or_none(self.key()),
       'title': self.title,
       'slug': self.slug,
       'desc': self.desc,
-      'dj_list': [str(dj_key) for dj_key in self.dj_list],
+      'dj_list': [str_or_none(dj_key) for dj_key in self.dj_list],
       'page_html': self.page_html,
       'top_artists': self.top_artists,
       'top_playcounts': self.top_playcounts,
@@ -113,8 +119,8 @@ class Album(ApiModel):
       'artist': self.artist,
       'add_date': self.add_date,
       'song_list': self.songList,
-      'cover_small_key': str(self.cover_small_key),
-      'cover_large_key': str(self.cover_large_key)
+      'cover_small_key': str_or_none(self.cover_small_key),
+      'cover_large_key': str_or_none(self.cover_large_key),
       }
 
 class Song(ApiModel):
@@ -128,10 +134,10 @@ class Song(ApiModel):
 
   def to_json(self):
     return {
-      'key': str(self.key()),
+      'key': str_or_none(self.key()),
       'title': self.title,
       'artist': self.artist,
-      'album_key': str(self.album_key)
+      'album_key': str_or_none(self.album_key),
       }
 
 class Play(ApiModel):
@@ -150,9 +156,9 @@ class Play(ApiModel):
 
   def to_json(self):
     return {
-      'key': str(self.key()),
-      'song_key': str(self.song_key),
-      'program_key': str(self.program_key),
+      'key': str_or_none(self.key()),
+      'song_key': str_or_none(self.song_key),
+      'program_key': str_or_none(self.program_key),
       'play_date': time.mktime(self.play_date.utctimetuple()) * 1000
       }
 
