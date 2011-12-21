@@ -230,9 +230,9 @@ def getSong(key):
     return cached
   return mcset(db.get(key), SONG_ENTRY %key)
 
-def putSong(title, artist, album=None, key=None):
+def putSong(title, artist, album=None):
   song = models.Song(parent=album,
-                     title=title, artist=artist, key=key)
+                     title=title, artist=artist)
   if album is not None:
     song.album = album
   song.put()
@@ -262,12 +262,20 @@ def putAlbum(title, artist, tracks, add_date=None, asin=None,
   if add_date is None:
     add_date = datetime.datetime.now()
 
-  song_fake_key = db.Key.from_path("Song", 1)
-  batch = db.allocate_ids(song_fake_key, len(tracks))
-  id_range = range(batch[0], batch[1] + 1)
-  song_keys = [db.Key.from_path('Song', key_id) for key_id in id_range]
+  album_fake_key = db.Key.from_path("Album", 1)
+  batch = db.allocate_ids(album_fake_key, 1)
+  album_key = db.Key.from_path('Album', batch[0])
+
+  song_keys = [putSong(title=trackname,
+                       artist=artist,
+                       album=album_key,
+                       ).key()
+               for trackname in tracks]
+
+  tryPutArtist(artist)
 
   album = models.Album(
+    key=album_key,
     title=title,
     lower_title=title.lower(),
     artist=artist,
@@ -284,14 +292,6 @@ def putAlbum(title, artist, tracks, add_date=None, asin=None,
     album.asin = asin
 
   album.put()
-
-  for trackname, key in itertools.izip(tracks, song_keys):
-    putSong(title=trackname,
-            artist=artist,
-            album=album,
-            key=key)
-
-  tryPutArtist(artist)
 
   if isNew:
     pass
