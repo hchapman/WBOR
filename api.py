@@ -8,6 +8,7 @@ import logging
 import cache
 
 from configuration import webapp2conf
+from main import ViewCoverHandler
 
 class ApiRequestHandler(webapp2.RequestHandler):
   def json_respond(self, data):
@@ -51,7 +52,8 @@ class ProgramHandler(ApiRequestHandler):
 class AlbumHandler(ApiRequestHandler):
   def get(self, key):
     album = cache.getAlbum(key)
-    if album:
+    logging.info(album.to_json())
+    if album is not None:
       self.json_respond(album.to_json())
 
 app = webapp2.WSGIApplication([
@@ -59,9 +61,10 @@ app = webapp2.WSGIApplication([
     ('/api/lastPlays/?', LastPlays),
 
     # RESTful API object handlers
-    ('/api/play/([^/]*/?)', PlayHandler),
-    ('/api/song/([^/]*/?)', SongHandler),
-    ('/api/program/([^/]*/?)', ProgramHandler),
-    ('/api/album/([^/]*/?)', AlbumHandler),
+    ('/api/play/([^/]*)/?', PlayHandler),
+    ('/api/song/([^/]*)/?', SongHandler),
+    ('/api/program/([^/]*)/?', ProgramHandler),
+    ('/api/album/([^/]*)/?', AlbumHandler),
+    ('/api/cover/([^/]*)/?', ViewCoverHandler),
     ], debug=True, config=webapp2conf)
 

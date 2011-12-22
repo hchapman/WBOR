@@ -117,8 +117,8 @@ class Album(ApiModel):
       'key': str(self.key()),
       'title': self.title,
       'artist': self.artist,
-      'add_date': self.add_date,
-      'song_list': self.songList,
+      #'add_date': self.add_date,
+      'song_list': [str_or_none(song) for song in self.songList],
       'cover_small_key': str_or_none(self.cover_small_key),
       'cover_large_key': str_or_none(self.cover_large_key),
       }
