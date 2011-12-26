@@ -31,6 +31,13 @@ class LastPlays(ApiRequestHandler):
         'play_list': [play.to_json() for play in last_plays]
         })
 
+class NewShelf(ApiRequestHandler):
+  def get(self):
+    album_list = cache.getNewAlbums(num=36)
+    self.json_respond({
+        'album_list': [album.to_json() for album in album_list]
+        })
+
 class PlayHandler(ApiRequestHandler):
   def get(self, key):
     play = cache.getPlay(key)
@@ -59,6 +66,7 @@ class AlbumHandler(ApiRequestHandler):
 app = webapp2.WSGIApplication([
     ('/api/nowPlaying/?', NowPlaying),
     ('/api/lastPlays/?', LastPlays),
+    ('/api/newShelf/?', NewShelf),
 
     # RESTful API object handlers
     ('/api/play/([^/]*)/?', PlayHandler),
