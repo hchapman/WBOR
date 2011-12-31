@@ -368,6 +368,67 @@ class PlaylistPage(BaseHandler):
     self.response.out.write(template.render(getPath("playlist.html"), 
                                             template_values))
 
+class PlaylistExport(BaseHandler):
+  def get(self):
+    import csv
+    shows = models.getPrograms()
+    slug = self.request.get("show")
+    datestring = self.request.get("programdate")
+    selected_date = None
+
+    if datestring:
+      try:
+        selected_date = datetime.datetime.strptime(datestring, "%m/%d/%Y")
+        selected_date = selected_date + datetime.timedelta(hours=12)
+        print selected_date.isoformat(" ")
+      except:
+        self.session.add_flash("The date provided could not be parsed.")
+        self.redirect("/")
+        return
+
+    if slug:
+      selected_program = models.getProgramBySlug(slug)
+      if not selected_program:
+        self.session.add_flash("There is no program for slug %s." % slug)
+        self.redirect("/")
+        return
+      if selected_date:
+        plays = models.getPlaysBetween(program=selected_program, 
+                                       after=(selected_date - 
+                                              datetime.timedelta(hours=24)), 
+                                       before=(selected_date + 
+                                               datetime.timedelta(hours=24)))
+      else:
+        lastplay = models.getLastPlays(program=selected_program, num=1)
+        if lastplay:
+          lastplay = lastplay[0]
+          last_date = lastplay.play_date
+          plays = models.getPlaysBetween(program=selected_program,
+                                         after=(last_date - 
+                                                datetime.timedelta(days=1)))
+        else:
+          plays = []
+    else:
+      if selected_date is None:
+        lastplay = cache.getLastPlay()
+        if lastplay:
+          selected_date = lastplay.play_date
+
+      if selected_date:
+        print "doop"
+        print selected_date.isoformat(" ")
+        plays = models.getRetardedNumberOfPlaysForDate(selected_date)
+      else:
+        plays = cache.getLastPlays(60)
+    
+    csv_sep = "\t"
+    out_data = [("Date", "Time", "Title", "Artist")]
+    for p in plays:
+      s = cache.getSong(p.song_key)
+      out_data.append((p.play_date.isoformat(csv_sep), s.title, s.artist))
+    
+    self.response.out.write("\n".join([csv_sep.join(row) for row in out_data]))
+
 class FunPage(BaseHandler):
   def get(self):
     template_values = {}
@@ -513,6 +574,7 @@ app = webapp2.WSGIApplication([
     ('/programs?/([^/]*)/?', ProgramPage),
     ('/schedule/?', SchedulePage),
     ('/playlists/?', PlaylistPage),
+    ('/playexport/?', PlaylistExport),
     ('/fun/?', FunPage),
     ('/charts/?', ChartsPage),
     ('/history/?', HistoryPage),

@@ -328,7 +328,19 @@ def getPlaysForDate(date, program=None):
   plays = plays.order("-play_date").fetch(1000)
 
   return plays
-    
+
+def getRetardedNumberOfPlaysForDate(date, program=None):
+  plays = Play.all().order("-play_date")
+  if program:
+    plays.filter("program =", program)
+
+  after = date - datetime.timedelta(hours=72) 
+  before = date + datetime.timedelta(hours=72)
+  plays = plays.filter("play_date >=", after)\
+      .filter("play_date <=", before)
+  plays = plays.order("-play_date").fetch(1000)
+
+  return plays    
 
 def getPlaysBetween(program, before=None, after=None):
   plays = Play.all().filter("program =", program)
