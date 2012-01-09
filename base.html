@@ -17,6 +17,7 @@
 <script type='text/javascript' src='/static/js/jquery.autocomplete.js'></script>
 <script type='text/javascript' src='/static/js/jquery.lightbox.js'></script>
 <script type='text/javascript' src='/static/js/jquery.tinymce.js'></script>
+<script type='text/javascript' src='/static/js/jquery.form.js'></script>
 <script type='text/javascript'>
     background = function() {
         document.body.style.background = 'url(/static/images/bg/' + (Math.round(Math.random() * 21) + 1) + '.gif)';
@@ -153,9 +154,9 @@
     
     {% block main_content %}
     <div class='grid_12 flash-msg' id='msgbox'>
-      {% if flash.msg %}
-        {{ flash.msg }}
-      {% endif %}
+      {% for msg in flash %}
+        {{ msg.0|safe }}
+      {% endfor %}
     </div>
     {% block top_row %}{% endblock %}
     <div class='grid_7 left'><!-- Left-hand column on front page -->

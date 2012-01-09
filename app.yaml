@@ -1,18 +1,38 @@
-application: wbor-brunswick
-version: 1-4-3
-runtime: python
+application: wbor-hr
+version: 1-6-api1
+runtime: python27
 api_version: 1
+threadsafe: true
+default_expiration: "7d"
+
+builtins:
+- remote_api: on
 
 handlers:
 - url: /
-  script: main.py
+  script: main.app
 - url: /index\.html
-  script: main.py
+  script: main.app
 - url: /static
   static_dir: static
+- url: /fun/?
+  static_files: static/screenclean.swf
+  upload: static/screenclean.swf
+- url: /favicon\.png
+  static_files: static/images/favicon.png
+  upload: static/images/favicon\.png
+- url: /favicon\.ico
+  static_files: static/images/favicon.png
+  upload: static/images/favicon\.png
 - url: /dj.*
-  script: dj.py
+  script: dj.app
+- url: /api.*
+  script: api.app
 - url: /blog/.*/edit/?
-  script: dj.py
+  script: dj.app
 - url: /.*
-  script: main.py
+  script: main.app
+
+libraries:
+- name: django
+  version: latest

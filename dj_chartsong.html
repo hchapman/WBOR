@@ -49,7 +49,7 @@ $(function() {
 
 {% block left_column %}
     <div>
-        <b>If you are unable to chart, please <a href='mailto:hchaps@gmail.com'>email me</a> ASAP with your full name, the name of your program, and the names of your co-DJs, if any.</b>
+        <b>If you are unable to chart, please <a href='mailto:cmsmith@bowdoin.edu'>email me</a> ASAP with your full name, the name of your program, and the names of your co-DJs, if any.</b>
     </div>
     <div>
         <h4>Chart Song</h4>
@@ -66,7 +66,7 @@ $(function() {
             </div>
             <div id='new-song-div'>
               {% if new_song_div_html %}
-              {{ new_song_div_html }}
+              {{ new_song_div_html|safe }}
               {% else %}
                 <label>Album</label>
                 <br>
@@ -92,7 +92,7 @@ $(function() {
     <div id='current-playlist'>
         <h4>Last Played</h4>
         <ul id='played_list'>
-            {{ playlist_html }}
+            {{ playlist_html|safe }}
         </ul>
     </div>        
 {% endblock %}
@@ -103,7 +103,8 @@ $(function() {
         <a href='/dj/'>Return to main index</a>
     </div>
     <div id='psa-status'>
-        The last PSA (<i>{{ last_psa.desc }}</i>) was played at {{ last_psa.play_date|date:"h:i" }}, or {{ last_psa.play_date|timesince }} ago.
+        {% if last_psa %} The last PSA (<i>{{ last_psa.desc }}</i>) was played at {{ last_psa.play_date|date:"h:i" }}, or {{ last_psa.play_date|timesince }} ago.
+	{% else %} There have been no PSAs played. {% endif %}
         <br>
         <form action='/dj/chartsong/' method='post'>
             <input type='submit' name='submit' value='Station ID'>

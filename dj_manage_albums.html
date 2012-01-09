@@ -7,6 +7,7 @@
     var newalbumtimeout = null;
     var oldalbumtimeout = null;
     $(function() {
+	$('#manual-album-form').submit(addManualAlbum);
         $("#album-lookup").keyup(function(e) {
             if ($("#album-lookup").val() == "") {
                 $("#add-album-update").hide("slow");
@@ -17,6 +18,7 @@
             }
         });
     });
+
     
     function amazonlookup(keywords) {
         $.get('/ajax/albuminfo',
@@ -30,7 +32,7 @@
             });
             $("#add-album-update").show("slow");
         });
-    }
+    };
     
     function addAmazonAlbum() {
         $(this).addClass("album-processing")
@@ -49,6 +51,32 @@
             }
         });
     }
+
+    function addManualAlbum() {
+        $(this).addClass("album-processing");
+	$.post("/dj/albums",
+	       {
+		   'ajax': 1,
+		   'action': 'manual',
+		   'title': $("#manual-title").val(),
+		   'artist': $("#manual-artist").val(),
+		   'cover_url': $("#manual-url").val(),
+		   'track-list': $("#manual-track-list").val(),
+	       },
+	       function(data) {
+		   if (parseInt(data.result) != 0) {
+		       $("#manual-album-form").removeClass("album-processing");
+		       $("#msgbox").html(data.msg);
+		   } else {
+		       $("#manual-album-form").removeClass("album-processing");
+		       $("#msgbox").html(data.msg);
+		       $("#manual-album-form").clearForm();
+		       $("#manual-cover-preview-image").attr("src", '/static/images/noalbumart.png');
+		   }
+	       });
+	return false;
+    }
+
     
     function toggleNew() {
         var checkbox = this.getElementsByTagName("input");
@@ -76,24 +104,6 @@
     
     $(function() {
         $("#manage-albums-list li").click(toggleNew);
-        $("#add-album-track-list li input[value='Delete']").live('click', function() {
-            if ($(this).parent().siblings("li").length < 1) {
-                return false;
-            }
-            $(this.parentNode).remove();
-        });
-        $("#add-album-track-list li input[type='text']").live('keydown', function(event) {
-            if (event.keyCode == '13') {
-                $(this).siblings("input[value='Insert']").click();
-                return false;
-            }
-        })
-        $("#add-album-track-list li input[value='Insert']").live('click', function() {
-            var li = $(this.parentNode);
-            var li2 = li.clone()
-            li2.insertAfter(li);
-            li2.children("input[type='text']").val("").focus();
-        });
         $("#manual-url").change(function() {
             $("#manual-cover-preview-image").attr("src", $(this).val());
         });
@@ -111,7 +121,7 @@
     <div id='new-albums'>
         <h4>On the New Shelf</h4>
         {% if new_album_html %}
-        {{ new_album_html }}
+        {{ new_album_html|safe }}
         {% else %}
         {% include "dj_manage_new_albums_list.html"}
         {% endif %}
@@ -125,7 +135,7 @@
     </div>
     <div id='add-album-manual'>
         <h4>Add Album Manually</h4>
-        <form action='/dj/albums' method='post'>
+        <form id='manual-album-form' action='/dj/albums' method='post'>
             <input type='hidden' name='action' value='manual'>
             <table class='balancedtable'>
                 <tr>
@@ -143,11 +153,8 @@
             </table>
             <div id='manual-cover-preview'><img src='/static/images/noalbumart.png' id='manual-cover-preview-image' /></div>
             <h5>Track List</h5>
-            <!-- <ol id='add-album-track-list'>
-                            <li><input type='text' name='track'> <input type='button' value='Insert'> <input type='button' value='Delete'></li>
-                        </ol> -->
-			<textarea name='track-list' style="width:100%; height: 120pt"></textarea>
-            <input type='submit' name='submit' value='Add'>
+	    <textarea id='manual-track-list' name='track-list' style="width:100%; height: 120pt"></textarea>
+            <input id='manual-album-submit' type='submit' name='submit' value='Add'>
         </form>
     </div>
 {% endblock %}
