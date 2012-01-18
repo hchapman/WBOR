@@ -239,15 +239,23 @@ def putSong(title, artist, album=None):
   return mcset(song, SONG_ENTRY %song.key())
 
 ## Functions for getting and setting DJs
-#DJ_ENTRY = "dj_key%s"
+DJ_ENTRY = "dj_key%s"
 
-#def getDj(key):
-#    if key is None:
-#        return None
-#    if isinstance(key, models.DJ):
-#        return key
+def getDj(key):
+    if key is None:
+        return None
+    if isinstance(key, models.DJ):
+        return key
         
-#    cached = memcache.get()
+    cached = memcache.get(DJ_ENTRY %key)
+    if cached is not None:
+        return cached
+    return mcset(db.get(key), DJ_ENTRY %key)
+    
+def putDJ(email, fullName, userName, password):
+  dj = models.DJ(email=email, fullName=fullName, userName=userName, password=password)
+  dj.put()
+  return mcset(song, SONG_ENTRY %dj.key())
 
 ## Functions for getting and setting Programs
 PROGRAM_ENTRY = "program_key%s"
