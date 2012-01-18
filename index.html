@@ -3,6 +3,7 @@
 {% block title %}WBOR{% endblock %}
 
 {% block extra_scripts %}
+
 <script type='text/javascript'>
   $(function() {
     $("#newalbums").load("/ajax/albumtable/", {'page': 0}, function(data) {
@@ -20,7 +21,7 @@
 
 
 {% block left_column %}
-
+<a style="width:400px;height:100px;vertical-align:middle;text-align:center;background-color:#000;position:absolute;z-index:5555;top:50px;left:50px;background-image:url(http://americancensorship.org/images/stop-censorship-small.png);background-position:center center;background-repeat:no-repeat;" href="http://americancensorship.org"></a>
 <div id='latestplays'>
     <h4>Recently on WBOR</h4>
     <i>Loading...</i>

@@ -238,6 +238,17 @@ def putSong(title, artist, album=None):
   song.put()
   return mcset(song, SONG_ENTRY %song.key())
 
+## Functions for getting and setting DJs
+#DJ_ENTRY = "dj_key%s"
+
+#def getDj(key):
+#    if key is None:
+#        return None
+#    if isinstance(key, models.DJ):
+#        return key
+        
+#    cached = memcache.get()
+
 ## Functions for getting and setting Programs
 PROGRAM_ENTRY = "program_key%s"
 PROGRAM_EXPIRE = 360  # Program cache lasts for one hour maximum
