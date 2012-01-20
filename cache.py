@@ -256,6 +256,22 @@ def putDj(email, fullName, userName, password):
   dj = models.DJ(email=email, fullName=fullName, userName=userName, password=password)
   dj.put()
   return mcset(song, SONG_ENTRY %dj.key())
+  
+def getDjKey(username=None):
+  dj = models.Dj.all(keys_only=True).filter("lowercase_name =", username.lower()).get()
+  if dj:
+    return dj
+  return None 
+  
+def djLogin():
+  dj_key = getDjKey(username=username)
+  dj = getDj(dj_key)
+  if dj is not None:
+    if check_password(dj.password_hash, password):
+      return dj
+  return None
+  
+
 
 ## Functions for getting and setting Programs
 PROGRAM_ENTRY = "program_key%s"
