@@ -244,7 +244,7 @@ DJ_ENTRY = "dj_key%s"
 def getDj(key):
     if key is None:
         return None
-    if isinstance(key, models.DJ):
+    if isinstance(key, models.Dj):
         return key
         
     cached = memcache.get(DJ_ENTRY %key)
@@ -252,7 +252,7 @@ def getDj(key):
         return cached
     return mcset(db.get(key), DJ_ENTRY %key)
     
-def putDJ(email, fullName, userName, password):
+def putDj(email, fullName, userName, password):
   dj = models.DJ(email=email, fullName=fullName, userName=userName, password=password)
   dj.put()
   return mcset(song, SONG_ENTRY %dj.key())

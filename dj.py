@@ -138,7 +138,7 @@ class Login(UserHandler):
       self.redirect('/dj/login/')
       return
     self.set_session_user(dj)
-    programList = models.getProgramsByDj(dj)
+    programList = cache.getDj(dj)
     if not programList:
       self.session.add_flash("You have successfully logged in, but you have no associated programs.  You will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately.")
       self.redirect('/dj/')
@@ -374,7 +374,7 @@ class ChartSong(UserHandler):
           return
         trackname = song.title
         track_artist = song.artist
-        models.addNewPlay(song=song, program=self.program_key, 
+        cache.addNewPlay(song=song, program=self.program_key, 
                           play_date=datetime.datetime.now(), isNew=True, 
                           artist=album.artist)
       else:

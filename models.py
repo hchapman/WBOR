@@ -122,16 +122,6 @@ class Album(ApiModel):
       'cover_small_key': str_or_none(self.cover_small_key),
       'cover_large_key': str_or_none(self.cover_large_key),
       }
-
-class DJ(ApiModel):
-  email = db.StringProperty()
-  fullName = db.StringProperty()
-  userName = db.StringProperty()
-  password = db.StringProperty()
-  
-  @property
-
-#perhaps encrypt passwords later?
   
 class Song(ApiModel):
   title = db.StringProperty()
