@@ -263,15 +263,13 @@ def getDjKey(username=None):
     return dj
   return None 
   
-def djLogin():
+def djLogin(username, password):
   dj_key = getDjKey(username=username)
   dj = getDj(dj_key)
   if dj is not None:
     if check_password(dj.password_hash, password):
       return dj
   return None
-  
-
 
 ## Functions for getting and setting Programs
 PROGRAM_ENTRY = "program_key%s"
