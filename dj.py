@@ -132,7 +132,7 @@ class Login(UserHandler):
   def post(self):
     username = self.request.get("username")
     password = self.request.get("password")
-    dj = models.djLogin(username, password)
+    dj = cache.djLogin(username, password)
     if not dj:
       self.session.add_flash("Invalid username/password combination. Please try again.")
       self.redirect('/dj/login/')
@@ -162,7 +162,7 @@ class RequestPassword(UserHandler):
     reset_key = self.request.get("reset_key")
     if reset_key:
       username = self.request.get("username")
-      reset_dj = models.getDjByUsername(username)
+      reset_dj = cache.getDj(username)
       if not reset_dj:
         self.session.add_flash("There is no user by that name")
         self.redirect("/dj/reset/")
@@ -217,7 +217,7 @@ class RequestPassword(UserHandler):
     email = self.request.get("email")
     reset_dj = None
     if username:
-      reset_dj = models.getDjByUsername(username)
+      reset_dj = cache.getDj(username)
     if not reset_dj:
       self.session.add_flash("Requested user does not exist")
       self.redirect("/dj/reset/")
