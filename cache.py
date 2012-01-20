@@ -252,10 +252,26 @@ def getDj(key):
         return cached
     return mcset(db.get(key), DJ_ENTRY %key)
     
-def putDj(email, fullName, userName, password):
-  dj = models.DJ(email=email, fullName=fullName, userName=userName, password=password)
-  dj.put()
-  return mcset(dj, DJ_ENTRY %dj.key())
+def putDj(email, fullName, userName, password, new):
+  if new is False
+    dj = models.DJ(email=email, fullName=fullName, userName=userName, password=password)
+    dj.put()
+    return mcset(dj, DJ_ENTRY %dj.key())
+  else 
+    dj_key = getDjKey(username=username)
+    dj = getDj(dj_key)
+    if dj is not None:
+      if fullName is not None:
+        dj.fullname = fullName
+      if email is not None:
+        dj.email = email
+      if username is not None:
+        dj.username = username
+      if password is not None:
+        dj.pw_reset_hash = password #is this right?
+      dj.put()
+      return mcset(dj, DJ_ENTRY %dj.key())
+    return None
   
 def getDjKey(username=None):
   dj = models.Dj.all(keys_only=True).filter("lowercase_name =", username.lower()).get()
@@ -269,23 +285,6 @@ def djLogin(username, password):
   if dj is not None:
     if check_password(dj.password_hash, password):
       return dj
-  return None
-  
-def updateDj(email, fullName, userName, password):
-  dj_key = getDjKey(username=username)
-  dj = getDj(dj_key)
-  if dj is not None:
-    if fullName is not None:
-      dj.fullname = fullName
-    if email is not None:
-      dj.email = email
-    if username is not None:
-      dj.username = username
-# do I need to update the password_hash field in the Dj model?
-    if password is not None:
-      dj.password = password
-    dj.put()
-    return mcset(dj, DJ_ENTRY %dj.key())
   return None
   
 
