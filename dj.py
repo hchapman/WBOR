@@ -254,7 +254,7 @@ please click on the following link or paste it into your address bar:
 If you were not who requested this password reset, then please just ignore
 this email.
 
-Thank you!
+sThank you!
 The WBOR.org Team
 """%reset_url)
     self.session.add_flash("Request successfully sent! Check your mail, and be sure to doublecheck the spam folder in case.")
@@ -569,7 +569,8 @@ class ViewLogs(UserHandler):
 class ManageDJs(UserHandler):
   @authorization_required("Manage DJs")
   def get(self):
-    dj_list = models.Dj.all().order("fullname")
+    dj_list = cache.getAllDjs() # This is TERRIBLE PRACTICE
+    # dj_list = models.Dj.all().order("fullname")
     template_values = {
       'dj_list': dj_list,
       'session': self.session,
@@ -611,23 +612,26 @@ class ManageDJs(UserHandler):
         email = email + "@bowdoin.edu"
       if email[-1] == "@":
         email = email + "bowdoin.edu"
-      dj = models.getDjByEmail(email)
-      if dj:
-        self.session.add_flash("A DJ with email address " + dj.email + " already exists: " + dj.fullname + ", username " + dj.username)
+      dj = cache.getDjByEmail(email)
+      if dj is not None:
+        self.session.add_flash(
+          "A DJ with email address %s already exists: %s, username %s" %
+          (dj.email, dj.fullname, dj.username))
         self.redirect("/dj/djs")
         return
-      dj = models.getDjByUsername(username)
-      if dj:
-        self.session.add_flash("A DJ with username " + username + " already exists: " + dj.fullname + ", email address " + dj.email)
+      dj = cache.getDjByUsername(username)
+      if dj is not None:
+        self.session.add_flash(
+          "A DJ with username %s already exists: %s, email address %s" %
+          (dj.username, dj.fullname, dj.email))
         self.redirect("/dj/djs")
         return
       # If both username and email address are new, then we can add them
-      dj = models.Dj(fullname=self.request.get("fullname"),
-        lowername=self.request.get("fullname").lower(),
+      dj = cache.putDj(fullname=self.request.get("fullname"),
         email=email,
         username=username,
-        password_hash=hash_password(self.request.get("password")))
-      dj.put()
+        password=self.request.get("password"))
+
       self.session.add_flash(dj.fullname + " successfully added as a DJ.")
       self.redirect("/dj/djs/")
   

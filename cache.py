@@ -244,22 +244,24 @@ def putSong(title, artist, album=None):
 DJ_ENTRY = "dj_key%s"
 
 def getDj(key):
-    if key is None:
-        return None
-    if isinstance(key, models.Dj):
-        return key
+  if key is None:
+    return None
+  if isinstance(key, models.Dj):
+    return key
         
-    cached = memcache.get(DJ_ENTRY %key)
-    if cached is not None:
-        return cached
-    return mcset(db.get(key), DJ_ENTRY %key)
+  cached = memcache.get(DJ_ENTRY %key)
+  if cached is not None:
+    #logging.debug("Cached dj, %s"%cached.fullname)
+    return cached
+  logging.debug("Have to DB load dj with key, %s"%key)
+  return mcset(db.get(key), DJ_ENTRY %key)
     
 def putDj(email=None, fullname=None, username=None, 
           password=None, edit_dj=None):
   if edit_dj is None:
     if None in (email, fullname, username, password):
       raise Exception("Insufficient fields for new Dj")
-    dj = models.DJ(fullname=fullname, 
+    dj = models.Dj(fullname=fullname, 
                    lowername=fullname.lower(),
                    email=email,
                    username=username, 
@@ -285,15 +287,33 @@ def putDj(email=None, fullname=None, username=None,
 
   return None
   
-def getDjKey(username=None):
+def getDjKey(username=None, email=None):
   if username is not None:
     dj = models.Dj.all(keys_only=True).filter("username", username).get()
+  elif email is not None:
+    dj = models.Dj.all(keys_only=True).filter("email", username).get()
   if dj:
     return dj
   return None 
 
+def getDjKeys(order=None):
+  dj_query = models.Dj.all(keys_only=True)
+  # Potentially add filters and stuff here
+
+  if order is not None:
+    dj_query = dj_query.order(order)
+
+  return dj_query.fetch(1000)
+
+def getAllDjs():
+  return filter(None, [getDj(key) for key in
+                       getDjKeys(order="fullname")])
+  
 def getDjByUsername(username):
   return getDj(getDjKey(username=username))
+
+def getDjByEmail(email):
+  return getDj(getDjKey(email=email))
   
 def djLogin(username, password):
   dj_key = getDjKey(username=username)
