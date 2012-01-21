@@ -20,6 +20,8 @@ from google.appengine.ext import db
 # Local module imports
 import models
 
+from passwd_crypto import hash_password, check_password
+
 # Global python imports
 import datetime
 import logging
@@ -252,32 +254,46 @@ def getDj(key):
         return cached
     return mcset(db.get(key), DJ_ENTRY %key)
     
-def putDj(email, fullName, userName, password, new):
-  if new is False
-    dj = models.DJ(email=email, fullName=fullName, userName=userName, password=password)
+def putDj(email=None, fullname=None, username=None, 
+          password=None, edit_dj=None):
+  if edit_dj is None:
+    if None in (email, fullname, username, password):
+      raise Exception("Insufficient fields for new Dj")
+    dj = models.DJ(fullname=fullname, 
+                   lowername=fullname.lower(),
+                   email=email,
+                   username=username, 
+                   password_hash=hash_password(password))
+  else:
+    dj = getDj(edit_dj) # In case they passed a key
+    if dj is None:
+      raise Exception("Quantum Dj nonexistance error")
+    
+    if fullname is not None:
+      dj.fullname = fullname
+      dj.lowername = fullname.lower()
+    if email is not None:
+      dj.email = email
+    if username is not None: # Although this should be an immutable property
+      dj.username = username
+    if password is not None:
+      dj.password_hash = hash_password(password)
+
+  if dj is not None:
     dj.put()
     return mcset(dj, DJ_ENTRY %dj.key())
-  else 
-    dj_key = getDjKey(username=username)
-    dj = getDj(dj_key)
-    if dj is not None:
-      if fullName is not None:
-        dj.fullname = fullName
-      if email is not None:
-        dj.email = email
-      if username is not None:
-        dj.username = username
-      if password is not None:
-        dj.pw_reset_hash = password #is this right?
-      dj.put()
-      return mcset(dj, DJ_ENTRY %dj.key())
-    return None
+
+  return None
   
 def getDjKey(username=None):
-  dj = models.Dj.all(keys_only=True).filter("lowercase_name =", username.lower()).get()
+  if username is not None:
+    dj = models.Dj.all(keys_only=True).filter("username", username).get()
   if dj:
     return dj
   return None 
+
+def getDjByUsername(username):
+  return getDj(getDjKey(username=username))
   
 def djLogin(username, password):
   dj_key = getDjKey(username=username)

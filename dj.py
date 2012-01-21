@@ -138,7 +138,7 @@ class Login(UserHandler):
       self.redirect('/dj/login/')
       return
     self.set_session_user(dj)
-    programList = cache.getDj(dj)
+    programList = models.getProgramsByDj(dj)
     if not programList:
       self.session.add_flash("You have successfully logged in, but you have no associated programs.  You will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately.")
       self.redirect('/dj/')
@@ -162,7 +162,7 @@ class RequestPassword(UserHandler):
     reset_key = self.request.get("reset_key")
     if reset_key:
       username = self.request.get("username")
-      reset_dj = cache.getDj(username)
+      reset_dj = cache.getDjByUsername(username=username)
       if not reset_dj:
         self.session.add_flash("There is no user by that name")
         self.redirect("/dj/reset/")
@@ -217,7 +217,7 @@ class RequestPassword(UserHandler):
     email = self.request.get("email")
     reset_dj = None
     if username:
-      reset_dj = cache.getDj(username)
+      reset_dj = cache.getDjByUsername(username=username)
     if not reset_dj:
       self.session.add_flash("Requested user does not exist")
       self.redirect("/dj/reset/")
