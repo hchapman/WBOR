@@ -171,7 +171,24 @@ class StationID(db.Model):
   program = db.ReferenceProperty(Program)
   play_date = db.DateTimeProperty()
 
+# I don't know why we manage permissions here rather than in Djs
 class Permission(db.Model):
+  PERM_DJ_EDIT = "Manage DJs"
+  PERM_PROGRAM_EDIT = "Manage Programs"
+  PERM_PERMISSION_EDIT = "Manage Permissions"
+  PERM_ALBUM_EDIT = "Manage Albums"
+  PERM_GENRE_EDIT = "Manage Genres"
+  PERM_BLOG_EDIT = "Manage Blog"
+  PERM_EVENT_EDIT = "Manage Events"
+
+  PERMISSIONS = (PERM_DJ_EDIT,
+                 PERM_PROGRAM_EDIT,
+                 PERM_PERMISSION_EDIT,
+                 PERM_ALBUM_EDIT,
+                 PERM_GENRE_EDIT,
+                 PERM_BLOG_EDIT,
+                 PERM_EVENT_EDIT,)
+
   title = db.StringProperty()
   dj_list = db.ListProperty(db.Key)
 

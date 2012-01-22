@@ -96,13 +96,13 @@ class MainPage(UserHandler):
     template_values = {
       'session': self.session,
       'flashes': self.session.get_flashes(),
-      'manage_djs': models.hasPermission(djkey, "Manage DJs"),
-      'manage_programs': models.hasPermission(djkey, "Manage Programs"),
-      'manage_permissions': models.hasPermission(djkey, "Manage Permissions"),
-      'manage_albums': models.hasPermission(djkey, "Manage Albums"),
-      'manage_genres': models.hasPermission(djkey, "Manage Genres"),
-      'manage_blog': models.hasPermission(djkey, "Manage Blog"),
-      'manage_events': models.hasPermission(djkey, "Manage Events"),
+      'manage_djs': cache.hasPermission(djkey, "Manage DJs"),
+      'manage_programs': cache.hasPermission(djkey, "Manage Programs"),
+      'manage_permissions': cache.hasPermission(djkey, "Manage Permissions"),
+      'manage_albums': cache.hasPermission(djkey, "Manage Albums"),
+      'manage_genres': cache.hasPermission(djkey, "Manage Genres"),
+      'manage_blog': cache.hasPermission(djkey, "Manage Blog"),
+      'manage_events': cache.hasPermission(djkey, "Manage Events"),
       'posts': models.getLastPosts(3),
     }
     self.response.out.write(template.render(getPath("dj_main.html"), template_values))
@@ -281,7 +281,7 @@ class SelectProgram(UserHandler):
   @login_required
   def post(self):
     program_key = self.request.get("programkey")
-    program = models.Program.get(program_key)
+    program = cache.getProgram(key=program_key)
     if not program:
       self.session.add_flash("An error occurred retrieving your program.  Please try again.")
       self.redirect("/dj/")
@@ -361,13 +361,13 @@ class ChartSong(UserHandler):
       if isNew:
         # if it's "new", the album should be in the datastore already with
         # a valid key.
-        album = models.Album.get(self.request.get("album_key"))      
+        album = cache.getAlbum(key=self.request.get("album_key"))      
         if not album:
           self.session.add_flash("Missing album information for new song, please try again.")
           self.redirect("/dj/chartsong/")
           return
         # likewise, the song should be in the datastore already with a valid key.
-        song = models.Song.get(self.request.get("song_key"))
+        song = cache.getSong(key=self.request.get("song_key"))
         if not song:
           self.session.add_flash("An error occurred trying to fetch the song, please try again.")
           self.redirect("/dj/chartsong/")
@@ -391,20 +391,18 @@ class ChartSong(UserHandler):
                           artist=track_artist)
       memcache_key = "playlist_html_%s"%self.session.get('program').get('key')
       playlist_html = template.render("dj_chartsong_playlist_div.html",
-      {'playlist': models.getLastPlays(program=self.program_key, 
-                                       after=(datetime.datetime.now() - 
-                                              datetime.timedelta(days=1)))}
+      {'playlist': cache.getLastPlays(program=self.program_key, 
+                                      after=(datetime.datetime.now() - 
+                                             datetime.timedelta(days=1)))}
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
-      if not models.getArtist(track_artist):
+      if not cache.getArtist(track_artist):
         # this is for autocomplete purposes. if the artist hasn't been charted
         # before, save the artist name in the datastore.
-        an = models.ArtistName(artist_name=track_artist, 
-          lowercase_name=track_artist.lower(),
-          search_names=models.artistSearchName(track_artist).split())
-        an.put()
+        cache.tryPutArtist(track_artist)
+
       # updates the top 10 artists for the program
-      self.updateArtists(models.Program.get(self.program_key), track_artist)
+      self.updateArtists(cache.getProgram(key=self.program_key), track_artist)
       try:
         # last.fm integration
         lastfm_username = "wbor"
@@ -468,7 +466,10 @@ class ChartSong(UserHandler):
     program.top_playcounts = [int(p[0]) for p in playcounts]
     program.put()
   def getPlayCountByArtist(self, program, artist):
-    return len(models.Play.all().filter("program =", program).filter("artist =", artist).fetch(1000))
+    return len(models.Play.all(keys_only=True).
+               filter("program =", program).
+               filter("artist =", artist).
+               fetch(1000))
   
 
 
@@ -586,8 +587,11 @@ class ManageDJs(UserHandler):
       self.session.add_flash("There was an error, please try again.")
       self.redirect("/dj/djs/")
     else:
+      fullname = self.request.get("fullname")
       email = self.request.get("email")
       username = self.request.get("username")
+      password = self.request.get("password")
+
       if not email:
         self.session.add_flash("Please enter a valid email address.")
         self.redirect("/dj/djs")
@@ -596,22 +600,19 @@ class ManageDJs(UserHandler):
         self.session.add_flash("Please enter a valid username.")
         self.redirect("/dj/djs")
         return
-      if not self.request.get("fullname"):
+      if not fullname:
         self.session.add_flash("Please enter a valid full name.")
         self.redirect("/dj/djs")
         return
-      if not self.request.get("password"):
+      if not password:
         self.session.add_flash("Please enter a valid password.")
         self.redirect("/dj/djs")
         return
-      if not self.request.get("password") == self.request.get("confirm"):
+      if not password == self.request.get("confirm"):
         self.session.add_flash("Passwords do not match.")
         self.redirect("/dj/djs")
         return
-      if "@" not in email:
-        email = email + "@bowdoin.edu"
-      if email[-1] == "@":
-        email = email + "bowdoin.edu"
+
       dj = cache.getDjByEmail(email)
       if dj is not None:
         self.session.add_flash(
@@ -626,11 +627,12 @@ class ManageDJs(UserHandler):
           (dj.username, dj.fullname, dj.email))
         self.redirect("/dj/djs")
         return
+
       # If both username and email address are new, then we can add them
-      dj = cache.putDj(fullname=self.request.get("fullname"),
-        email=email,
-        username=username,
-        password=self.request.get("password"))
+      dj = cache.putDj(fullname=fullname,
+                       email=email,
+                       username=username,
+                       password=password)
 
       self.session.add_flash(dj.fullname + " successfully added as a DJ.")
       self.redirect("/dj/djs/")
@@ -642,8 +644,8 @@ class ManageDJs(UserHandler):
 class EditDJ(UserHandler):
   @authorization_required("Manage DJs")
   def get(self, dj_key):
-    dj = models.Dj.get(dj_key)
-    dj_list = models.Dj.all().order("fullname")
+    dj = cache.getDj(dj_key)
+    dj_list = cache.getAllDjs()
     if not dj:
       self.session.add_flash("The DJ specified (" + dj_key + ") does not exist.  Please try again.")
       self.redirect("/dj/djs/")
@@ -659,30 +661,34 @@ class EditDJ(UserHandler):
   
   @authorization_required("Manage DJs")
   def post(self, dj_key):
-    dj = models.Dj.get(dj_key)
-    if (not dj) or (self.request.get("submit") != "Edit DJ" and self.request.get("submit") != "Delete DJ"):
+    dj = cache.getDj(dj_key)
+    if (dj is None) or (self.request.get("submit") != "Edit DJ" and 
+                        self.request.get("submit") != "Delete DJ"):
       self.session.add_flash("There was an error processing your request.  Please try again.")
+
     elif self.request.get("submit") == "Edit DJ":
-      dj.fullname = self.request.get("fullname")
-      dj.lowername = dj.fullname.lower()
-      dj.email = self.request.get("email")
-      if dj.email[-1] == "@":
-        dj.email = dj.email + "bowdoin.edu"
-      if "@" not in dj.email:
-        dj.email = dj.email + "@bowdoin.edu"
-      dj.username = self.request.get("username")
-      if self.request.get("password"):
-        if not self.request.get("password") == self.request.get("confirm"):
+      fullname = self.request.get("fullname")
+      email = self.request.get("email")
+      username = self.request.get("username")
+      password = self.request.get("password")
+
+      if password is not None:
+        if not password == self.request.get("confirm"):
           self.session.add_flash("New passwords do not match.")
           self.redirect("/dj/djs")
           return
-        else:
-          dj.password_hash = hash_password(self.request.get("password"))
-      dj.put()
-      self.session.add_flash(dj.fullname + " has been successfully edited.")
+
+      # Edit the dj
+      dj = cache.putDj(fullname=fullname,
+                       email=email,
+                       username=username,
+                       password=password,
+                       edit_dj=dj)
+      
+      self.session.add_flash(fullname + " has been successfully edited.")
     elif self.request.get("submit") == "Delete DJ":
-      dj.delete()
-      self.session.add_flash(dj.fullname + " has been successfully deleted.")
+      cache.deleteDj(dj)
+      self.session.add_flash(fullname + " has been successfully deleted.")
     self.redirect("/dj/djs/")
 
 
@@ -1079,12 +1085,12 @@ class EditEvent(UserHandler):
 class ManagePermissions(UserHandler):
   @authorization_required("Manage Permissions")
   def get(self):
-    permissions = models.getPermissions()
+    permissions = cache.getPermissions()
     template_values = {
       'permissions': [{
         'key': p.key(),
         'title': p.title,
-        'dj_list': [models.Dj.get(d) for d in p.dj_list],
+        'dj_list': [cache.getDj(d) for d in p.dj_list],
         } for p in permissions],
       'session': self.session,
       'flash': self.flash,
@@ -1096,12 +1102,12 @@ class ManagePermissions(UserHandler):
   def post(self):
     self.response.headers['Content-Type'] = 'text/json'
     dj_key = self.request.get("dj_key")
-    dj = models.Dj.get(dj_key)
+    dj = cache.getDj(dj_key)
     errors = "";
     if not dj:
       errors = "Unable to find DJ. "
     permission_key = self.request.get("permission_key")
-    permission = models.Permission.get(permission_key)
+    permission = cache.getPermission(key=permission_key)
     if not permission:
       errors = "Unable to find permission."
     if errors:
@@ -1227,7 +1233,7 @@ class ManageAlbums(UserHandler):
       # We're removing the "new" marking from an album
       self.response.headers['Content-Type'] = 'text/json'
       key = self.request.get("key")
-      album = models.Album.get(key)
+      album = cache.getAlbum(key=key)
       if not cache.setAlbumIsNew(key, is_new=False):
         self.response.out.write(json.dumps({'err': "Album not found. Please try again."}))
         return

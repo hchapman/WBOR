@@ -257,7 +257,8 @@ def getDj(key):
   return mcset(db.get(key), DJ_ENTRY %key)
     
 def putDj(email=None, fullname=None, username=None, 
-          password=None, edit_dj=None):
+          password=None, edit_dj=None,
+          fix_email=True):
   if edit_dj is None:
     if None in (email, fullname, username, password):
       raise Exception("Insufficient fields for new Dj")
@@ -275,7 +276,12 @@ def putDj(email=None, fullname=None, username=None,
       dj.fullname = fullname
       dj.lowername = fullname.lower()
     if email is not None:
-      dj.email = email
+      if fix_email: # Add @bowdoin.edu to undressed emails
+        if email[-1] == "@":
+          email += "bowdoin.edu"
+        if "@" not in email:
+          email += "@bowdoin.edu"
+      email = email
     if username is not None: # Although this should be an immutable property
       dj.username = username
     if password is not None:
@@ -286,6 +292,14 @@ def putDj(email=None, fullname=None, username=None,
     return mcset(dj, DJ_ENTRY %dj.key())
 
   return None
+
+def deleteDj(dj):
+  if dj is None:
+    raise Exception("No Dj to delete")
+  try:
+    dj = getDj(dj)
+  except:
+    raise Exception("Unable to determine Dj to delete")
   
 def getDjKey(username=None, email=None):
   if username is not None:
@@ -440,6 +454,70 @@ def getNewAlbums(num=50, by_artist=False):
     return sorted(albums, key=lambda album: album.artist.lower())
   else:
     return sorted(albums, key=lambda album: album.add_date)
+
+# Functions for getting and setting Permissions
+# As it stands, permissions are only dealt with using human-readable
+# permission labels.
+PERMISSION_ENTRY = "permission_key%s"
+PERMISSION_LABEL = "permission_label%s"
+
+PERMISSIONS = "all_permissions_cache"
+
+def getPermissionKey(label):
+  if label is None:
+    return None
+  if isinstance(label, models.Permission):
+    return label
+
+  cached = memcache.get(PERMISSION_LABEL %label)
+  if cached is not None:
+    return cached
+  
+  key = Permission.all(keys_only=True).filter("title =", label).get(),
+  return mcset(key, PERMISSION_LABEL %label)
+
+def getPermissions():
+  keys = memcache.get(PERMISSIONS)
+  if keys is None:
+    keys = Permission.all(keys_only=True).order("-title").fetch(100)
+    mcset(keys, PERMISSIONS)
+
+  return filter(None, [getPermission(key) for key in keys])
+
+def getPermission(label=None, key=None):
+  if label is None and key is None:
+    return None
+  if isinstance(label, models.Permission):
+    return label
+  if isinstance(key, models.Permission):
+    return key
+
+  if label is not None and key is None:
+    key = getPermissionKey(label)
+    
+  if key is None:
+    return None
+
+  cached = memcache.get(PERMISSION_ENTRY %key)
+  if cached is not None:
+    return cached
+
+  return mcset(db.get(key), PERMISSION_ENTRY %key)
+
+def hasPermission(dj, label):
+  if isinstance(dj, models.Dj):
+    dj_key = dj.key()
+  else:
+    dj_key = dj
+
+  if dj_key is None:
+    return False
+
+  # For now we have a fixed set of possible permissions
+  if label in models.Permission.PERMISSIONS:
+    return dj_key in getPermission(label)
+
+  return False
 
 ## Functions for getting and setting Artists,
 ## Specifically, caching artist name autocompletion 
