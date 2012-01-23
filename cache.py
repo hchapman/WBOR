@@ -255,6 +255,11 @@ def getDj(key):
     return cached
   logging.debug("Have to DB load dj with key, %s"%key)
   return mcset(db.get(key), DJ_ENTRY %key)
+
+def getDjs(program=None):
+  if program is not None:
+    program = getProgram(program)
+    return filter(None, [getDj(key) for key in program.dj_list])
     
 def putDj(email=None, fullname=None, username=None, 
           password=None, edit_dj=None,
@@ -342,6 +347,8 @@ def djLogin(username, password):
 PROGRAM_ENTRY = "program_key%s"
 PROGRAM_EXPIRE = 360  # Program cache lasts for one hour maximum
 
+DJ_PROGRAMS = "programs_by_dj%s"
+
 def getProgram(key):
   if key is None:
     return None
@@ -352,6 +359,33 @@ def getProgram(key):
   if cached is not None:
     return cached
   return mcset_t(db.get(key), PROGRAM_EXPIRE, PROGRAM_ENTRY, key)
+
+def getAllPrograms():
+  return filter(None, [getProgram(key) for key in
+                       getProgramKeys(order="title")])
+
+def getPrograms(dj=None, order=None):
+  program_keys = getProgramKeys(dj=dj, order=order)
+  return filter(None, [getProgram(key) for key in program_keys])
+  
+def getProgramKeys(dj=None, order=None):
+  query = Program.all(keys_only=True)
+
+  if dj is not None:
+    if isinstance(key, models.Dj):
+      dj = dj.key()
+    if dj is not None:
+      query.filter("dj_list =", dj)
+
+  if order is not None:
+    query.order(order)
+
+  # TODO if more filters are added, be sure to modify this
+  cached = memcache.get(DJ_PROGRAMS %dj)
+  if cached is not None:
+    return cached  
+
+  return mcset(query.fetch(1000), DJ_PROGRAMS %dj)
 
 ## Functions for getting and setting Albums
 NEW_ALBUMS = "new_albums"

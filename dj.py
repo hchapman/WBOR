@@ -72,8 +72,7 @@ def authorization_required(label):
     def wrapper(self, *args, **kw):
       if self.session_has_login():
         key = self.dj_key
-        perm = models.getPermission(label)
-        if key in perm.dj_list:
+        if cache.hasPermission(key, label)
           func(self, *args, **kw)
         else:
           self.session.add_flash("You're not authorized to view this page. If you think this is an error, please send an email to a member of WBOR management.")
@@ -138,7 +137,7 @@ class Login(UserHandler):
       self.redirect('/dj/login/')
       return
     self.set_session_user(dj)
-    programList = models.getProgramsByDj(dj)
+    programList = cache.getPrograms(dj=dj)
     if not programList:
       self.session.add_flash("You have successfully logged in, but you have no associated programs.  You will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately.")
       self.redirect('/dj/')
@@ -178,7 +177,7 @@ class RequestPassword(UserHandler):
         reset_dj.pw_reset_expire = datetime.datetime.now()
         reset_dj.pw_reset_hash = None
         reset_dj.put()
-        programList = models.getProgramsByDj(reset_dj)
+        programList = cache.getPrograms(dj=reset_dj)
         if not programList:
           self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nYou will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately.")
           # self.sess['program'] = None
@@ -264,7 +263,7 @@ The WBOR.org Team
 class SelectProgram(UserHandler):
   @login_required
   def get(self):
-    programlist = models.getProgramsByDj(self.dj_key)
+    programlist = cache.getPrograms(dj=self.dj_key)
     if len(programlist) <= 1:
       self.session.add_flash("You don't have more than one radio program to choose between.")
       self.redirect("/dj/")
@@ -571,7 +570,7 @@ class ManageDJs(UserHandler):
   @authorization_required("Manage DJs")
   def get(self):
     dj_list = cache.getAllDjs() # This is TERRIBLE PRACTICE
-    # dj_list = models.Dj.all().order("fullname")
+
     template_values = {
       'dj_list': dj_list,
       'session': self.session,
@@ -698,18 +697,14 @@ class EditDJ(UserHandler):
 class ManagePrograms(UserHandler):
   @authorization_required("Manage Programs")
   def get(self):
-    program_list = models.Program.all().order("title")
+    program_list = cache.getPrograms(order="title")
 
     template_values = {
       'current_programs': tuple({"prog" : program,
-                                 "dj_list" : (tuple(models.Dj.get(dj) 
-                                                    for dj in program.dj_list) if program.dj_list
-                                              else None)}
-                                for program in program_list if program.current),
+                                 "dj_list" : cache.getDjs(program=program)}
+                                 for program in program_list if program.current),
       'legacy_programs': tuple({"prog" : program,
-                                "dj_list" : (tuple(models.Dj.get(dj) 
-                                                   for dj in program.dj_list) if program.dj_list
-                                              else None)}
+                                "dj_list" : cache.getDjs(program=program)}
                                for program in program_list if not program.current),
       'session': self.session,
       'flash': self.flash,
@@ -768,7 +763,7 @@ class EditProgram(UserHandler):
   
   @authorization_required("Manage Programs")
   def post(self, program_key):
-    program = models.Program.get(program_key)
+    program = cache.getProgram(program_key)
     if (not program) or (self.request.get("submit") != "Edit Program" and self.request.get("submit") != "Delete Program"):
       self.session.add_flash("There was an error processing your request. Please try again.")
     elif self.request.get("submit") == "Edit Program":
@@ -841,7 +836,7 @@ class MySelf(UserHandler):
 class MyShow(UserHandler):
   @login_required
   def get(self):
-    program = models.Program.get(self.program_key)
+    program = cache.getProgram(self.program_key)
     template_values = {
       'session': self.session,
       'flash': self.flash,
@@ -852,7 +847,7 @@ class MyShow(UserHandler):
   
   @login_required
   def post(self):
-    program = models.Program.get(self.request.get("program_key"))
+    program = cache.getProgram(self.request.get("program_key"))
     if not program:
       self.session.add_flash("Unable to find program.")
       self.redirect("/dj/myshow")
