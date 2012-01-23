@@ -48,6 +48,26 @@ def mcdelete(cache_key, *args):
   if response < 2:
     logging.debug(LMC_DEL_ERROR %(cache_key, response))
 
+def cacheGet(key, model_class, cachekey_template, use_datastore=False):
+  
+  if key is None:
+    return None,
+  if isinstance(key, model_class):
+    return key
+
+  obj = memcache.get(cachekey_template %s)
+
+def batchGetModels(getter, keys):
+  '''Get a bunch of models with getter, trying for cache and using
+  a batch datastore get otherwise, maintaining order'''
+
+  models = []
+  batch_keys = []
+  for key in keys:
+    obj = getter(key, use_datastore=False)
+    if key is not None:
+      models.append(obj)
+
 ## Functions generally for getting and setting new Plays.
 ### Constants representing key templates for the memcache.
 LAST_PLAYS = "last_plays"
@@ -109,7 +129,7 @@ def getLastPlayKeys(num=1,
       mcset(last_plays, lp_mc_key)
   return last_plays[:num]
 
-def getPlay(key):
+def getPlay(key, use_datastore=True):
   """Get a play from its db key."""
   if key is None:
     return None
@@ -191,7 +211,7 @@ def getLastPsaKey():
       mcset(psa, LAST_PSA)
   return psa
 
-def getPsa(key):
+def getPsa(key, use_datastore=True):
   if key is None:
     return None
   if isinstance(key, models.Psa):
@@ -243,7 +263,7 @@ def putSong(title, artist, album=None):
 ## Functions for getting and setting DJs
 DJ_ENTRY = "dj_key%s"
 
-def getDj(key):
+def getDj(key, use_datastore=True):
   if key is None:
     return None
   if isinstance(key, models.Dj):
@@ -349,16 +369,39 @@ PROGRAM_EXPIRE = 360  # Program cache lasts for one hour maximum
 
 DJ_PROGRAMS = "programs_by_dj%s"
 
-def getProgram(key):
-  if key is None:
+def getProgram(key=None, slug=None, order=None, 
+               get_any=False, use_datastore=True):
+  # Make sure we actually know enough to get
+  if not filter(None, (key, slug,)) or get_any:
     return None
-  if isinstance(key, models.Program):
-    return key
 
-  cached = memcache.get(PROGRAM_ENTRY %key)
-  if cached is not None:
-    return cached
-  return mcset_t(db.get(key), PROGRAM_EXPIRE, PROGRAM_ENTRY, key)
+  # We're getting the program by key
+  if key is not None:
+    if isinstance(key, models.Program):
+      return key
+
+    cached = memcache.get(PROGRAM_ENTRY %key)
+    if cached is not None:
+      return cached
+    return mcset_t(db.get(key), PROGRAM_EXPIRE, PROGRAM_ENTRY, key)
+
+  # We're using a query on programs instead
+  return getProgram(key=getProgramKey(slug=slug, order=order, get_any=get_any))
+  
+def getProgramKey(slug=None, order=None, get_any=False):
+  query = models.Program.all(keys_only=True)
+
+  if not filter(None, (slug,)) or get_any:
+    return None
+
+  if slug is not None:
+    query.filter("slug =", slug)
+
+  if order is not None:
+    query.order(order)
+
+  # Consider adding query caching here, if necessary
+  return query.get()
 
 def getAllPrograms():
   return filter(None, [getProgram(key) for key in
@@ -470,7 +513,7 @@ def getNewAlbumKeys(num=50):
 
   return new_albums[:num]
 
-def getAlbum(key):
+def getAlbum(key, use_datastore=True):
   if key is None:
     return None
   if isinstance(key, models.Album):
@@ -518,7 +561,7 @@ def getPermissions():
 
   return filter(None, [getPermission(key) for key in keys])
 
-def getPermission(label=None, key=None):
+def getPermission(label=None, key=None, use_datastore=True):
   if label is None and key is None:
     return None
   if isinstance(label, models.Permission):
@@ -592,7 +635,7 @@ def getArtistKey(a_name=None):
     return artist
   return None
 
-def getArtist(key):
+def getArtist(key, use_datastore=True):
   if key is None:
     return None
   if isinstance(key, models.ArtistName):
