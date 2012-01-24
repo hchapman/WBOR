@@ -50,11 +50,13 @@ def mcdelete(cache_key, *args):
 
 def cacheGet(keys, model_class, cachekey_template, 
              use_datastore=True, one_key=False):
+  if keys is None:
+    return None
   if isinstance(keys, model_class):
     return keys
 
   if isinstance(keys, str) or isinstance(keys, db.Key) or one_key:
-    keys = tuple(key,)
+    keys = (keys,)
     one_key = True
 
   if not one_key:
@@ -66,8 +68,8 @@ def cacheGet(keys, model_class, cachekey_template,
       return None,
     if isinstance(key, model_class):
       return key
+    obj = memcache.get(cachekey_template %key)
 
-    obj = memcache.get(cachekey_template %s)
     if obj is not None:
       if one_key:
         return obj

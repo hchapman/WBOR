@@ -43,9 +43,21 @@ def runDjCacheTests():
                       password="secret", edit_dj=dj3)
     dj3 = cache.putDj(password="supersecret2", edit_dj=dj3)
 
-    # Delete a Dj
-    cache.deleteDj(dj2)
 
     print dj1.to_xml()
     print dj2.to_xml()
     print dj3.to_xml()
+
+    print "--------------------"
+    
+    print cache.djLogin("ctest", "chest")
+    print cache.djLogin("ctest", "secret")
+    print cache.djLogin("ctest", "supersecret2")
+
+    # Delete the Djs
+    cache.deleteDj(dj1)
+    cache.deleteDj(dj2)
+    cache.deleteDj(dj3)
+
+    print cache.djLogin("ctest", "supersecret2")
+    print cache.djLogin("ctest", "chest")
