@@ -701,10 +701,10 @@ class ManagePrograms(UserHandler):
 
     template_values = {
       'current_programs': tuple({"prog" : program,
-                                 "dj_list" : cache.getDjs(program=program)}
+                                 "dj_list" : cache.getDj(program.dj_list)}
                                  for program in program_list if program.current),
       'legacy_programs': tuple({"prog" : program,
-                                "dj_list" : cache.getDjs(program=program)}
+                                "dj_list" : cache.getDj(program.dj_list)}
                                for program in program_list if not program.current),
       'session': self.session,
       'flash': self.flash,

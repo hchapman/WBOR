@@ -30,7 +30,7 @@ def runDjCacheTests():
     print dj2.to_xml()
     print dj3.to_xml()
 
-    # Alter a Dj's information
+    # Alter some Dj information
     dj2 = cache.putDj(email="teslac", edit_dj=dj2)
     dj2 = cache.putDj(email="teslac@", edit_dj=dj2)
     dj2 = cache.putDj(email="teslac@hotmail.com", edit_dj=dj2)
@@ -43,13 +43,13 @@ def runDjCacheTests():
                       password="secret", edit_dj=dj3)
     dj3 = cache.putDj(password="supersecret2", edit_dj=dj3)
 
-
     print dj1.to_xml()
     print dj2.to_xml()
     print dj3.to_xml()
 
     print "--------------------"
     
+    # Try logging in
     print cache.djLogin("ctest", "chest")
     print cache.djLogin("ctest", "secret")
     print cache.djLogin("ctest", "supersecret2")

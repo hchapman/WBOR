@@ -260,17 +260,35 @@ def putSong(title, artist, album=None):
 ## Functions for getting and setting DJs
 DJ_ENTRY = "dj_key%s"
 
+## Primary Dj getting functions
 def getDj(keys=None,
-          username=None, email=None,
-          num=1, use_datastore=True, one_key=False):
-  return cacheGet(keys, models.Dj, DJ_ENTRY, 
-                  use_datastore=use_datastore, one_key=one_key)
+          username=None, email=None, order=None,
+          num=-1, use_datastore=True, one_key=False):
+  if keys is not None:
+    return cacheGet(keys, models.Dj, DJ_ENTRY, 
+                    use_datastore=use_datastore, one_key=one_key)
 
-def getDjs(program=None):
-  if program is not None:
-    program = getProgram(program)
-    return filter(None, [getDj(key) for key in program.dj_list])
-    
+  keys = getDjKey(username=username, email=email, order=order, num=num)  
+  if keys is not None:
+    return getDj(keys=keys, use_datastore=use_datastore)
+  return None
+
+def getDjKey(username=None, email=None, program=None, order=None, num=-1):
+  query = models.Dj.all(keys_only=True)
+
+  if username is not None:
+    query.filter("username =", username)
+  if email is not None:
+    query.filter("email =", username)
+
+  if order is not None:
+    query.order(order)
+
+  if num == -1:
+    return query.get()
+  return query.fetch(num)
+
+## Primary Dj setting functions    
 def putDj(email=None, fullname=None, username=None, 
           password=None, edit_dj=None,
           fix_email=True):
@@ -313,6 +331,7 @@ def putDj(email=None, fullname=None, username=None,
 
   return None
 
+## Primary Dj deleting functions
 def deleteDj(dj):
   if dj is None:
     raise Exception("No Dj to delete")
@@ -325,37 +344,18 @@ def deleteDj(dj):
     mcset(None, DJ_ENTRY %dj.key())
     dj.delete()
   
-def getDjKey(username=None, email=None):
-  if username is not None:
-    dj = models.Dj.all(keys_only=True).filter("username", username).get()
-  elif email is not None:
-    dj = models.Dj.all(keys_only=True).filter("email", username).get()
-  if dj:
-    return dj
-  return None 
-
-def getDjKeys(order=None):
-  dj_query = models.Dj.all(keys_only=True)
-  # Potentially add filters and stuff here
-
-  if order is not None:
-    dj_query = dj_query.order(order)
-
-  return dj_query.fetch(1000)
-
+## Auxiliary Dj functions
 def getAllDjs():
-  return filter(None, [getDj(key) for key in
-                       getDjKeys(order="fullname")])
+  return getDj(order="fullname", num=1000)
   
 def getDjByUsername(username):
-  return getDj(getDjKey(username=username))
+  return getDj(username=username)
 
 def getDjByEmail(email):
-  return getDj(getDjKey(email=email))
+  return getDj(email=email)
   
 def djLogin(username, password):
-  dj_key = getDjKey(username=username)
-  dj = getDj(dj_key)
+  dj = getDj(username=username)
   if dj is not None:
     if check_password(dj.password_hash, password):
       return dj
@@ -368,22 +368,21 @@ PROGRAM_EXPIRE = 360  # Program cache lasts for one hour maximum
 
 DJ_PROGRAMS = "programs_by_dj%s"
 
-def getProgram(keys=None, slug=None, order=None, num=1,
-               get_any=False, use_datastore=True, one_key=False):
+def getProgram(keys=None, slug=None, order=None, num=-1,
+               use_datastore=True, one_key=False):
   # We're getting the program by key
   if keys is not None:
-      return cacheGet(keys, models.Program, PROGRAM_ENTRY, 
-                      use_datastore=use_datastore, one_key=one_key)
+    return cacheGet(keys, models.Program, PROGRAM_ENTRY, 
+                    use_datastore=use_datastore, one_key=one_key)
 
   # We're using a query on programs instead
-  return getProgram(key=getProgramKey(slug=slug, order=order, 
-                                      num=num, get_any=get_any))
+  keys = getProgramKey(slug=slug, order=order, num=num)
+  if keys is not None:
+    return getProgram(keys=keys, use_datastore=use_datastore)
+  return None
   
-def getProgramKey(slug=None, order=None, num=1, get_any=False):
+def getProgramKey(slug=None, order=None, num=-1):
   query = models.Program.all(keys_only=True)
-
-  if not filter(None, (slug,)) or get_any:
-    return None
 
   if slug is not None:
     query.filter("slug =", slug)
@@ -392,7 +391,9 @@ def getProgramKey(slug=None, order=None, num=1, get_any=False):
     query.order(order)
 
   # Consider adding query caching here, if necessary
-  return query.get()
+  if num == -1:
+    return query.get()
+  return query.fetch(num)
 
 def getAllPrograms():
   return filter(None, [getProgram(key) for key in
