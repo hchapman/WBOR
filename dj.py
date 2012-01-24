@@ -72,7 +72,7 @@ def authorization_required(label):
     def wrapper(self, *args, **kw):
       if self.session_has_login():
         key = self.dj_key
-        if cache.hasPermission(key, label)
+        if cache.hasPermission(key, label):
           func(self, *args, **kw)
         else:
           self.session.add_flash("You're not authorized to view this page. If you think this is an error, please send an email to a member of WBOR management.")

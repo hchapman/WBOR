@@ -50,8 +50,11 @@ def mcdelete(cache_key, *args):
 
 def cacheGet(keys, model_class, cachekey_template, 
              use_datastore=True, one_key=False):
+  if isinstance(keys, model_class):
+    return keys
+
   if isinstance(keys, str) or isinstance(keys, db.Key) or one_key:
-    keys = (key,)
+    keys = tuple(key,)
     one_key = True
 
   if not one_key:
@@ -255,21 +258,11 @@ def putSong(title, artist, album=None):
 ## Functions for getting and setting DJs
 DJ_ENTRY = "dj_key%s"
 
-def getDj(keys, use_datastore=True, one_key=False):
-  return cacheGet(keys, models.Play, PLAY_ENTRY, 
+def getDj(keys=None,
+          username=None, email=None,
+          num=1, use_datastore=True, one_key=False):
+  return cacheGet(keys, models.Dj, DJ_ENTRY, 
                   use_datastore=use_datastore, one_key=one_key)
-
-  if key is None:
-    return None
-  if isinstance(key, models.Dj):
-    return key
-        
-  cached = memcache.get(DJ_ENTRY %key)
-  if cached is not None:
-    #logging.debug("Cached dj, %s"%cached.fullname)
-    return cached
-  logging.debug("Have to DB load dj with key, %s"%key)
-  return mcset(db.get(key), DJ_ENTRY %key)
 
 def getDjs(program=None):
   if program is not None:
@@ -282,6 +275,11 @@ def putDj(email=None, fullname=None, username=None,
   if edit_dj is None:
     if None in (email, fullname, username, password):
       raise Exception("Insufficient fields for new Dj")
+    if fix_email: # Add @bowdoin.edu to undressed emails
+      if email[-1] == "@":
+        email += "bowdoin.edu"
+      if "@" not in email:
+        email += "@bowdoin.edu"
     dj = models.Dj(fullname=fullname, 
                    lowername=fullname.lower(),
                    email=email,
@@ -301,7 +299,7 @@ def putDj(email=None, fullname=None, username=None,
           email += "bowdoin.edu"
         if "@" not in email:
           email += "@bowdoin.edu"
-      email = email
+      dj.email = email
     if username is not None: # Although this should be an immutable property
       dj.username = username
     if password is not None:
@@ -320,6 +318,10 @@ def deleteDj(dj):
     dj = getDj(dj)
   except:
     raise Exception("Unable to determine Dj to delete")
+
+  if dj is not None:
+    mcset(None, DJ_ENTRY %dj.key())
+    dj.delete()
   
 def getDjKey(username=None, email=None):
   if username is not None:
@@ -364,26 +366,18 @@ PROGRAM_EXPIRE = 360  # Program cache lasts for one hour maximum
 
 DJ_PROGRAMS = "programs_by_dj%s"
 
-def getProgram(key=None, slug=None, order=None, 
-               get_any=False, use_datastore=True):
-  # Make sure we actually know enough to get
-  if not filter(None, (key, slug,)) or get_any:
-    return None
-
+def getProgram(keys=None, slug=None, order=None, num=1,
+               get_any=False, use_datastore=True, one_key=False):
   # We're getting the program by key
-  if key is not None:
-    if isinstance(key, models.Program):
-      return key
-
-    cached = memcache.get(PROGRAM_ENTRY %key)
-    if cached is not None:
-      return cached
-    return mcset_t(db.get(key), PROGRAM_EXPIRE, PROGRAM_ENTRY, key)
+  if keys is not None:
+      return cacheGet(keys, models.Program, PROGRAM_ENTRY, 
+                      use_datastore=use_datastore, one_key=one_key)
 
   # We're using a query on programs instead
-  return getProgram(key=getProgramKey(slug=slug, order=order, get_any=get_any))
+  return getProgram(key=getProgramKey(slug=slug, order=order, 
+                                      num=num, get_any=get_any))
   
-def getProgramKey(slug=None, order=None, get_any=False):
+def getProgramKey(slug=None, order=None, num=1, get_any=False):
   query = models.Program.all(keys_only=True)
 
   if not filter(None, (slug,)) or get_any:
@@ -508,16 +502,9 @@ def getNewAlbumKeys(num=50):
 
   return new_albums[:num]
 
-def getAlbum(key, use_datastore=True):
-  if key is None:
-    return None
-  if isinstance(key, models.Album):
-    return key
-
-  cached = memcache.get(ALBUM_ENTRY %key)
-  if cached is not None:
-    return cached
-  return mcset(db.get(key), ALBUM_ENTRY, key)
+def getAlbum(keys, use_datastore=True, one_key=False):
+  return cacheGet(keys, models.Album, ALBUM_ENTRY, 
+                  use_datastore=use_datastore, one_key=one_key)
 
 def getNewAlbums(num=50, by_artist=False):
   albums = filter(None, [getAlbum(key) for key in
@@ -556,25 +543,14 @@ def getPermissions():
 
   return filter(None, [getPermission(key) for key in keys])
 
-def getPermission(label=None, key=None, use_datastore=True):
-  if label is None and key is None:
-    return None
-  if isinstance(label, models.Permission):
-    return label
-  if isinstance(key, models.Permission):
-    return key
+def getPermission(keys=None, label=None, use_datastore=True, one_key=False):
+  if label is not None and keys is None:
+    if isinstance(label, models.Permission):
+      return label
+    keys = getPermissionKey(label)
 
-  if label is not None and key is None:
-    key = getPermissionKey(label)
-    
-  if key is None:
-    return None
-
-  cached = memcache.get(PERMISSION_ENTRY %key)
-  if cached is not None:
-    return cached
-
-  return mcset(db.get(key), PERMISSION_ENTRY %key)
+  return cacheGet(keys, models.Permission, PERMISSION_ENTRY, 
+                  use_datastore=use_datastore, one_key=one_key)
 
 def hasPermission(dj, label):
   if isinstance(dj, models.Dj):
@@ -630,16 +606,9 @@ def getArtistKey(a_name=None):
     return artist
   return None
 
-def getArtist(key, use_datastore=True):
-  if key is None:
-    return None
-  if isinstance(key, models.ArtistName):
-    return key
-
-  cached = memcache.get(ARTIST_ENTRY %key)
-  if cached is not None:
-    return cached
-  return mcset(db.get(key), ARTIST_ENTRY %key)
+def getArtist(key, use_datastore=True, one_key=False):
+  return cacheGet(keys, models.ArtistName, ARTIST_ENTRY, 
+                  use_datastore=use_datastore, one_key=one_key)
 
 # Replace with batch get of uncached database entities
 def getArtists(keys):
