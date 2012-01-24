@@ -48,25 +48,42 @@ def mcdelete(cache_key, *args):
   if response < 2:
     logging.debug(LMC_DEL_ERROR %(cache_key, response))
 
-def cacheGet(key, model_class, cachekey_template, use_datastore=False):
+def cacheGet(keys, model_class, cachekey_template, 
+             use_datastore=True, one_key=False):
+  if isinstance(keys, str) or isinstance(keys, db.Key) or one_key:
+    keys = (key,)
+    one_key = True
+
+  if not one_key:
+    objs = []
+    db_fetch_keys = []
+
+  for i, key in enumerate(keys):
+    if key is None:
+      return None,
+    if isinstance(key, model_class):
+      return key
+
+    obj = memcache.get(cachekey_template %s)
+    if obj is not None:
+      if one_key:
+        return obj
+      objs.append(obj)
   
-  if key is None:
-    return None,
-  if isinstance(key, model_class):
-    return key
+    if one_key:
+      return model_class.get(key)
 
-  obj = memcache.get(cachekey_template %s)
+    # Store the key to batch fetch, and the position to place it
+    if use_datastore:
+      db_fetch_keys.append((i, key))
 
-def batchGetModels(getter, keys):
-  '''Get a bunch of models with getter, trying for cache and using
-  a batch datastore get otherwise, maintaining order'''
+  # Improve this if possible. Use a batch fetch on non-memcache keys.
+  db_fetch_zip = zip(db_fetch_keys) #[0]: idx, [1]: key
+  for i, obj in zip(db_fetch_zip[0], 
+                    model_class.get(db_fetch_zip[1])):
+    objs[i] = mcset(obj, cachekey_template %key)
 
-  models = []
-  batch_keys = []
-  for key in keys:
-    obj = getter(key, use_datastore=False)
-    if key is not None:
-      models.append(obj)
+  return filter(None, objs)
 
 ## Functions generally for getting and setting new Plays.
 ### Constants representing key templates for the memcache.
@@ -129,19 +146,10 @@ def getLastPlayKeys(num=1,
       mcset(last_plays, lp_mc_key)
   return last_plays[:num]
 
-def getPlay(key, use_datastore=True):
+def getPlay(keys, use_datastore=True, one_key=False):
   """Get a play from its db key."""
-  if key is None:
-    return None
-  if isinstance(key, models.Play):
-    return key
-
-  play = memcache.get(PLAY_ENTRY %key)
-  if play is None:
-    logging.info("Have to update %s memcache" %PLAY_ENTRY%key)
-    play = db.get(key)
-    mcset(play, PLAY_ENTRY, key)
-  return play
+  return cacheGet(keys, models.Play, PLAY_ENTRY, 
+                  use_datastore=use_datastore, one_key=one_key)
 
 def getLastPlays(num=1,
                  program=None, before=None, after=None):
@@ -211,18 +219,9 @@ def getLastPsaKey():
       mcset(psa, LAST_PSA)
   return psa
 
-def getPsa(key, use_datastore=True):
-  if key is None:
-    return None
-  if isinstance(key, models.Psa):
-    return key
-
-  psa = memcache.get(PSA_ENTRY %key)
-  if psa is None:
-    logging.debug("Have to update %s memcache"%PSA_ENTRY%key)
-    psa = db.get(key)
-    mcset(psa, PSA_ENTRY, key)
-  return psa
+def getPsa(keys, use_datastore=True, one_key=False):
+  return cacheGet(keys, models.Psa, PSA_ENTRY, 
+                  use_datastore=use_datastore, one_key=one_key)
     
 def getLastPsa():
   return getPsa(getLastPsaKey())
@@ -241,16 +240,9 @@ def addNewPsa(desc, program, play_date=None):
 ## Functions for getting and setting Songs
 SONG_ENTRY = "song_key%s"
 
-def getSong(key):
-  if key is None:
-    return None
-  if isinstance(key, models.Song):
-    return key
-
-  cached = memcache.get(SONG_ENTRY %key)
-  if cached is not None:
-    return cached
-  return mcset(db.get(key), SONG_ENTRY %key)
+def getSong(keys, use_datastore=True, one_key=False):
+  return cacheGet(keys, models.Song, SONG_ENTRY, 
+                  use_datastore=use_datastore, one_key=one_key)
 
 def putSong(title, artist, album=None):
   song = models.Song(parent=album,
@@ -263,7 +255,10 @@ def putSong(title, artist, album=None):
 ## Functions for getting and setting DJs
 DJ_ENTRY = "dj_key%s"
 
-def getDj(key, use_datastore=True):
+def getDj(keys, use_datastore=True, one_key=False):
+  return cacheGet(keys, models.Play, PLAY_ENTRY, 
+                  use_datastore=use_datastore, one_key=one_key)
+
   if key is None:
     return None
   if isinstance(key, models.Dj):
