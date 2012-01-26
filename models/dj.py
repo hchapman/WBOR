@@ -48,8 +48,8 @@ class Dj(CachedModel):
           username=None, email=None, order=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
-      return cls.cacheGet(keys, models.Dj, ENTRY, 
-                          use_datastore=use_datastore, one_key=one_key)
+      return super(Dj, cls).get(keys, models.Dj, ENTRY, 
+                                use_datastore=use_datastore, one_key=one_key)
 
     keys = cls.getKey(username=username, email=email, order=order, num=num)  
     if keys is not None:
@@ -100,3 +100,22 @@ class Dj(CachedModel):
       self.password_hash = hash_password(password)
 
     super(Dj, self).put()
+
+  @classmethod
+  def getAll(cls):
+    return cls.get(order="fullname", num=1000)
+
+  @classmethod
+  def getByUsername(clsusername):
+    return cls.get(username=username)
+
+  @classmethod
+  def getByEmail(cls, email):
+    return cls.get(email=email)
+
+  @classmethod
+  def login(cls, username, password):
+    dj = cls.getByUsername(username)
+    if dj is not None and check_password(dj.password_hash, password):
+      return dj
+    return None

@@ -30,6 +30,8 @@ class CachedModel(db.Model):
   LOG_SET_FAIL = "Memcache set(%s, %s) failed"
   LOG_DEL_ERROR = "Memcache delete(%s) failed with error code %s"
 
+  ENTRY = "cachedmodel_key%s"
+
   @classmethod
   def cacheSet(cls, value, cache_key, *args):
     logging.debug(cls.LOG_SET_DEBUG %(cache_key %args, value))
