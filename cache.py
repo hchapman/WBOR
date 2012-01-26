@@ -18,7 +18,7 @@ from google.appengine.api import memcache
 from google.appengine.ext import db
 
 # Local module imports
-import models
+import models_old as models
 
 from passwd_crypto import hash_password, check_password
 

@@ -25,7 +25,7 @@ import json
 import logging
 
 import amazon
-import models
+import models_old as models
 
 from google.appengine.api import urlfetch
 from google.appengine.api import memcache

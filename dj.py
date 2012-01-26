@@ -13,7 +13,7 @@
 # 
 
 import os
-import models
+import models_old as models
 import cache
 import urllib
 import hmac

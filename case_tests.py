@@ -1,7 +1,13 @@
 ## Case testing for wbor.org functionality
 # Author: Harrison Chapman
 
+from google.appengine.ext import webapp
+
 import cache
+from models.dj import Dj
+
+from handlers import BaseHandler
+from configuration import webapp2conf
 
 def run():
     runCacheTests()
@@ -11,10 +17,10 @@ def runCacheTests():
 
 def runDjCacheTests():
     # Put some Djs
-    dj1 = cache.putDj(email="tcase",
-                      fullname="Test Casington",
-                      username="tcase",
-                      password="esact")
+    dj1 = Dj.new(email="tcase",
+                 fullname="Test Casington",
+                 username="tcase",
+                 password="esact")
 
     dj2 = cache.putDj(email="tcase2@",
                       fullname="Tesla Casey",
@@ -35,9 +41,9 @@ def runDjCacheTests():
     dj2 = cache.putDj(email="teslac@", edit_dj=dj2)
     dj2 = cache.putDj(email="teslac@hotmail.com", edit_dj=dj2)
 
-    dj1 = cache.putDj(fullname="Tess Case", edit_dj=dj1)
-    dj1 = cache.putDj(email="tesscase", fullname="Tessa Case", edit_dj=dj1)
-    dj1 = cache.putDj(email="tesscase@", fullname="Tessa Case", edit_dj=dj1)
+    dj1.put(fullname="Tess Case")
+    dj1.put(email="tesscase", fullname="Tessa Case")
+    dj1.put(email="tesscase@", fullname="Tessa Case")
 
     dj3 = cache.putDj(email="chase", fullname="Chase Case", 
                       password="secret", edit_dj=dj3)
@@ -55,9 +61,17 @@ def runDjCacheTests():
     print cache.djLogin("ctest", "supersecret2")
 
     # Delete the Djs
-    cache.deleteDj(dj1)
+    dj1.delete()
     cache.deleteDj(dj2)
     cache.deleteDj(dj3)
 
     print cache.djLogin("ctest", "supersecret2")
     print cache.djLogin("ctest", "chest")
+
+class RunTests(BaseHandler):
+    def get(self):
+        run()
+
+app = webapp.WSGIApplication([
+        ('.*', RunTests),
+        ], debug=True, config=webapp2conf)

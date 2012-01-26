@@ -45,7 +45,70 @@ def str_or_none(obj):
   else:
     return None
 
-class ApiModel(db.Model):
+# Ignore this for now, but I am really thinking that this will be better
+# than the huge mess that cache.py became
+class CachedModel(db.Model):
+  LOG_SET_DEBUG = "Memcache set (%s, %s) required"
+  LOG_SET_FAIL = "Memcache set(%s, %s) failed"
+  LOG_DEL_ERROR = "Memcache delete(%s) failed with error code %s"
+
+  @classmethod
+  def cacheSet(cls, value, cache_key, *args):
+    logging.debug(LOG_SET_DEBUG %(cache_key %args, value))
+    if not memcache.set(cache_key %args, value):
+      logging.error(LOG_SET_FAIL % (cache_key %args, value))
+    return value
+
+  @classmethod
+  def cacheDelete(cls, cache_key, *args):
+    response = memcache.delete(cache_key %args)
+    if response < 2:
+      logging.debug(LOG_DEL_ERROR %(cache_key, response))
+
+  @classmethod
+  def cacheGet(cls, keys, cachekey_template, 
+             use_datastore=True, one_key=False):
+    if keys is None:
+      return None
+    if isinstance(keys, cls):
+      return keys
+
+    if isinstance(keys, str) or isinstance(keys, db.Key) or one_key:
+      keys = (keys,)
+      one_key = True
+
+    if not one_key:
+      objs = []
+      db_fetch_keys = []
+
+    for i, key in enumerate(keys):
+      if key is None:
+        return None,
+      if isinstance(key, cls):
+        return key
+      obj = memcache.get(cachekey_template %key)
+
+      if obj is not None:
+        if one_key:
+          return obj
+        objs.append(obj)
+
+      if one_key:
+        return cls.get(key)
+
+      # Store the key to batch fetch, and the position to place it
+      if use_datastore:
+        db_fetch_keys.append((i, key))
+
+    # Improve this if possible. Use a batch fetch on non-memcache keys.
+    db_fetch_zip = zip(db_fetch_keys) #[0]: idx, [1]: key
+    for i, obj in zip(db_fetch_zip[0], 
+                      cls.get(db_fetch_zip[1])):
+      objs[i] = mcset(obj, cachekey_template %key)
+
+    return filter(None, objs)
+
+class ApiModel(CachedModel):
   def to_json():
     pass
 
