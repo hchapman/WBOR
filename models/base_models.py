@@ -20,6 +20,12 @@ import datetime
 import logging
 import itertools
 
+def isKey(obj):
+  return isinstance(obj, db.Key) or isinstance(obj, str)
+
+def asKey(obj):
+  return dj if isKey(dj) else dj.key()
+
 class CachedModel(db.Model):
   ''' A CachedModel is a database model which tries its best to keep
   its information synced in the memcache so that fewer database hits
@@ -46,14 +52,13 @@ class CachedModel(db.Model):
       logging.debug(cls.LOG_DEL_ERROR %(cache_key, response))
 
   @classmethod
-  def cacheGet(cls, keys, cachekey_template, 
-             use_datastore=True, one_key=False):
+  def get(cls, keys, use_datastore=True, one_key=False):
     if keys is None:
       return None
     if isinstance(keys, cls):
       return keys
 
-    if isinstance(keys, str) or isinstance(keys, db.Key) or one_key:
+    if isKey(keys) or one_key:
       keys = (keys,)
       one_key = True
 
@@ -66,7 +71,7 @@ class CachedModel(db.Model):
         return None,
       if isinstance(key, cls):
         return key
-      obj = memcache.get(cachekey_template %key)
+      obj = memcache.get(cls.ENTRY %key)
 
       if obj is not None:
         if one_key:
@@ -84,7 +89,7 @@ class CachedModel(db.Model):
     db_fetch_zip = zip(db_fetch_keys) #[0]: idx, [1]: key
     for i, obj in zip(db_fetch_zip[0], 
                       super(CachedModel, cls).get(db_fetch_zip[1])):
-      objs[i] = cls.cacheSet(obj, cachekey_template %key)
+      objs[i] = cls.cacheSet(obj, cls.ENTRY %key)
 
     return filter(None, objs)
 

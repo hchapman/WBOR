@@ -215,30 +215,18 @@ class RequestPassword(UserHandler):
     username = self.request.get("username")
     email = self.request.get("email")
     reset_dj = None
-    if username:
-      reset_dj = cache.getDjByUsername(username=username)
-    if not reset_dj:
-      self.session.add_flash("Requested user does not exist")
-      self.redirect("/dj/reset/")
-      return
-    if "@" not in email:
-      email = email + "@bowdoin.edu"
-    if email[-1] == "@":
-      email = email + "bowdoin.edu"
-    if reset_dj.email.strip() != email.strip():
-      self.session.add_flash("Username and email do not match")
-      self.redirect("/dj/reset/")
+
+    try:
+      reset_dj = Dj.getByUsernameCheckEmail(username, email)
+    except NoSuchUserException as e:
+      self.session.add_flash(str(e))
+      self.redirect("/dj/reset")
       return
 
     # Generate a key to be sent to the user and add the
     # new password request to the database
-    reset_key = ''.join(random.choice(string.ascii_letters +
-                                      string.digits) for x in range(20))
     reset_url="%s/dj/reset/?username=%s&reset_key=%s"%(
-      self.request.host_url,username,reset_key)
-    reset_dj.pw_reset_expire=datetime.datetime.now() + datetime.timedelta(2)
-    reset_dj.pw_reset_hash=hash_password(reset_key)
-    reset_dj.put()
+      self.request.host_url,username,reset_dj.resetPassword())
     mail.send_mail(
       sender="WBOR <password-reset@wbor-hr.appspotmail.com>",
       to=email.strip(),
