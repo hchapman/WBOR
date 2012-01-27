@@ -2,6 +2,7 @@
 # Author: Harrison Chapman
 
 from google.appengine.ext import webapp
+from google.appengine.ext import db
 
 import cache
 from models.dj import Dj
@@ -52,6 +53,11 @@ def runDjCacheTests():
     print dj1.to_xml()
     print dj2.to_xml()
     print dj3.to_xml()
+
+    print dj1.__hash__()
+    print dj1.key() == db.Key(str(dj1.key()))
+    print str(dj1.key()).__hash__()
+    print dj1.key().__hash__()
 
     print "--------------------"
     

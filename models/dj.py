@@ -33,6 +33,9 @@ class NoSuchUserException(Exception):
 class Dj(CachedModel):
   ENTRY = "dj_key%s"
 
+  USERNAME = "dj_username%s"
+  EMAIL = "dj_email%s"
+
   # GAE Datastore properties
   fullname = db.StringProperty()
   lowername = db.StringProperty()
@@ -122,7 +125,11 @@ class Dj(CachedModel):
 
   @classmethod
   def getByUsername(cls, username):
-    return cls.get(username=username)
+    cached = cls.cacheGet(cls.USERNAME, username)
+    if cached is not None:
+      return cached
+
+    return cls.cacheSet(cls.USERNAME, cls.get(username=username))
 
   @classmethod
   def getByEmail(cls, email):

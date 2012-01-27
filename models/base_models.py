@@ -24,7 +24,16 @@ def isKey(obj):
   return isinstance(obj, db.Key) or isinstance(obj, str)
 
 def asKey(obj):
-  return dj if isKey(dj) else dj.key()
+  if isinstance(obj, str):
+    return db.Key(obj)
+  if isinstance(obj, db.Key):
+    return obj
+  if isinstance(obj, db.Model):
+    return obj.key()
+  return None
+
+def asKeys(key_list):
+  return filter(None, [asKey(key) for key in key_list])
 
 class CachedModel(db.Model):
   ''' A CachedModel is a database model which tries its best to keep
@@ -40,6 +49,11 @@ class CachedModel(db.Model):
 
   @classmethod
   def cacheSet(cls, value, cache_key, *args):
+    '''
+    Classmethod to access memcache.set
+
+    Returns the cached value, for chaining purposes.
+    '''
     logging.debug(cls.LOG_SET_DEBUG %(cache_key %args, value))
     if not memcache.set(cache_key %args, value):
       logging.error(cls.LOG_SET_FAIL % (cache_key %args, value))
@@ -47,12 +61,44 @@ class CachedModel(db.Model):
 
   @classmethod
   def cacheDelete(cls, cache_key, *args):
+    '''
+    Classmethod to access memcache.delete
+    '''
     response = memcache.delete(cache_key %args)
     if response < 2:
       logging.debug(cls.LOG_DEL_ERROR %(cache_key, response))
 
   @classmethod
+  def cacheGet(cls, cache_key, *args):
+    '''
+    Classmethod to access memcache.get
+    '''
+    return memcache.get(cache_key %args)
+
+  def addToCache(self):
+    '''
+    Populate the memcache with self. The base only stores the object
+    associated to its key, but children may wish to also cache queries
+    e.g. username.
+
+    For chaining purposes, returns self
+    '''
+    self.cacheSet(obj, self.ENTRY %key)
+    return self
+
+  def purgeFromCache(self):
+    '''
+    Remove self from the memcache where applicable. The opposite of
+    "addToCache".
+    '''
+    self.cacheDelete(self.ENTRY %self.key())
+
+  @classmethod
   def get(cls, keys, use_datastore=True, one_key=False):
+    '''
+    Get the data for (a) model(s) by its key(s) using the cache first,
+    and then possibly datastore if necessary
+    '''
     if keys is None:
       return None
     if isinstance(keys, cls):
@@ -71,7 +117,7 @@ class CachedModel(db.Model):
         return None,
       if isinstance(key, cls):
         return key
-      obj = memcache.get(cls.ENTRY %key)
+      obj = cacheGet(cls.ENTRY %key)
 
       if obj is not None:
         if one_key:
@@ -89,17 +135,23 @@ class CachedModel(db.Model):
     db_fetch_zip = zip(db_fetch_keys) #[0]: idx, [1]: key
     for i, obj in zip(db_fetch_zip[0], 
                       super(CachedModel, cls).get(db_fetch_zip[1])):
-      objs[i] = cls.cacheSet(obj, cls.ENTRY %key)
+      objs[i] = obj.addToCache()
 
     return filter(None, objs)
 
   def put(self):
+    '''
+    Update datastore with self, and then update memcache for self.
+    '''
     super(CachedModel, self).put()
-    self.cacheSet(self, self.ENTRY %self.key())
+    self.addToCache()
 
   def delete(self):
-    self.cacheSet(None, self.ENTRY %self.key())
+    '''
+    Remove self from memcache, then from datastore.
+    '''
     super(CachedModel, self).delete()
+    self.purgeFromCache()
 
 class ApiModel(CachedModel):
   def to_json():

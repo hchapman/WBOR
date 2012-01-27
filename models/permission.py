@@ -22,6 +22,7 @@ import random
 
 class Permission(CachedModel):
   ENTRY = "permission_key%s"
+  LABEL = "permission_label%s"
 
   # Other memcache key constants
   BY_LABEL = "permission_label%s"
@@ -68,7 +69,7 @@ class Permission(CachedModel):
              order=None, num=-1):
     query = cls.all(keys_only=True)
 
-    if username is not None:
+    if title is not None:
       query.filter("title =", title)
 
     if order is not None:
@@ -89,8 +90,18 @@ class Permission(CachedModel):
       djs = (djs,)
     
     self.dj_list = list(set(dj_list).
-                        union([asKey(key) for key in djs]))
+                        union(asKeys(dj_list)))
     
+    if put:
+      self.put()
+
+  def removeDj(self, djs, put=True):
+    if isKey(djs) or isinstance(djs, Dj):
+      djs = (djs,)
+
+    self.dj_list = list(set(dj_list).
+                        difference(asKeys(dj_list)))
+
     if put:
       self.put()
 
@@ -99,22 +110,8 @@ class Permission(CachedModel):
     return cls.get(order="title", num=1000)
 
   @classmethod
-  def getByUsername(cls, username):
-    return cls.get(username=username)
-
-  @classmethod
-  def getByEmail(cls, email):
-    return cls.get(email=email)
-
-  @classmethod
-  def getByUsernameCheckEmail(cls, username, email):
-    dj = cls.get(username=username)
-    if dj is None:
-      raise NoSuchUserException("There is no user by that username.")
-    if fixBareEmail(email).strip() != dj.email.strip():
-      raise NoSuchUserException("Email address is inconsistent.")
-
-    return dj
+  def getByTitle(cls, title):
+    return cls.get(title=title)
 
   @classmethod
   def login(cls, username, password):
