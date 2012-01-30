@@ -45,8 +45,34 @@ class Dj(CachedModel):
   pw_reset_expire = db.DateTimeProperty()
   pw_reset_hash = db.StringProperty()
 
-  def __init__(self, parent=None, key_name=None, **kwds):
-    super(Dj, self).__init__(parent=parent, key_name=key_name, **kwds)
+  def __init__(self, parent=None, key_name=None, cached=True, **kwargs):
+    super(Dj, self).__init__(parent=parent, 
+                             key_name=key_name, cached=cached, **kwargs)
+
+  def addUsernameCache(self):
+    self.cacheSet(self.key(), self.USERNAME, self.username)
+    return self
+  def purgeUsernameCache(self):
+    self.cacheDelete(self.USERNAME, self.username)
+    return self
+
+  def addEmailCache(self):
+    self.cacheSet(self.key(), self.EMAIL, self.email)
+    return self
+  def purgeEmailCache(self):
+    self.cacheDelete(self.EMAIL, self.email)
+    return self
+
+  def addToCache(self):
+    super(Dj, self).addToCache()
+    self.addUsernameCache()
+    self.addEmailCache()
+    return self
+
+  def purgeFromCache(self):
+    super(Dj, self).purgeFromCache()
+    self.purgeUsernameCache()
+    self.purgeEmailCache()
 
   @classmethod
   def get(cls, keys=None,
@@ -80,7 +106,7 @@ class Dj(CachedModel):
 
   @classmethod
   def new(cls, email=None, fullname=None, username=None, 
-          password=None, fix_email=True, put=True):
+          password=None, fix_email=True):
     if None in (email, fullname, username, password):
       raise Exception("Insufficient fields for new Dj")
 
@@ -89,23 +115,21 @@ class Dj(CachedModel):
              email=fixBareEmail(email) if fix_email else email,
              username=username, 
              password_hash=hash_password(password))
-    if put:
-      dj.put()
+
     return dj
 
-  def put(self, email=None, fullname=None, username=None, 
-          password=None, fix_email=True):
+  def put(self, fullname=None, username=None, email=None, password=None,
+          fix_email=True):
     if fullname is not None:
-      self.fullname = fullname
-      self.lowername = fullname.lower()
+      self.p_fullname = fullname
     if email is not None:
-      self.email = fixBareEmail(email) if fix_email else email
+      self.p_email = email
     if username is not None: # Although this should be an immutable property
-      self.username = username
+      self.p_username = username
     if password is not None:
-      self.password_hash = hash_password(password)
+      self.p_password = password
 
-    super(Dj, self).put()
+    return super(Dj, self).put()
 
   def resetPassword(self, put=True):
     reset_key = ''.join(random.choice(string.ascii_letters +
@@ -119,28 +143,92 @@ class Dj(CachedModel):
     
     return reset_key
 
+  @property
+  def p_fullname(self):
+    return self.fullname
+
+  @property
+  def p_lowername(self):
+    return self.lowername
+
+  @p_fullname.setter
+  def p_fullname(self, fullname):
+    self.fullname = fullname.strip()
+    self.lowername = fullname.lower().strip()
+
+  @property
+  def p_username(self):
+    return self.username
+  
+  @p_fullname.setter
+  def p_username(self, username):
+    username = username.strip()
+    other = self.getKeyByUsername(username)
+    if other is not None and other_dj != self.key():
+      raise Exception("There is already a Dj with this username")
+    else:
+      self.username = username
+
+  @property
+  def p_email(self):
+    return self.email
+
+  @p_email.setter
+  def p_email(self, email):
+    email = fixBareEmail(email.strip())
+    other = self.getKeyByEmail(email)
+    if other is not None and other != self.key():
+      raise Exception("There is already a Dj with this email")
+    else:
+      self.email = email
+
+  @property
+  def p_password(self):
+    return self.pasword_hash
+
+  @p_password.setter
+  def p_password(self, password):
+    self.password_hash = hash_password(password)
+
   @classmethod
   def getAll(cls):
     return cls.get(order="fullname", num=1000)
 
   @classmethod
-  def getByUsername(cls, username):
-    cached = cls.cacheGet(cls.USERNAME, username)
+  def getByUsername(cls, username, keys_only=False):
+    cached = cls.getByIndex(cls.USERNAME, username, keys_only=keys_only)
     if cached is not None:
       return cached
 
-    return cls.cacheSet(cls.USERNAME, cls.get(username=username))
+    if keys_only:
+      return cls.getKey(username=username)
+    return cls.get(username=username).addUsernameCache()
 
   @classmethod
-  def getByEmail(cls, email):
-    return cls.get(email=email)
+  def getKeyByUsername(cls, username):
+    dj = cls.getByUsername(username, keys_only=True)
+    cls.
+
+  @classmethod
+  def getByEmail(cls, email, keys_only=False):
+    cached = cls.getByIndex(cls.EMAIL, email, keys_only=keys_only)
+    if cached is not None:
+      return cached
+
+    if keys_only:
+      return cls.getKey(email=email)
+    return cls.get(email=email).addEmailCache()
+
+  @classmethod
+  def getKeyByEmail(cls, email):
+    dj = cls.getByEmail(email=email, keys_only=True)
 
   @classmethod
   def getByUsernameCheckEmail(cls, username, email):
-    dj = cls.get(username=username)
+    dj = cls.getByUsername(username)
     if dj is None:
       raise NoSuchUserException("There is no user by that username.")
-    if fixBareEmail(email).strip() != dj.email.strip():
+    if fixBareEmail(email.strip()) != dj.email.strip():
       raise NoSuchUserException("Email address is inconsistent.")
 
     return dj

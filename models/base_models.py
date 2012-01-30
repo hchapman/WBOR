@@ -47,6 +47,12 @@ class CachedModel(db.Model):
 
   ENTRY = "cachedmodel_key%s"
 
+  def __init__(self, parent=None, key_name=None, cached=True,
+               **kwargs):
+    self._cached = True
+    super(CachedModel, self).__init__(parent=parent,
+                                      key_nae=key_name, **kwargs)
+
   @classmethod
   def cacheSet(cls, value, cache_key, *args):
     '''
@@ -75,6 +81,11 @@ class CachedModel(db.Model):
     '''
     return memcache.get(cache_key %args)
 
+  def addObjectCache(self):
+    self.cacheSet(self, self.ENTRY %self.key())
+  def purgeObjectCache(self):
+    self.cacheDelete(self.ENTRY %self.key())
+
   def addToCache(self):
     '''
     Populate the memcache with self. The base only stores the object
@@ -83,7 +94,7 @@ class CachedModel(db.Model):
 
     For chaining purposes, returns self
     '''
-    self.cacheSet(obj, self.ENTRY %key)
+    self.addObjectCache()
     return self
 
   def purgeFromCache(self):
@@ -91,7 +102,8 @@ class CachedModel(db.Model):
     Remove self from the memcache where applicable. The opposite of
     "addToCache".
     '''
-    self.cacheDelete(self.ENTRY %self.key())
+    self.purgeObjectCache()
+    return self
 
   @classmethod
   def get(cls, keys, use_datastore=True, one_key=False):
@@ -139,12 +151,26 @@ class CachedModel(db.Model):
 
     return filter(None, objs)
 
+  @classmethod
+  def getByIndex(cls, index, *args, **kwargs):
+    keys_only = True if kwargs.get("keys_only") else False
+    cached = cls.cacheGet(index, *args)
+
+    if cached is not None:
+      if keys_only:
+        return cached
+      obj = cls.get(cached)
+      if obj is not None:
+        return obj
+
+    return None
+
   def put(self):
     '''
     Update datastore with self, and then update memcache for self.
     '''
     super(CachedModel, self).put()
-    self.addToCache()
+    return self.addToCache()
 
   def delete(self):
     '''

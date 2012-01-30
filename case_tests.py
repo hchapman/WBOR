@@ -17,6 +17,7 @@ def runCacheTests():
     runDjCacheTests()
 
 def runDjCacheTests():
+  try:
     # Put some Djs
     dj1 = Dj.new(email="tcase",
                  fullname="Test Casington",
@@ -66,6 +67,7 @@ def runDjCacheTests():
     print cache.djLogin("ctest", "secret")
     print cache.djLogin("ctest", "supersecret2")
 
+  finally:
     # Delete the Djs
     dj1.delete()
     cache.deleteDj(dj2)

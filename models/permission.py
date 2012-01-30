@@ -51,6 +51,8 @@ class Permission(CachedModel):
   def __init__(self, parent=None, key_name=None, **kwds):
     super(Permission, self).__init__(parent=parent, key_name=key_name, **kwds)
 
+  
+
   @classmethod
   def get(cls, keys=None,
           title=None,
@@ -85,25 +87,19 @@ class Permission(CachedModel):
 
     super(Permission, self).put()
 
-  def addDj(self, djs, put=True):
+  def addDj(self, dj):
     if isKey(djs) or isinstance(djs, Dj):
       djs = (djs,)
     
     self.dj_list = list(set(dj_list).
                         union(asKeys(dj_list)))
-    
-    if put:
-      self.put()
 
-  def removeDj(self, djs, put=True):
+  def removeDj(self, djs):
     if isKey(djs) or isinstance(djs, Dj):
       djs = (djs,)
 
     self.dj_list = list(set(dj_list).
                         difference(asKeys(dj_list)))
-
-    if put:
-      self.put()
 
   @classmethod
   def getAll(cls):
