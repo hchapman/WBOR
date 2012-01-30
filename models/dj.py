@@ -49,30 +49,45 @@ class Dj(CachedModel):
     super(Dj, self).__init__(parent=parent, 
                              key_name=key_name, cached=cached, **kwargs)
 
-  def addUsernameCache(self):
-    self.cacheSet(self.key(), self.USERNAME, self.username)
+  @classmethod
+  def addUsernameCache(cls, key, username):
+    return cls.cacheSet(key, cls.USERNAME, username)
+  @classmethod
+  def purgeUsernameCache(cls, username):
+    cls.cacheDelete(cls.USERNAME, username)
+
+  def addOwnUsernameCache(self):
+    self.addUsernameCache(self.key(), self.p_username)
     return self
-  def purgeUsernameCache(self):
-    self.cacheDelete(self.USERNAME, self.username)
+  def purgeOwnUsernameCache(self):
+    self.purgeUsernameCache(self.p_username)
     return self
 
-  def addEmailCache(self):
-    self.cacheSet(self.key(), self.EMAIL, self.email)
+  @classmethod
+  def addEmailCache(cls, key, email):
+    return cls.cacheSet(key, cls.EMAIL, email)
+  @classmethod
+  def purgeEmailCache(cls, email):
+    cls.cacheDelete(cls.EMAIL, p_email)
+
+  def addOwnEmailCache(self):
+    self.addEmailCache(self.key(), self.p_email)
     return self
-  def purgeEmailCache(self):
-    self.cacheDelete(self.EMAIL, self.email)
+  def purgeOwnEmailCache(self):
+    self.purgeEmailCache(self.p_email)
     return self
 
   def addToCache(self):
     super(Dj, self).addToCache()
-    self.addUsernameCache()
-    self.addEmailCache()
+    self.addOwnUsernameCache()
+    self.addOwnEmailCache()
     return self
 
   def purgeFromCache(self):
     super(Dj, self).purgeFromCache()
-    self.purgeUsernameCache()
-    self.purgeEmailCache()
+    self.purgeOwnUsernameCache()
+    self.purgeOwnEmailCache()
+    return self
 
   @classmethod
   def get(cls, keys=None,
@@ -95,7 +110,7 @@ class Dj(CachedModel):
     if username is not None:
       query.filter("username =", username)
     if email is not None:
-      query.filter("email =", username)
+      query.filter("email =", email)
 
     if order is not None:
       query.order(order)
@@ -190,6 +205,8 @@ class Dj(CachedModel):
   def p_password(self, password):
     self.password_hash = hash_password(password)
 
+  # TODO: instead use paging and cursors (is that what they're called)
+  # to return part of all the Djs (in case there end up being more than 1000!)
   @classmethod
   def getAll(cls):
     return cls.get(order="fullname", num=1000)
@@ -201,27 +218,27 @@ class Dj(CachedModel):
       return cached
 
     if keys_only:
-      return cls.getKey(username=username)
-    return cls.get(username=username).addUsernameCache()
+      return cls.addUsernameCache(cls.getKey(username=username), username)
+    return cls.get(username=username).addOwnUsernameCache()
 
   @classmethod
   def getKeyByUsername(cls, username):
-    dj = cls.getByUsername(username, keys_only=True)
-    cls.
+    return cls.getByUsername(username, keys_only=True)
 
   @classmethod
   def getByEmail(cls, email, keys_only=False):
+    email = fixBareEmail(email)
     cached = cls.getByIndex(cls.EMAIL, email, keys_only=keys_only)
     if cached is not None:
       return cached
 
     if keys_only:
-      return cls.getKey(email=email)
+      return cls.addEmailCache(cls.getKey(email=email), email)
     return cls.get(email=email).addEmailCache()
 
   @classmethod
   def getKeyByEmail(cls, email):
-    dj = cls.getByEmail(email=email, keys_only=True)
+    return cls.getByEmail(email=email, keys_only=True)
 
   @classmethod
   def getByUsernameCheckEmail(cls, username, email):
@@ -233,9 +250,12 @@ class Dj(CachedModel):
 
     return dj
 
+  def passwordMatches(self, password):
+    return check_password(self.p_password, password)
+
   @classmethod
   def login(cls, username, password):
     dj = cls.getByUsername(username)
-    if dj is not None and check_password(dj.password_hash, password):
+    if dj is not None and dj.passwordMatches(password):
       return dj
     return None

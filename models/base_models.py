@@ -159,9 +159,9 @@ class CachedModel(db.Model):
     if cached is not None:
       if keys_only:
         return cached
-      obj = cls.get(cached)
-      if obj is not None:
-        return obj
+      objs = cls.get(cached)
+      if objs is not None:
+        return objs
 
     return None
 
