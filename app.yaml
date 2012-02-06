@@ -25,7 +25,7 @@ handlers:
   static_files: static/images/favicon.png
   upload: static/images/favicon\.png
 - url: /runtests
-  script: case_tests.app
+  script: test_cases.app
 - url: /dj.*
   script: dj.app
 - url: /api.*

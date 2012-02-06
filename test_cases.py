@@ -1,4 +1,4 @@
-## Case testing for wbor.org functionality
+## Test cases for wbor.org functionality
 # Author: Harrison Chapman
 
 from google.appengine.ext import webapp
