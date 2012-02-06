@@ -20,6 +20,9 @@ import datetime
 import logging
 import itertools
 
+class ModelError(Exception):
+  pass
+
 def isKey(obj):
   return isinstance(obj, db.Key) or isinstance(obj, str)
 

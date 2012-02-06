@@ -27,8 +27,9 @@ def fixBareEmail(email):
     return email + "@bowdoin.edu"
   return email
 
-class NoSuchUserException(Exception):
+class NoSuchUserError(ModelError):
   pass
+class InvalidLoginError(ModelError)
 
 class Dj(CachedModel):
   ENTRY = "dj_key%s"
@@ -158,6 +159,21 @@ class Dj(CachedModel):
     
     return reset_key
 
+  @classmethod
+  def recoveryLogin(cls, username, reset_key):
+    dj = cls.getByUsername(username)
+    if dj is None:
+      raise NoSuchUserError
+    if (dj.pw_reset_expire is None or
+        dj.pw_reset_hash is None or
+        datetime.datetime.now() > dj.pw_reset_expire):
+      raise InvalidLoginError
+    elif check_password(dj.pw_reset_hash, reset_key):
+      dj.pw_reset_expire = datetime.datetime.now()
+      dj.reset_hash = None
+      dj.put()
+      return dj
+
   @property
   def p_fullname(self):
     return self.fullname
@@ -180,7 +196,7 @@ class Dj(CachedModel):
     username = username.strip()
     other = self.getKeyByUsername(username)
     if other is not None and other_dj != self.key():
-      raise Exception("There is already a Dj with this username")
+      raise ModelError("There is already a Dj with this username")
     else:
       self.username = username
 
@@ -193,7 +209,7 @@ class Dj(CachedModel):
     email = fixBareEmail(email.strip())
     other = self.getKeyByEmail(email)
     if other is not None and other != self.key():
-      raise Exception("There is already a Dj with this email")
+      raise ModelError("There is already a Dj with this email")
     else:
       self.email = email
 
@@ -256,6 +272,10 @@ class Dj(CachedModel):
   @classmethod
   def login(cls, username, password):
     dj = cls.getByUsername(username)
-    if dj is not None and dj.passwordMatches(password):
-      return dj
-    return None
+    if dj is None:
+      raise NoSuchUserError
+
+    if not dj.passwordMatches(password):
+      raise InvalidLoginError
+    
+    return dj

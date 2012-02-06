@@ -13,7 +13,6 @@
 # 
 
 import os
-import models_old as models
 import cache
 import urllib
 import hmac
@@ -43,6 +42,9 @@ import pylast
 from handlers import BaseHandler, UserHandler
 from passwd_crypto import hash_password, check_password
 from slughifi import slughifi
+import models_old as models
+
+from models import *
 
 from configuration import webapp2conf
 
@@ -72,7 +74,7 @@ def authorization_required(label):
     def wrapper(self, *args, **kw):
       if self.session_has_login():
         key = self.dj_key
-        if cache.hasPermission(key, label):
+        if Permission.getByTitle(label).hasDj(key):
           func(self, *args, **kw)
         else:
           self.session.add_flash("You're not authorized to view this page. If you think this is an error, please send an email to a member of WBOR management.")
@@ -95,13 +97,13 @@ class MainPage(UserHandler):
     template_values = {
       'session': self.session,
       'flashes': self.session.get_flashes(),
-      'manage_djs': cache.hasPermission(djkey, "Manage DJs"),
-      'manage_programs': cache.hasPermission(djkey, "Manage Programs"),
-      'manage_permissions': cache.hasPermission(djkey, "Manage Permissions"),
-      'manage_albums': cache.hasPermission(djkey, "Manage Albums"),
-      'manage_genres': cache.hasPermission(djkey, "Manage Genres"),
-      'manage_blog': cache.hasPermission(djkey, "Manage Blog"),
-      'manage_events': cache.hasPermission(djkey, "Manage Events"),
+      'manage_djs': Permission.getByTitle(Permission.DJ_EDIT).hasDj(djkey),
+      'manage_programs': Permission.getByTitle(Permission.PROGRAM_EDIT).hasDj(djkey),
+      'manage_albums': Permission.getByTitle(Permission.ALBUM_EDIT).hasDj(djkey),
+      'manage_permissions': Permission.getByTitle(Permission.PERM_DJ_EDIT).hasDj(djkey),
+      'manage_genres': Permission.getByTitle(Permission.GENRE_EDIT).hasDj(djkey),
+      'manage_blogs': Permission.getByTitle(Permission.BLOG_EDIT).hasDj(djkey),
+      'manage_events': Permission.getByTitle(Permission.EVENT_EDIT).hasDj(djkey),
       'posts': models.getLastPosts(3),
     }
     self.response.out.write(template.render(getPath("dj_main.html"), template_values))
@@ -111,9 +113,8 @@ class MainPage(UserHandler):
 class Logout(UserHandler):
   def get(self):
     self.session_logout()
-    self.session.add_flash("You have been logged out.")
+    self.flash = ("You have been logged out.")
     self.redirect('/')
-  
 
 # Logs the user in
 # get(): the login form
@@ -126,26 +127,32 @@ class Login(UserHandler):
       'session': self.session,
       'flashes': self.session.get_flashes(),
     }
-    self.response.out.write(template.render(getPath("dj_login.html"), template_values))
+    self.response.out.write(
+      template.render(getPath("dj_login.html"), template_values))
   
   def post(self):
     username = self.request.get("username")
     password = self.request.get("password")
-    dj = cache.djLogin(username, password)
+    dj = Dj.login(username, password)
     if not dj:
-      self.session.add_flash("Invalid username/password combination. Please try again.")
+      self.flash = "Invalid username/password combination. Please try again."
       self.redirect('/dj/login/')
       return
     self.set_session_user(dj)
     programList = cache.getPrograms(dj=dj)
     if not programList:
-      self.session.add_flash("You have successfully logged in, but you have no associated programs.  You will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately.")
+      self.flash = ("You have successfully logged in,"
+                    "but you have no associated programs."
+                    "You will not be able to do much until"
+                    "you have a program.  If you see this message,"
+                    "please email <a href='mailto:cmsmith@bowdoin.edu'>"
+                    "Connor</a> immediately.")
       self.redirect('/dj/')
       return
     elif len(programList) == 1:
       self.set_session_program(programList[0])
-      self.session.add_flash("Successfully logged in with program %s."% 
-                             programList[0].title)
+      self.flash = ("Successfully logged in with program %s."% 
+                    programList[0].title)
       self.redirect("/dj/")
       return
     else:
@@ -161,18 +168,16 @@ class RequestPassword(UserHandler):
     reset_key = self.request.get("reset_key")
     if reset_key:
       username = self.request.get("username")
-      reset_dj = cache.getDjByUsername(username=username)
+      reset_dj = Dj.recoveryLogin(username)
       if not reset_dj:
         self.session.add_flash("There is no user by that name")
         self.redirect("/dj/reset/")
         return
-      if (not reset_dj.pw_reset_expire or
-          not reset_dj.pw_reset_hash or
-          datetime.datetime.now() > reset_dj.pw_reset_expire):
+      if reset_dj.recoveryLogin(username, reset_key):
         self.session.add_flash("This request is no longer valid, request a new reset.")
         self.redirect("/dj/reset")
         return
-      if check_password(reset_dj.pw_reset_hash, reset_key):
+      else:
         self.set_session_user(reset_dj)
         reset_dj.pw_reset_expire = datetime.datetime.now()
         reset_dj.pw_reset_hash = None

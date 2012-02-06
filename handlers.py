@@ -24,7 +24,10 @@ class BaseHandler(webapp2.RequestHandler):
 
   @property
   def flash(self):
-    return self.session.get_flashes()
+    return self.session.get_flashes()[0]
+  @flash.setter
+  def flash(self, value):
+    self.session.add_flash(value)
 
 class UserHandler(BaseHandler):
   """Handler facilitating a currently logged in user (i.e. a DJ) and their programs, etc.
@@ -33,17 +36,17 @@ class UserHandler(BaseHandler):
     """Takes a Dj model, and stores values into the session"""
     self.session['dj'] = {
         'key' : str(dj.key()),
-        'fullname' : dj.fullname,
-        'lowername' : dj.lowername,
-        'email' : dj.email,
+        'fullname' : dj.p_fullname,
+        'lowername' : dj.p_lowername,
+        'email' : dj.p_email,
         }
   
   def set_session_program(self, pgm):
     """Takes a Program model, and stores values to the session"""
     self.session['program'] = {
         'key' : str(pgm.key()),
-        'slug' : pgm.slug,
-        'title' : pgm.title,
+        'slug' : pgm.p_slug,
+        'title' : pgm.p_title,
         }
 
   def session_logout(self):

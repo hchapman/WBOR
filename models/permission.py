@@ -2,7 +2,7 @@
 #
 # Author: Harrison Chapman
 # This file contains the Permission model, and auxiliary functions.
-#  A Dj object corresponds to a row in the Permission table in the datastore
+#  A Permission object corresponds to a row in the Permission table in the datastore
 
 from __future__ import with_statement
 
@@ -24,24 +24,24 @@ class Permission(CachedModel):
   ENTRY = "permission_key%s"
 
   # Other memcache key constants
-  LABEL = "permission_label%s"
+  TITLE = "permission_title%s"
   ALL = "all_permissions_cache"
 
-  PERM_DJ_EDIT = "Manage DJs"
-  PERM_PROGRAM_EDIT = "Manage Programs"
-  PERM_PERMISSION_EDIT = "Manage Permissions"
-  PERM_ALBUM_EDIT = "Manage Albums"
-  PERM_GENRE_EDIT = "Manage Genres"
-  PERM_BLOG_EDIT = "Manage Blog"
-  PERM_EVENT_EDIT = "Manage Events"
+  DJ_EDIT = "Manage DJs"
+  PROGRAM_EDIT = "Manage Programs"
+  PERMISSION_EDIT = "Manage Permissions"
+  ALBUM_EDIT = "Manage Albums"
+  GENRE_EDIT = "Manage Genres"
+  BLOG_EDIT = "Manage Blog"
+  EVENT_EDIT = "Manage Events"
 
-  PERMISSIONS = (PERM_DJ_EDIT,
-                 PERM_PROGRAM_EDIT,
-                 PERM_PERMISSION_EDIT,
-                 PERM_ALBUM_EDIT,
-                 PERM_GENRE_EDIT,
-                 PERM_BLOG_EDIT,
-                 PERM_EVENT_EDIT,)
+  PERMISSIONS = (DJ_EDIT,
+                 PROGRAM_EDIT,
+                 PERMISSION_EDIT,
+                 ALBUM_EDIT,
+                 GENRE_EDIT,
+                 BLOG_EDIT,
+                 EVENT_EDIT,)
 
   # GAE Datastore properties
   title = db.StringProperty()
@@ -51,17 +51,17 @@ class Permission(CachedModel):
     super(Permission, self).__init__(parent=parent, key_name=key_name, **kwds)
 
   @classmethod
-  def addLabelCache(cls, key, label):
-    return cls.cacheSet(key, cls.LABEL, label)
+  def addTitleCache(cls, key, title):
+    return cls.cacheSet(key, cls.TITLE, title)
   @classmethod
-  def purgeLabelCache(cls, label):
-    return cls.cacheDelete(cls.LABEL, label)
+  def purgeTitleCache(cls, title):
+    return cls.cacheDelete(cls.TITLE, title)
 
-  def addOwnLabelCache(self):
-    self.addUsernameCache(self.key(), self.label)
+  def addOwnTitleCache(self):
+    self.addUsernameCache(self.key(), self.title)
     return self
-  def purgeOwnLabelCache(self):
-    self.purgeLabelCache(self.label)
+  def purgeOwnTitleCache(self):
+    self.purgeTitleCache(self.title)
 
   @classmethod
   def setAllCache(cls, key_set):
@@ -93,36 +93,34 @@ class Permission(CachedModel):
 
   def addToCache(self):
     super(Permission, self).addToCache()
-    self.addOwnLabelCache()
-    self.addOwnAllCache()
+    self.addOwnTitleCache()
     return self
 
   def purgeFromCache(self):
     super(Permission, self).purgeFromCache()
-    self.purgeOwnLabelCache()
-    self.purgeOwnAllCache()
+    self.purgeOwnTitleCache()
     return self
 
   @classmethod
   def get(cls, keys=None,
-          label=None,
+          title=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
       return super(Permission, cls).get(keys, use_datastore=use_datastore, 
                                         one_key=one_key)
 
-    keys = cls.getKey(label=label, order=order, num=num)  
+    keys = cls.getKey(title=title, order=order, num=num)  
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
 
   @classmethod
-  def getKey(cls, label=None,
+  def getKey(cls, title=None,
              order=None, num=-1):
     query = cls.all(keys_only=True)
 
-    if label is not None:
-      query.filter("title =", label)
+    if title is not None:
+      query.filter("title =", title)
 
     if order is not None:
       query.order(order)
@@ -141,24 +139,22 @@ class Permission(CachedModel):
     if isKey(djs) or isinstance(djs, Dj):
       djs = (djs,)
     
-    self.dj_list = list(set(dj_list).
+    self.dj_list = list(set(self.dj_list).
                         union(asKeys(dj_list)))
 
   def removeDj(self, djs):
     if isKey(djs) or isinstance(djs, Dj):
       djs = (djs,)
 
-    self.dj_list = list(set(dj_list).
+    self.dj_list = list(set(self.dj_list).
                         difference(asKeys(dj_list)))
 
-  @classmethod
-  def p_label(self):
-    return self.label
+  def hasDj(self, dj):
+    return dj is not None and asKey(dj) in self.dj_list
 
   @classmethod
-  def p_dj_list(self):
-    pass #TODO: implement cached list pointing to dj_list property
-        
+  def p_title(self):
+    return self.title        
 
   @classmethod
   def getAll(cls, keys_only=False):
@@ -171,15 +167,15 @@ class Permission(CachedModel):
     return cls.get(keys=cls.setAllCache(cls.getKey(order="title", num=1000)))
 
   @classmethod
-  def getByLabel(cls, label, keys_only=False):
-    cached = cls.getByIndex(cls.LABEL, email, keys_only=keys_only)
+  def getByTitle(cls, title, keys_only=False):
+    cached = cls.getByIndex(cls.TITLE, email, keys_only=keys_only)
     if cached is not None:
       return cached
 
     if keys_only:
-      return cls.addLabelCache(cls.getKey(label=label), label)
-    return cls.get(label=label).addOwnLabelCache()
+      return cls.addTitleCache(cls.getKey(title=title), title)
+    return cls.get(title=title).addOwnTitleCache()
 
   @classmethod
-  def getKeyByLabel(cls, label):
-    return cls.getByLabel(label=label, keys_only=True)
+  def getKeyByTitle(cls, title):
+    return cls.getByTitle(title=title, keys_only=True)
