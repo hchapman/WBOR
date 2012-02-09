@@ -152,7 +152,7 @@ class Permission(CachedModel):
   def hasDj(self, dj):
     return dj is not None and asKey(dj) in self.dj_list
 
-  @classmethod
+  @property
   def p_title(self):
     return self.title        
 

@@ -44,12 +44,12 @@ class UserHandler(BaseHandler):
         'email' : dj.p_email,
         }
 
-  @user.getter
-  def get_user(self):
+  @property
+  def user(self):
     return self.dj_key
 
   @user.setter
-  def set_user(self, dj):
+  def user(self, dj):
     self.set_session_user(dj)
   
   def set_session_program(self, pgm):
@@ -60,12 +60,12 @@ class UserHandler(BaseHandler):
         'title' : pgm.p_title,
         }
 
-  @program.getter
-  def get_program(self):
+  @property
+  def program(self):
     return self.program_key
 
   @program.setter
-  def set_program(self, pgm):
+  def program(self, pgm):
     self.set_session_program(pgm)
 
   def session_logout(self):

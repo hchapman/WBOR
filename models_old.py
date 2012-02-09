@@ -112,15 +112,6 @@ class ApiModel(CachedModel):
   def to_json():
     pass
 
-class Dj(db.Model):
-  fullname = db.StringProperty()
-  lowername = db.StringProperty()
-  email = db.StringProperty()
-  username = db.StringProperty()
-  password_hash = db.StringProperty()
-  pw_reset_expire = db.DateTimeProperty()
-  pw_reset_hash = db.StringProperty()
-
 class Program(ApiModel):
   title = db.StringProperty()
   slug = db.StringProperty()
@@ -185,23 +176,6 @@ class Album(ApiModel):
       'cover_small_key': str_or_none(self.cover_small_key),
       'cover_large_key': str_or_none(self.cover_large_key),
       }
-  
-class Song(ApiModel):
-  title = db.StringProperty()
-  artist = db.StringProperty()
-  album = db.ReferenceProperty(Album)
-
-  @property
-  def album_key(self):
-    return Song.album.get_value_for_datastore(self)
-
-  def to_json(self):
-    return {
-      'key': str_or_none(self.key()),
-      'title': self.title,
-      'artist': self.artist,
-      'album_key': str_or_none(self.album_key),
-      }
 
 class Play(ApiModel):
   song = db.ReferenceProperty(Song)
@@ -233,27 +207,6 @@ class Psa(db.Model):
 class StationID(db.Model):
   program = db.ReferenceProperty(Program)
   play_date = db.DateTimeProperty()
-
-# I don't know why we manage permissions here rather than in Djs
-class Permission(db.Model):
-  PERM_DJ_EDIT = "Manage DJs"
-  PERM_PROGRAM_EDIT = "Manage Programs"
-  PERM_PERMISSION_EDIT = "Manage Permissions"
-  PERM_ALBUM_EDIT = "Manage Albums"
-  PERM_GENRE_EDIT = "Manage Genres"
-  PERM_BLOG_EDIT = "Manage Blog"
-  PERM_EVENT_EDIT = "Manage Events"
-
-  PERMISSIONS = (PERM_DJ_EDIT,
-                 PERM_PROGRAM_EDIT,
-                 PERM_PERMISSION_EDIT,
-                 PERM_ALBUM_EDIT,
-                 PERM_GENRE_EDIT,
-                 PERM_BLOG_EDIT,
-                 PERM_EVENT_EDIT,)
-
-  title = db.StringProperty()
-  dj_list = db.ListProperty(db.Key)
 
 class Event(db.Model):
   title = db.StringProperty()
@@ -329,34 +282,6 @@ def addNewPlay(song, program, artist,
     if last_plays is not None:
         memcache.set("last_3_plays",
                      [play] + last_plays[:2])
-
-                     
-
-def getPermission(label):
-  p = Permission.all().filter("title =", label).get()
-  return p
-
-def getDjByEmail(email):
-  d = Dj.all().filter("email =", email).get()
-  return d
-
-def getDjByUsername(username):
-  d = Dj.all().filter("username =", username).get()
-  return d
-
-def djLogin(username, password):
-  d = Dj.all().filter("username =", username).get()
-  if d is not None:
-    if check_password(d.password_hash, password):
-      return d
-    else:
-      return None
-  else:
-    return None
-
-def hasPermission(djkey, label):
-  p = getPermission(label)
-  return djkey in p.dj_list
 
 def getLastPosts(num):
   return BlogPost.all().order("-post_date").fetch(num)
@@ -480,19 +405,6 @@ def getPSAsInRange(start, end):
 def getIDsInRange(start, end):
   ids = StationID.all().filter("play_date >=", start).filter("play_date <=", end).fetch(1000)
   return ids
-
-def addDjToPermission(dj, permission):
-  if dj.key() not in permission.dj_list:
-    permission.dj_list.append(dj.key())
-  permission.put()
-
-def removeDjFromPermission(dj, permission):
-  if dj.key() in permission.dj_list:
-    permission.dj_list.remove(dj.key())
-  permission.put()
-
-def getPermissions():
-  return Permission.all().order("-title").fetch(100)
 
 def getNewPlaysInRange(start, end):
   plays = Play.all().filter("isNew =", True).filter("play_date >=", start).filter("play_date <=", end).fetch(1000)

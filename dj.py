@@ -575,7 +575,7 @@ class ViewLogs(UserHandler):
 class ManageDJs(UserHandler):
   @authorization_required("Manage DJs")
   def get(self):
-    dj_list = cache.getAllDjs() # This is TERRIBLE PRACTICE
+    dj_list = Dj.getAll() # This is TERRIBLE PRACTICE
 
     template_values = {
       'dj_list': dj_list,

@@ -188,7 +188,7 @@ class Dj(CachedModel):
       self.purgeOwnUsernameCache()
       self.username = username
 
-  @p_email.getter
+  @property
   def p_email(self):
     return self.email
 
@@ -203,7 +203,7 @@ class Dj(CachedModel):
       self.purgeOwnEmailCache()
       self.email = email
 
-  @p_password.getter
+  @property
   def p_password(self):
     return self.pasword_hash
 
@@ -263,10 +263,10 @@ class Dj(CachedModel):
   def login(cls, username, password):
     dj = cls.getByUsername(username)
     if dj is None:
-      raise NoSuchUserError
+      raise NoSuchUserError()
 
     if not dj.passwordMatches(password):
-      raise InvalidLoginError
+      raise InvalidLoginError()
     
     return dj
 
@@ -274,11 +274,13 @@ class Dj(CachedModel):
   def recoveryLogin(cls, username, reset_key):
     dj = cls.getByUsername(username)
     if dj is None:
-      raise NoSuchUserError
+      raise NoSuchUserError()
+
     if (dj.pw_reset_expire is None or
         dj.pw_reset_hash is None or
         datetime.datetime.now() > dj.pw_reset_expire):
-      raise InvalidLoginError
+      raise InvalidLoginError()
+
     elif check_password(dj.pw_reset_hash, reset_key):
       dj.pw_reset_expire = datetime.datetime.now()
       dj.reset_hash = None
