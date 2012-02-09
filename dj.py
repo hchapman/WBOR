@@ -44,7 +44,8 @@ from passwd_crypto import hash_password, check_password
 from slughifi import slughifi
 import models_old as models
 
-from models import *
+from models.dj import *
+from models.permission import *
 
 from configuration import webapp2conf
 
@@ -86,7 +87,7 @@ def authorization_required(label):
   return outer_wrapper
 
 # Convenience method for templates
-def getPath(filename):
+def get_path(filename):
   return os.path.join(os.path.dirname(__file__), filename)
 
 # http://www.wbor.org/dj/
@@ -100,13 +101,13 @@ class MainPage(UserHandler):
       'manage_djs': Permission.getByTitle(Permission.DJ_EDIT).hasDj(djkey),
       'manage_programs': Permission.getByTitle(Permission.PROGRAM_EDIT).hasDj(djkey),
       'manage_albums': Permission.getByTitle(Permission.ALBUM_EDIT).hasDj(djkey),
-      'manage_permissions': Permission.getByTitle(Permission.PERM_DJ_EDIT).hasDj(djkey),
+      'manage_permissions': Permission.getByTitle(Permission.PERMISSION_EDIT).hasDj(djkey),
       'manage_genres': Permission.getByTitle(Permission.GENRE_EDIT).hasDj(djkey),
       'manage_blogs': Permission.getByTitle(Permission.BLOG_EDIT).hasDj(djkey),
       'manage_events': Permission.getByTitle(Permission.EVENT_EDIT).hasDj(djkey),
       'posts': models.getLastPosts(3),
     }
-    self.response.out.write(template.render(getPath("dj_main.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_main.html"), template_values))
   
 
 # Logs the user out
@@ -128,17 +129,25 @@ class Login(UserHandler):
       'flashes': self.session.get_flashes(),
     }
     self.response.out.write(
-      template.render(getPath("dj_login.html"), template_values))
+      template.render(get_path("dj_login.html"), template_values))
   
   def post(self):
     username = self.request.get("username")
     password = self.request.get("password")
-    dj = Dj.login(username, password)
-    if not dj:
+
+    # Try to log in.
+    try:
+      dj = Dj.login(username, password)
+    except NoSuchUserError:
+      self.flash = "Invalid username. Please try again."
+      self.redirect('/dj/login/')
+      return
+    except InvalidLoginError:
       self.flash = "Invalid username/password combination. Please try again."
       self.redirect('/dj/login/')
       return
-    self.set_session_user(dj)
+
+    self.user = dj
     programList = cache.getPrograms(dj=dj)
     if not programList:
       self.flash = ("You have successfully logged in,"
@@ -150,7 +159,7 @@ class Login(UserHandler):
       self.redirect('/dj/')
       return
     elif len(programList) == 1:
-      self.set_session_program(programList[0])
+      self.program = programList[0]
       self.flash = ("Successfully logged in with program %s."% 
                     programList[0].title)
       self.redirect("/dj/")
@@ -168,25 +177,30 @@ class RequestPassword(UserHandler):
     reset_key = self.request.get("reset_key")
     if reset_key:
       username = self.request.get("username")
+
       try:
-        reset_dj = Dj.recoveryLogin(username)
+        reset_dj = Dj.recoveryLogin(username, reset_key)
       except NoSuchUserError:
         self.session.add_flash("There is no user by that name")
         self.redirect("/dj/reset/")
         return
       except InvalidLoginError:
-        self.session.add_flash("This request is no longer valid, or the key provided is somehow corrupt. If clicking the link in your email does not work again, perhaps request a new reset.")
+        self.flash = ("This request is no longer valid, or the key provided"
+                      "is somehow corrupt. If clicking the link in your email"
+                      "does not work again, perhaps request a new reset.")
         self.redirect("/dj/reset")
         return
       
       self.set_session_user(reset_dj)
-      reset_dj.pw_reset_expire = datetime.datetime.now()
-      reset_dj.pw_reset_hash = None
-      reset_dj.put()
       programList = cache.getPrograms(dj=reset_dj)
+
       if not programList:
-        self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nYou will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately.")
-        # self.sess['program'] = None
+        self.flash = ("You have been temporarily logged in. Please change your"
+                      "password so that you may log in in the future!<br><br>"
+                      "\n\nYou will not be able to do much until you have a"
+                      "program.  If you see this message, please email"
+                      "<a href='mailto:cmsmith@bowdoin.edu'>Connor</a>"
+                      "immediately.")
         self.redirect('/dj/myself')
         return
       elif len(programList) == 1:
@@ -201,11 +215,12 @@ class RequestPassword(UserHandler):
     else:
       if self.session_has_login():
         self.redirect("/dj/")
+        return
       template_values = {
         'session': self.session,
         'flash': self.flash,
         }
-      self.response.out.write(template.render(getPath("dj_reset_password.html"), 
+      self.response.out.write(template.render(get_path("dj_reset_password.html"), 
                                               template_values))
 
   def post(self):
@@ -221,7 +236,7 @@ class RequestPassword(UserHandler):
 
     try:
       reset_dj = Dj.getByUsernameCheckEmail(username, email)
-    except NoSuchUserException as e:
+    except NoSuchUserError as e:
       self.session.add_flash(str(e))
       self.redirect("/dj/reset")
       return
@@ -265,7 +280,7 @@ class SelectProgram(UserHandler):
       'flash': self.flash,
       'posts': models.getLastPosts(1)
     }
-    self.response.out.write(template.render(getPath("dj_selectprogram.html"),
+    self.response.out.write(template.render(get_path("dj_selectprogram.html"),
       template_values))
   
   @login_required
@@ -321,7 +336,7 @@ class ChartSong(UserHandler):
         album_songs = [cache.getSong(k) for k in 
                        new_albums[0].songList]
       new_song_div_html = template.render(
-        getPath("dj_chartsong_newsongdiv.html"), 
+        get_path("dj_chartsong_newsongdiv.html"), 
         {'new_albums': new_albums,
          'album_songs': album_songs,}
         )
@@ -339,7 +354,7 @@ class ChartSong(UserHandler):
       'posts': posts,
       'station_id': station_id,
     }
-    self.response.out.write(template.render(getPath("dj_chartsong.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_chartsong.html"), template_values))
   
   @login_required
   def post(self):
@@ -482,7 +497,7 @@ class ViewCharts(UserHandler):
       'start': start,
       'end': end,
     }
-    self.response.out.write(template.render(getPath("dj_charts.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_charts.html"), template_values))
   
   @login_required
   def post(self):
@@ -508,7 +523,7 @@ class ViewCharts(UserHandler):
       'start': start,
       'end': end,
     }
-    self.response.out.write(template.render(getPath("dj_charts.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_charts.html"), template_values))
 
 # Displays log of PSA and Station ID records for a given two-week period.
 # /dj/logs/?
@@ -529,7 +544,7 @@ class ViewLogs(UserHandler):
       'start': start,
       'end': end,
     }
-    self.response.out.write(template.render(getPath("dj_logs.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_logs.html"), template_values))
   
   @login_required
   def post(self):
@@ -550,7 +565,7 @@ class ViewLogs(UserHandler):
       'start': start,
       'end': end,
     }
-    self.response.out.write(template.render(getPath("dj_logs.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_logs.html"), template_values))
   
 
 
@@ -568,7 +583,7 @@ class ManageDJs(UserHandler):
       'flash': self.flash,
       'posts': models.getLastPosts(3),
     }
-    self.response.out.write(template.render(getPath("dj_manage_djs.html"),
+    self.response.out.write(template.render(get_path("dj_manage_djs.html"),
       template_values))
   
   @authorization_required("Manage DJs")
@@ -647,7 +662,7 @@ class EditDJ(UserHandler):
         'flash': self.flash,
         'posts': models.getLastPosts(3),
       }
-      self.response.out.write(template.render(getPath("dj_manage_djs.html"), template_values))
+      self.response.out.write(template.render(get_path("dj_manage_djs.html"), template_values))
   
   @authorization_required("Manage DJs")
   def post(self, dj_key):
@@ -701,7 +716,7 @@ class ManagePrograms(UserHandler):
       'flash': self.flash,
       'posts': models.getLastPosts(3),
     }
-    self.response.out.write(template.render(getPath("dj_manage_programs.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_manage_programs.html"), template_values))
   
   @authorization_required("Manage Programs")
   def post(self):
@@ -750,7 +765,7 @@ class EditProgram(UserHandler):
         'flash': self.flash,
         'posts': models.getLastPosts(3),
       }
-      self.response.out.write(template.render(getPath("dj_manage_programs.html"), template_values))
+      self.response.out.write(template.render(get_path("dj_manage_programs.html"), template_values))
   
   @authorization_required("Manage Programs")
   def post(self, program_key):
@@ -782,7 +797,7 @@ class MySelf(UserHandler):
       'dj': dj,
       'posts': models.getLastPosts(1),
     }
-    self.response.out.write(template.render(getPath("dj_self.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_self.html"), template_values))
   
   @login_required
   def post(self):
@@ -834,7 +849,7 @@ class MyShow(UserHandler):
       'program': program,
       'posts': models.getLastPosts(2),
     }
-    self.response.out.write(template.render(getPath("dj_myshow.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_myshow.html"), template_values))
   
   @login_required
   def post(self):
@@ -871,7 +886,7 @@ class NewBlogPost(UserHandler):
       'flash': self.flash,
       'posts': posts,
     }
-    self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_createpost.html"), template_values))
   
   @authorization_required("Manage Blog")
   def post(self):
@@ -892,7 +907,7 @@ class NewBlogPost(UserHandler):
       'posts': posts,
     }
     if errors:
-      self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
+      self.response.out.write(template.render(get_path("dj_createpost.html"), template_values))
     else:
       post.put()
       self.session.add_flash("Post \"%s\" successfully added." % title)
@@ -917,7 +932,7 @@ class EditBlogPost(UserHandler):
       'editing': True,
       'posts': posts,
     }
-    self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_createpost.html"), template_values))
   
   @authorization_required("Manage Blog")
   def post(self, date_string, slug):
@@ -956,7 +971,7 @@ class EditBlogPost(UserHandler):
       'posts': posts,
     }
     if errors:
-      self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
+      self.response.out.write(template.render(get_path("dj_createpost.html"), template_values))
     else:
       post.put()
       self.session.add_flash("Successfully altered post %s" % post.title)
@@ -985,7 +1000,7 @@ class NewEvent(UserHandler):
       'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)],
       'posts': posts,
     }
-    self.response.out.write(template.render(getPath("dj_create_event.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_create_event.html"), template_values))
 
   @authorization_required("Manage Events")
   def post(self):
@@ -1032,7 +1047,7 @@ class EditEvent(UserHandler):
       'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)],
       'posts': posts,
     }
-    self.response.out.write(template.render(getPath("dj_create_event.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_create_event.html"), template_values))
 
   @authorization_required("Manage Events")
   def post(self, event_key):
@@ -1071,7 +1086,7 @@ class EditEvent(UserHandler):
 class ManagePermissions(UserHandler):
   @authorization_required("Manage Permissions")
   def get(self):
-    permissions = cache.getPermissions()
+    permissions = Permission.getAll()
     template_values = {
       'permissions': [{
         'key': p.key(),
@@ -1082,7 +1097,7 @@ class ManagePermissions(UserHandler):
       'flash': self.flash,
       'posts': models.getLastPosts(2),
     }
-    self.response.out.write(template.render(getPath("dj_permissions.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_permissions.html"), template_values))
   
   @authorization_required("Manage Permissions")
   def post(self):
@@ -1093,7 +1108,7 @@ class ManagePermissions(UserHandler):
     if not dj:
       errors = "Unable to find DJ. "
     permission_key = self.request.get("permission_key")
-    permission = cache.getPermission(key=permission_key)
+    permission = Permission.get(key=permission_key)
     if not permission:
       errors = "Unable to find permission."
     if errors:
@@ -1103,11 +1118,13 @@ class ManagePermissions(UserHandler):
       return
     action = self.request.get("action")
     if action == "add":
-      if dj.key() in permission.dj_list:
-        errors = dj.fullname + " is already in the " + permission.title + " permission list."
+      if permission.hasDj(dj):
+        errors = ("%s is already in the %s permission list."%
+                  (dj.p_fullname, permission.p_title))
       else:
-        permission.dj_list.append(dj.key())
-        status = "Successfully added " + dj.fullname + " to " + permission.title + " permission list."
+        permission.addDj(dj)
+        status = ("Successfully added %s to %s permission list."%
+                  (dj.fullname, permission.title))
     if action == "remove":
       if dj.key() not in permission.dj_list:
         errors = dj.fullname + " was not in the " + permission.title + " permission list."
@@ -1142,7 +1159,7 @@ class ManageAlbums(UserHandler):
  #   if not new_album_html:
     new_album_list = cache.getNewAlbums()
     new_album_html = template.render(
-      getPath("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
+      get_path("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
       )
     memcache.set("manage_new_albums_html", new_album_html)
     template_values = {
@@ -1151,7 +1168,7 @@ class ManageAlbums(UserHandler):
       'session': self.session,
       'flash': self.flash,
     }
-    self.response.out.write(template.render(getPath("dj_manage_albums.html"), template_values))
+    self.response.out.write(template.render(get_path("dj_manage_albums.html"), template_values))
   
   @authorization_required("Manage Albums")
   def post(self):

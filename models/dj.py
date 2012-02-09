@@ -29,6 +29,7 @@ def fixBareEmail(email):
 
 class NoSuchUserError(ModelError):
   pass
+
 class InvalidLoginError(ModelError):
   pass
 
@@ -160,21 +161,6 @@ class Dj(CachedModel):
     
     return reset_key
 
-  @classmethod
-  def recoveryLogin(cls, username, reset_key):
-    dj = cls.getByUsername(username)
-    if dj is None:
-      raise NoSuchUserError
-    if (dj.pw_reset_expire is None or
-        dj.pw_reset_hash is None or
-        datetime.datetime.now() > dj.pw_reset_expire):
-      raise InvalidLoginError
-    elif check_password(dj.pw_reset_hash, reset_key):
-      dj.pw_reset_expire = datetime.datetime.now()
-      dj.reset_hash = None
-      dj.put()
-      return dj
-
   @property
   def p_fullname(self):
     return self.fullname
@@ -202,7 +188,7 @@ class Dj(CachedModel):
       self.purgeOwnUsernameCache()
       self.username = username
 
-  @property
+  @p_email.getter
   def p_email(self):
     return self.email
 
@@ -217,7 +203,7 @@ class Dj(CachedModel):
       self.purgeOwnEmailCache()
       self.email = email
 
-  @property
+  @p_password.getter
   def p_password(self):
     return self.pasword_hash
 
@@ -264,9 +250,9 @@ class Dj(CachedModel):
   def getByUsernameCheckEmail(cls, username, email):
     dj = cls.getByUsername(username)
     if dj is None:
-      raise NoSuchUserException("There is no user by that username.")
+      raise NoSuchUserError("There is no user by that username.")
     if fixBareEmail(email.strip()) != dj.email.strip():
-      raise NoSuchUserException("Email address is inconsistent.")
+      raise NoSuchUserError("Email address is inconsistent.")
 
     return dj
 
@@ -283,3 +269,18 @@ class Dj(CachedModel):
       raise InvalidLoginError
     
     return dj
+
+  @classmethod
+  def recoveryLogin(cls, username, reset_key):
+    dj = cls.getByUsername(username)
+    if dj is None:
+      raise NoSuchUserError
+    if (dj.pw_reset_expire is None or
+        dj.pw_reset_hash is None or
+        datetime.datetime.now() > dj.pw_reset_expire):
+      raise InvalidLoginError
+    elif check_password(dj.pw_reset_hash, reset_key):
+      dj.pw_reset_expire = datetime.datetime.now()
+      dj.reset_hash = None
+      dj.put()
+      return dj

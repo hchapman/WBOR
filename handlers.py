@@ -43,6 +43,14 @@ class UserHandler(BaseHandler):
         'lowername' : dj.p_lowername,
         'email' : dj.p_email,
         }
+
+  @user.getter
+  def get_user(self):
+    return self.dj_key
+
+  @user.setter
+  def set_user(self, dj):
+    self.set_session_user(dj)
   
   def set_session_program(self, pgm):
     """Takes a Program model, and stores values to the session"""
@@ -51,6 +59,14 @@ class UserHandler(BaseHandler):
         'slug' : pgm.p_slug,
         'title' : pgm.p_title,
         }
+
+  @program.getter
+  def get_program(self):
+    return self.program_key
+
+  @program.setter
+  def set_program(self, pgm):
+    self.set_session_program(pgm)
 
   def session_logout(self):
     """Logs the dj out, deleting program and dj keys in the session"""

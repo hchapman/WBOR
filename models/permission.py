@@ -135,7 +135,7 @@ class Permission(CachedModel):
 
     super(Permission, self).put()
 
-  def addDj(self, dj):
+  def addDj(self, djs):
     if isKey(djs) or isinstance(djs, Dj):
       djs = (djs,)
     
