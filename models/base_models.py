@@ -75,7 +75,7 @@ class CachedModel(db.Model):
     '''
     response = memcache.delete(cache_key %args)
     if response < 2:
-      logging.debug(cls.LOG_DEL_ERROR %(cache_key, response))
+      logging.error(cls.LOG_DEL_ERROR %(cache_key, response))
 
   @classmethod
   def cacheGet(cls, cache_key, *args):
@@ -179,8 +179,8 @@ class CachedModel(db.Model):
     '''
     Remove self from memcache, then from datastore.
     '''
-    super(CachedModel, self).delete()
     self.purgeFromCache()
+    super(CachedModel, self).delete()
 
 class ApiModel(CachedModel):
   def to_json():

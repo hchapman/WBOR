@@ -43,9 +43,25 @@ def runDjCacheTests():
     dj2 = cache.putDj(email="teslac@", edit_dj=dj2)
     dj2 = cache.putDj(email="teslac@hotmail.com", edit_dj=dj2)
 
-    dj1.put(fullname="Tess Case")
-    dj1.put(email="tesscase", fullname="Tessa Case")
-    dj1.put(email="tesscase@", fullname="Tessa Case")
+    try:
+        dj1.p_fullname = "Tess Case"
+        dj1.put()
+    except Exception as e:
+        print dj1.key(), e
+
+    try:
+        dj1.p_email = "tesscase"
+        dj1.p_fullname = "Tessa Case"
+        dj1.put()
+    except Exception as e:
+        print dj1.key(), e
+
+    try:
+        dj1.p_email = "tesscase@"
+        dj1.p_fullname = "Tessa Case"
+        dj1.put()
+    except Exception as e:
+        print dj1.key(), e
 
     dj3 = cache.putDj(email="chase", fullname="Chase Case", 
                       password="secret", edit_dj=dj3)

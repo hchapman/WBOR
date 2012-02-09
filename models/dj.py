@@ -29,7 +29,8 @@ def fixBareEmail(email):
 
 class NoSuchUserError(ModelError):
   pass
-class InvalidLoginError(ModelError)
+class InvalidLoginError(ModelError):
+  pass
 
 class Dj(CachedModel):
   ENTRY = "dj_key%s"
@@ -69,7 +70,7 @@ class Dj(CachedModel):
     return cls.cacheSet(key, cls.EMAIL, email)
   @classmethod
   def purgeEmailCache(cls, email):
-    cls.cacheDelete(cls.EMAIL, p_email)
+    cls.cacheDelete(cls.EMAIL, email)
 
   def addOwnEmailCache(self):
     self.addEmailCache(self.key(), self.p_email)
@@ -196,8 +197,9 @@ class Dj(CachedModel):
     username = username.strip()
     other = self.getKeyByUsername(username)
     if other is not None and other_dj != self.key():
-      raise ModelError("There is already a Dj with this username")
+      raise ModelError("There is already a Dj with this username", other)
     else:
+      self.purgeOwnUsernameCache()
       self.username = username
 
   @property
@@ -208,9 +210,11 @@ class Dj(CachedModel):
   def p_email(self, email):
     email = fixBareEmail(email.strip())
     other = self.getKeyByEmail(email)
+    print other, self.key()
     if other is not None and other != self.key():
-      raise ModelError("There is already a Dj with this email")
+      raise ModelError("There is already a Dj with this email", other)
     else:
+      self.purgeOwnEmailCache()
       self.email = email
 
   @property

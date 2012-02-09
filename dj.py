@@ -168,38 +168,36 @@ class RequestPassword(UserHandler):
     reset_key = self.request.get("reset_key")
     if reset_key:
       username = self.request.get("username")
-      reset_dj = Dj.recoveryLogin(username)
-      if not reset_dj:
+      try:
+        reset_dj = Dj.recoveryLogin(username)
+      except NoSuchUserError:
         self.session.add_flash("There is no user by that name")
         self.redirect("/dj/reset/")
         return
-      if reset_dj.recoveryLogin(username, reset_key):
-        self.session.add_flash("This request is no longer valid, request a new reset.")
+      except InvalidLoginError:
+        self.session.add_flash("This request is no longer valid, or the key provided is somehow corrupt. If clicking the link in your email does not work again, perhaps request a new reset.")
         self.redirect("/dj/reset")
         return
+      
+      self.set_session_user(reset_dj)
+      reset_dj.pw_reset_expire = datetime.datetime.now()
+      reset_dj.pw_reset_hash = None
+      reset_dj.put()
+      programList = cache.getPrograms(dj=reset_dj)
+      if not programList:
+        self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nYou will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately.")
+        # self.sess['program'] = None
+        self.redirect('/dj/myself')
+        return
+      elif len(programList) == 1:
+        self.set_session_program(programList[0])
+        self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nLogged in with program " + programList[0].title + ".")
+        self.redirect("/dj/myself")
+        return
       else:
-        self.set_session_user(reset_dj)
-        reset_dj.pw_reset_expire = datetime.datetime.now()
-        reset_dj.pw_reset_hash = None
-        reset_dj.put()
-        programList = cache.getPrograms(dj=reset_dj)
-        if not programList:
-          self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nYou will not be able to do much until you have a program.  If you see this message, please email <a href='mailto:cmsmith@bowdoin.edu'>Connor</a> immediately.")
-          # self.sess['program'] = None
-          self.redirect('/dj/myself')
-          return
-        elif len(programList) == 1:
-          self.set_session_program(programList[0])
-          self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nLogged in with program " + programList[0].title + ".")
-          self.redirect("/dj/myself")
-          return
-        else:
-          self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!")
-          self.redirect("/dj/myself")
-          return
-      else:
-        self.session.add_flash("Error, this is not a valid password reset URL.")
-        self.redirect("/dj/reset/")
+        self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!")
+        self.redirect("/dj/myself")
+        return
     else:
       if self.session_has_login():
         self.redirect("/dj/")
