@@ -172,8 +172,9 @@ class CachedModel(db.Model):
     '''
     Update datastore with self, and then update memcache for self.
     '''
-    super(CachedModel, self).put()
-    return self.addToCache()
+    ret_val = super(CachedModel, self).put()
+    self.addToCache()
+    return ret_val
 
   def delete(self):
     '''

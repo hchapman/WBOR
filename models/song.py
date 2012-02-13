@@ -21,6 +21,9 @@ import itertools
 import random
 
 class Song(CachedModel):
+  '''A Song is an (entirely) immutable datastore object which represents
+  a song; e.g. one played in the past or an element in a list of tracks.
+  '''
   ENTRY = "song_key%s"
 
   # GAE Datastore properties
@@ -40,11 +43,15 @@ class Song(CachedModel):
       'album_key': str_or_none(self.album_key),
       }
 
-  def __init__(self, parent=None, key_name=None, **kwds):
+  def __init__(self, title, artist, album=None, 
+               parent=None, key_name=None, **kwds):
     if parent is None:
       parent = kwargs.get("album")
-
-    super(Song, self).__init__(parent=parent, key_name=key_name, **kwds)
+    
+    super(Song, self).__init__(parent=parent, key_name=key_name,
+                               title=title, artist=artist, **kwds)
+    if album is not None:
+      self.album = album
 
   def addToCache(self):
     super(Song, self).addToCache()
@@ -79,33 +86,15 @@ class Song(CachedModel):
       return query.get()
     return query.fetch(num)
 
-  def put(self, title=None, artist=None, album=None):
-    if title is not None:
-      self.p_title = title
-    if artist is not None:
-      self.p_artist = artist
-    if album is not None:
-      self.p_album = album
-
-    super(Song, self).put()
+  def put(self):
+    return super(Song, self).put()
 
   @property
   def p_title(self):
     return self.title
-  @p_title.setter
-  def p_title(self, title):
-    self.title = title
-
   @property
   def p_artist(self):
     return self.artist
-  @p_artist.setter
-  def p_artist(self, artist):
-    self.artist = artist
-
   @property
   def p_album(self):
     return self.album
-  @p_album.setter
-  def p_album(self, album):
-    self.album = album

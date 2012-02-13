@@ -133,7 +133,7 @@ class Permission(CachedModel):
     if dj_list is not None:
       self.dj_list = dj_list
 
-    super(Permission, self).put()
+    return super(Permission, self).put()
 
   def addDj(self, djs):
     if isKey(djs) or isinstance(djs, Dj):
