@@ -86,18 +86,24 @@ class MainPage(UserHandler):
   @login_required
   def get(self):
     djkey = self.dj_key
+
     template_values = {
       'session': self.session,
       'flashes': self.session.get_flashes(),
-      'manage_djs': Permission.getByTitle(Permission.DJ_EDIT).hasDj(djkey),
-      'manage_programs': Permission.getByTitle(Permission.PROGRAM_EDIT).hasDj(djkey),
-      'manage_albums': Permission.getByTitle(Permission.ALBUM_EDIT).hasDj(djkey),
-      'manage_permissions': Permission.getByTitle(Permission.PERMISSION_EDIT).hasDj(djkey),
-      'manage_genres': Permission.getByTitle(Permission.GENRE_EDIT).hasDj(djkey),
-      'manage_blogs': Permission.getByTitle(Permission.BLOG_EDIT).hasDj(djkey),
-      'manage_events': Permission.getByTitle(Permission.EVENT_EDIT).hasDj(djkey),
       'posts': models.getLastPosts(3),
     }
+    permissions = {
+      'djs': Permission.DJ_EDIT,
+      'programs': Permission.PROGRAM_EDIT,
+      'albums': Permission.ALBUM_EDIT,
+      'permissions': Permission.PERMISSION_EDIT,
+      'genres': Permission.GENRE_EDIT,
+      'blogs': Permission.BLOG_EDIT,
+      'events': Permission.EVENT_EDIT,}
+    permissions_dict = dict(('manage_%s'%key, 
+                             Permission.getByTitle(perm).hasDj(djkey)) for 
+                            (key, perm) in permissions.iteritems())
+    template_values.update(permissions_dict)
     self.response.out.write(template.render(get_path("dj_main.html"), template_values))
   
 

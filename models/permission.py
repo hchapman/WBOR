@@ -102,7 +102,6 @@ class Permission(CachedModel):
   def purgeFromCache(self):
     super(Permission, self).purgeFromCache()
     self.purgeOwnTitleCache()
-    self.purgeAllCache()
     return self
 
   @classmethod
@@ -137,8 +136,7 @@ class Permission(CachedModel):
     if dj_list is not None:
       self.dj_list = dj_list
 
-    self.purgeAllCache()
-    super(Permission, self).put()
+    return super(Permission, self).put()
 
   def addDj(self, djs):
     if isKey(djs) or isinstance(djs, Dj):
