@@ -15,10 +15,6 @@ from dj import Dj
 
 # Global python imports
 import logging
-import datetime
-import logging
-import itertools
-import random
 
 class Album(CachedModel):
   ENTRY = "album_key%s"

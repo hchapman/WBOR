@@ -11,13 +11,10 @@ from google.appengine.ext import db
 
 # Local module imports
 from passwd_crypto import hash_password, check_password
-from base_models import *
+from base_models import (CachedModel, QueryError, ModelError)
 
 # Global python imports
-import logging
 import datetime
-import logging
-import itertools
 import random
 
 def fixBareEmail(email):
@@ -27,7 +24,9 @@ def fixBareEmail(email):
     return email + "@bowdoin.edu"
   return email
 
-class NoSuchUserError(ModelError):
+class NoSuchUsernameError(QueryError):
+  pass
+class NoSuchEmailError(QueryError):
   pass
 
 class InvalidLoginError(ModelError):
@@ -223,9 +222,14 @@ class Dj(CachedModel):
     if cached is not None:
       return cached
 
-    if keys_only:
-      return cls.addUsernameCache(cls.getKey(username=username), username)
-    return cls.get(username=username).addOwnUsernameCache()
+    key = cls.getKey(email=email)
+    if key is not None:
+      if keys_only:
+        return cls.addUsernameCache(key, username)
+      dj = cls.get(key)
+      if dj is not None:
+        return dj.addOwnUsernameCache()
+    raise NoSuchUsernameError()
 
   @classmethod
   def getKeyByUsername(cls, username):
@@ -238,23 +242,21 @@ class Dj(CachedModel):
     if cached is not None:
       return cached
 
-    if keys_only:
-      return cls.addEmailCache(cls.getKey(email=email), email)
-    return cls.get(email=email).addEmailCache()
+    key = cls.getKey(email=email)
+    if key is not None:
+      if keys_only:
+        return cls.addEmailCache(key, email)
+      dj = cls.get(key)
+      if dj is not None:
+        return dj.addOwnEmailCache()
+    raise NoSuchEmailError()
 
   @classmethod
   def getKeyByEmail(cls, email):
     return cls.getByEmail(email=email, keys_only=True)
 
-  @classmethod
-  def getByUsernameCheckEmail(cls, username, email):
-    dj = cls.getByUsername(username)
-    if dj is None:
-      raise NoSuchUserError("There is no user by that username.")
-    if fixBareEmail(email.strip()) != dj.email.strip():
-      raise NoSuchUserError("Email address is inconsistent.")
-
-    return dj
+  def emailMatches(self, email):
+    return self.p_email == fixBareEmail(email)
 
   def passwordMatches(self, password):
     return check_password(self.p_password, password)
@@ -263,7 +265,7 @@ class Dj(CachedModel):
   def login(cls, username, password):
     dj = cls.getByUsername(username)
     if dj is None:
-      raise NoSuchUserError()
+      raise NoSuchUsernameError()
 
     if not dj.passwordMatches(password):
       raise InvalidLoginError()

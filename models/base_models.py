@@ -23,6 +23,9 @@ import itertools
 class ModelError(Exception):
   pass
 
+class QueryError(ModelError):
+  pass
+
 def isKey(obj):
   return isinstance(obj, db.Key) or isinstance(obj, str)
 

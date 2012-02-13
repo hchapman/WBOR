@@ -20,6 +20,9 @@ import logging
 import itertools
 import random
 
+class NoSuchTitleError(QueryError):
+  pass
+
 class Permission(CachedModel):
   ENTRY = "permission_key%s"
 
@@ -99,6 +102,7 @@ class Permission(CachedModel):
   def purgeFromCache(self):
     super(Permission, self).purgeFromCache()
     self.purgeOwnTitleCache()
+    self.purgeAllCache()
     return self
 
   @classmethod
@@ -133,6 +137,7 @@ class Permission(CachedModel):
     if dj_list is not None:
       self.dj_list = dj_list
 
+    self.purgeAllCache()
     super(Permission, self).put()
 
   def addDj(self, djs):
@@ -172,9 +177,14 @@ class Permission(CachedModel):
     if cached is not None:
       return cached
 
-    if keys_only:
-      return cls.addTitleCache(cls.getKey(title=title), title)
-    return cls.get(title=title).addOwnTitleCache()
+    key is cls.getKey(title=title)
+    if key is not None:
+      if keys_only:
+        return cls.addTitleCache(key, title)
+      permission = cls.get(key)
+      if permission is not None:
+        return permission.addOwnTitleCache()
+    raise NoSuchTitleError()
 
   @classmethod
   def getKeyByTitle(cls, title):

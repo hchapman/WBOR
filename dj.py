@@ -14,18 +14,10 @@
 
 import os
 import cache
-import urllib
-import hmac
-import base64
-import hashlib
 import datetime
 import time
 import logging
-import random
-import string
 import json
-
-from xml.dom import minidom
 
 from google.appengine.api import urlfetch
 from google.appengine.api import mail
@@ -35,17 +27,16 @@ from google.appengine.api import files
 
 import webapp2
 from google.appengine.ext.webapp import template
-from google.appengine.ext.webapp import util
 
 import amazon
 import pylast
-from handlers import BaseHandler, UserHandler
-from passwd_crypto import hash_password, check_password
+from handlers import UserHandler
+from passwd_crypto import hash_password
 from slughifi import slughifi
 import models_old as models
 
-from models.dj import *
-from models.permission import *
+from models.dj import (Dj, InvalidLoginError,)
+from models.permission import (Permission,)
 
 from configuration import webapp2conf
 

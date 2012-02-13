@@ -4,7 +4,6 @@
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 
-import cache
 from models.dj import Dj
 
 from handlers import BaseHandler
@@ -24,24 +23,24 @@ def runDjCacheTests():
                  username="tcase",
                  password="esact")
 
-    dj2 = cache.putDj(email="tcase2@",
-                      fullname="Tesla Casey",
-                      username="tcase2",
-                      password="esac_secret")
+    # dj2 = cache.putDj(email="tcase2@",
+    #                   fullname="Tesla Casey",
+    #                   username="tcase2",
+    #                   password="esac_secret")
 
-    dj3 = cache.putDj(email="ctest@gmail.com",
-                      fullname="Chase Testa",
-                      username="ctest",
-                      password="chest")
+    # dj3 = cache.putDj(email="ctest@gmail.com",
+    #                   fullname="Chase Testa",
+    #                   username="ctest",
+    #                   password="chest")
 
     print dj1.to_xml()
-    print dj2.to_xml()
-    print dj3.to_xml()
+    #print dj2.to_xml()
+    #print dj3.to_xml()
 
     # Alter some Dj information
-    dj2 = cache.putDj(email="teslac", edit_dj=dj2)
-    dj2 = cache.putDj(email="teslac@", edit_dj=dj2)
-    dj2 = cache.putDj(email="teslac@hotmail.com", edit_dj=dj2)
+    #dj2 = cache.putDj(email="teslac", edit_dj=dj2)
+    #dj2 = cache.putDj(email="teslac@", edit_dj=dj2)
+    #dj2 = cache.putDj(email="teslac@hotmail.com", edit_dj=dj2)
 
     try:
         dj1.p_fullname = "Tess Case"
@@ -51,7 +50,7 @@ def runDjCacheTests():
 
     try:
         dj1.p_email = "tesscase"
-        dj1.p_fullname = "Tessa Case"
+        dj1.p_username = "ttcase"
         dj1.put()
     except Exception as e:
         print dj1.key(), e
@@ -63,13 +62,13 @@ def runDjCacheTests():
     except Exception as e:
         print dj1.key(), e
 
-    dj3 = cache.putDj(email="chase", fullname="Chase Case", 
-                      password="secret", edit_dj=dj3)
-    dj3 = cache.putDj(password="supersecret2", edit_dj=dj3)
+   # dj3 = cache.putDj(email="chase", fullname="Chase Case", 
+                      #password="secret", edit_dj=dj3)
+    #dj3 = cache.putDj(password="supersecret2", edit_dj=dj3)
 
     print dj1.to_xml()
-    print dj2.to_xml()
-    print dj3.to_xml()
+    #print dj2.to_xml()
+    #print dj3.to_xml()
 
     print dj1.__hash__()
     print dj1.key() == db.Key(str(dj1.key()))
@@ -78,19 +77,24 @@ def runDjCacheTests():
 
     print "--------------------"
     
+    login_dj = Dj.login("tcase", "esact")
+    print login_dj.to_xml()
+    login_dj = Dj.login("ttcase", "esact")
+    print login_dj.to_xml()
+    
     # Try logging in
-    print cache.djLogin("ctest", "chest")
-    print cache.djLogin("ctest", "secret")
-    print cache.djLogin("ctest", "supersecret2")
+    #print cache.djLogin("ctest", "chest")
+    #print cache.djLogin("ctest", "secret")
+    #print cache.djLogin("ctest", "supersecret2")
 
   finally:
     # Delete the Djs
     dj1.delete()
-    cache.deleteDj(dj2)
-    cache.deleteDj(dj3)
+    #cache.deleteDj(dj2)
+    #cache.deleteDj(dj3)
 
-    print cache.djLogin("ctest", "supersecret2")
-    print cache.djLogin("ctest", "chest")
+    #print cache.djLogin("ctest", "supersecret2")
+    #print cache.djLogin("ctest", "chest")
 
 class RunTests(BaseHandler):
     def get(self):
