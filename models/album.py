@@ -11,10 +11,10 @@ from google.appengine.ext import db
 
 # Local module imports
 from base_models import *
-from dj import Dj
 
 # Global python imports
 import logging
+import itertools
 
 class Album(CachedModel):
   ENTRY = "album_key%s"
@@ -64,7 +64,7 @@ class Album(CachedModel):
     if add_date is None:
       add_date = datetime.datetime.now()
     if key is None:
-      proto_key db.Key.from_path("Album", 1)
+      proto_key = db.Key.from_path("Album", 1)
       batch = db.allocate_ids(proto_key, 1)
       key = db.Key.from_path('Album', batch[0])
 
@@ -92,24 +92,19 @@ class Album(CachedModel):
   # to friggin' Google.
   # TODO: generalize this interface (caches some "new" elements)
   @classmethod
-  def addToNewCache(cls, key, add_date=None):
+  def add_to_new_cache(cls, key, add_date=None):
     if add_date is None:
       add_date = datetime.datetime.now()
-    new_cache = cls.cacheGet(cls.NEW)
+    new_cache = cls.cache_get(cls.NEW)
     if new_cache is not None:
-      # New cache should already be sorted by date.
-      next_idx = next(idx for idx, obj in 
-                      itertools.izip(xrange(len(new_cache)-1, -1, -1,)
-                                     reversed(new_cache)) if 
-                      obj.add_date < add_date) # Probably returns wrong order
-      #TODO fix this!! make new cache be a buncha tuples (key, date)
+      pass
 
-  def addToCache(self):
-    super(Album, self).addToCache()
+  def add_to_cache(self):
+    super(Album, self).add_to_cache()
     return self
 
-  def purgeFromCache(self):
-    super(Album, self).purgeFromCache()
+  def purge_from_cache(self):
+    super(Album, self).purge_from_cache()
     return self
 
   @classmethod
@@ -120,13 +115,13 @@ class Album(CachedModel):
       return super(Album, cls).get(keys, use_datastore=use_datastore, 
                                         one_key=one_key)
 
-    keys = cls.getKey(title=title, order=order, num=num)  
+    keys = cls.get_key(title=title, order=order, num=num)  
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
 
   @classmethod
-  def getKey(cls, title=None, artist=None, is_new=None,
+  def get_key(cls, title=None, artist=None, is_new=None,
              order=None, num=-1):
     query = cls.all(keys_only=True)
 
@@ -178,11 +173,8 @@ class Album(CachedModel):
     self.isNew = False
 
   @classmethod
-  def getNew(cls, keys_only=False):
-    allcache = cls.getByIndex(cls.ALL, keys_only=keys_only)
+  def get_new(cls, num=36, keys_only=False):
+    new_cache = cls.get_by_index(cls.NEW, keys_only=keys_only)
     if allcache:
       return allcache
-
-    if keys_only:
-      return cls.setAllCache(cls.getKey(order="title", num=1000))
-    return cls.get(keys=cls.setAllCache(cls.getKey(order="title", num=1000)))
+    pass

@@ -16,8 +16,9 @@ from base_models import (CachedModel, QueryError, ModelError)
 # Global python imports
 import datetime
 import random
+import string
 
-def fixBareEmail(email):
+def fix_bare_email(email):
   if email[-1] == "@":
     return email + "bowdoin.edu"
   if "@" not in email:
@@ -52,43 +53,43 @@ class Dj(CachedModel):
                              key_name=key_name, cached=cached, **kwargs)
 
   @classmethod
-  def addUsernameCache(cls, key, username):
-    return cls.cacheSet(key, cls.USERNAME, username)
+  def add_username_cache(cls, key, username):
+    return cls.cache_set(key, cls.USERNAME, username)
   @classmethod
-  def purgeUsernameCache(cls, username):
-    cls.cacheDelete(cls.USERNAME, username)
+  def purge_username_cache(cls, username):
+    cls.cache_delete(cls.USERNAME, username)
 
-  def addOwnUsernameCache(self):
-    self.addUsernameCache(self.key(), self.p_username)
+  def add_own_username_cache(self):
+    self.add_username_cache(self.key(), self.p_username)
     return self
-  def purgeOwnUsernameCache(self):
-    self.purgeUsernameCache(self.p_username)
+  def purge_own_username_cache(self):
+    self.purge_username_cache(self.p_username)
     return self
 
   @classmethod
-  def addEmailCache(cls, key, email):
-    return cls.cacheSet(key, cls.EMAIL, email)
+  def add_email_cache(cls, key, email):
+    return cls.cache_set(key, cls.EMAIL, email)
   @classmethod
-  def purgeEmailCache(cls, email):
-    cls.cacheDelete(cls.EMAIL, email)
+  def purge_email_cache(cls, email):
+    cls.cache_delete(cls.EMAIL, email)
 
-  def addOwnEmailCache(self):
-    self.addEmailCache(self.key(), self.p_email)
+  def add_own_email_cache(self):
+    self.add_email_cache(self.key(), self.p_email)
     return self
-  def purgeOwnEmailCache(self):
-    self.purgeEmailCache(self.p_email)
-    return self
-
-  def addToCache(self):
-    super(Dj, self).addToCache()
-    self.addOwnUsernameCache()
-    self.addOwnEmailCache()
+  def purge_own_email_cache(self):
+    self.purge_email_cache(self.p_email)
     return self
 
-  def purgeFromCache(self):
-    super(Dj, self).purgeFromCache()
-    self.purgeOwnUsernameCache()
-    self.purgeOwnEmailCache()
+  def add_to_cache(self):
+    super(Dj, self).add_to_cache()
+    self.add_own_username_cache()
+    self.add_own_email_cache()
+    return self
+
+  def purge_from_cache(self):
+    super(Dj, self).purge_from_cache()
+    self.purge_own_username_cache()
+    self.purge_own_email_cache()
     return self
 
   @classmethod
@@ -99,13 +100,13 @@ class Dj(CachedModel):
       return super(Dj, cls).get(keys, 
                                 use_datastore=use_datastore, one_key=one_key)
 
-    keys = cls.getKey(username=username, email=email, order=order, num=num)  
+    keys = cls.get_key(username=username, email=email, order=order, num=num)  
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
 
   @classmethod
-  def getKey(cls, username=None, email=None, program=None, 
+  def get_key(cls, username=None, email=None, program=None, 
              order=None, num=-1):
     query = cls.all(keys_only=True)
 
@@ -129,7 +130,7 @@ class Dj(CachedModel):
 
     dj = cls(fullname=fullname, 
              lowername=fullname.lower(),
-             email=fixBareEmail(email) if fix_email else email,
+             email=fix_bare_email(email) if fix_email else email,
              username=username, 
              password_hash=hash_password(password))
 
@@ -148,7 +149,7 @@ class Dj(CachedModel):
 
     return super(Dj, self).put()
 
-  def resetPassword(self, put=True):
+  def reset_password(self, put=True):
     reset_key = ''.join(random.choice(string.ascii_letters +
                                       string.digits) for x in range(20))
  
@@ -180,11 +181,11 @@ class Dj(CachedModel):
   @p_fullname.setter
   def p_username(self, username):
     username = username.strip()
-    other = self.getKeyByUsername(username)
-    if other is not None and other_dj != self.key():
+    other = self.get_key_by_username(username)
+    if other is not None and other != self.key():
       raise ModelError("There is already a Dj with this username", other)
     else:
-      self.purgeOwnUsernameCache()
+      self.purge_own_username_cache()
       self.username = username
 
   @property
@@ -193,13 +194,13 @@ class Dj(CachedModel):
 
   @p_email.setter
   def p_email(self, email):
-    email = fixBareEmail(email.strip())
-    other = self.getKeyByEmail(email)
+    email = fix_bare_email(email.strip())
+    other = self.get_key_by_email(email)
     print other, self.key()
     if other is not None and other != self.key():
       raise ModelError("There is already a Dj with this email", other)
     else:
-      self.purgeOwnEmailCache()
+      self.purge_own_email_cache()
       self.email = email
 
   @property
@@ -213,70 +214,70 @@ class Dj(CachedModel):
   # TODO: instead use paging and cursors (is that what they're called)
   # to return part of all the Djs (in case there end up being more than 1000!)
   @classmethod
-  def getAll(cls):
+  def get_all(cls):
     return cls.get(order="fullname", num=1000)
 
   @classmethod
-  def getByUsername(cls, username, keys_only=False):
-    cached = cls.getByIndex(cls.USERNAME, username, keys_only=keys_only)
+  def get_by_username(cls, username, keys_only=False):
+    cached = cls.get_by_index(cls.USERNAME, username, keys_only=keys_only)
     if cached is not None:
       return cached
 
-    key = cls.getKey(email=email)
+    key = cls.get_key(username=username)
     if key is not None:
       if keys_only:
-        return cls.addUsernameCache(key, username)
+        return cls.add_username_cache(key, username)
       dj = cls.get(key)
       if dj is not None:
-        return dj.addOwnUsernameCache()
+        return dj.add_own_username_cache()
     raise NoSuchUsernameError()
 
   @classmethod
-  def getKeyByUsername(cls, username):
-    return cls.getByUsername(username, keys_only=True)
+  def get_key_by_username(cls, username):
+    return cls.get_by_username(username, keys_only=True)
 
   @classmethod
-  def getByEmail(cls, email, keys_only=False):
-    email = fixBareEmail(email)
-    cached = cls.getByIndex(cls.EMAIL, email, keys_only=keys_only)
+  def get_by_email(cls, email, keys_only=False):
+    email = fix_bare_email(email)
+    cached = cls.get_by_index(cls.EMAIL, email, keys_only=keys_only)
     if cached is not None:
       return cached
 
-    key = cls.getKey(email=email)
+    key = cls.get_key(email=email)
     if key is not None:
       if keys_only:
-        return cls.addEmailCache(key, email)
+        return cls.add_email_cache(key, email)
       dj = cls.get(key)
       if dj is not None:
-        return dj.addOwnEmailCache()
+        return dj.add_own_email_cache()
     raise NoSuchEmailError()
 
   @classmethod
-  def getKeyByEmail(cls, email):
-    return cls.getByEmail(email=email, keys_only=True)
+  def get_key_by_email(cls, email):
+    return cls.get_by_email(email=email, keys_only=True)
 
-  def emailMatches(self, email):
-    return self.p_email == fixBareEmail(email)
+  def email_matches(self, email):
+    return self.p_email == fix_bare_email(email)
 
-  def passwordMatches(self, password):
+  def password_matches(self, password):
     return check_password(self.p_password, password)
 
   @classmethod
   def login(cls, username, password):
-    dj = cls.getByUsername(username)
+    dj = cls.get_by_username(username)
     if dj is None:
       raise NoSuchUsernameError()
 
-    if not dj.passwordMatches(password):
+    if not dj.password_matches(password):
       raise InvalidLoginError()
     
     return dj
 
   @classmethod
-  def recoveryLogin(cls, username, reset_key):
-    dj = cls.getByUsername(username)
+  def recovery_login(cls, username, reset_key):
+    dj = cls.get_by_username(username)
     if dj is None:
-      raise NoSuchUserError()
+      raise NoSuchUsernameError()
 
     if (dj.pw_reset_expire is None or
         dj.pw_reset_hash is None or

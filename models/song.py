@@ -53,12 +53,12 @@ class Song(CachedModel):
     if album is not None:
       self.album = album
 
-  def addToCache(self):
-    super(Song, self).addToCache()
+  def add_to_cache(self):
+    super(Song, self).add_to_cache()
     return self
 
-  def purgeFromCache(self):
-    super(Song, self).purgeFromCache()
+  def purge_from_cache(self):
+    super(Song, self).purge_from_cache()
     return self
 
   @classmethod
@@ -69,13 +69,13 @@ class Song(CachedModel):
       return super(Song, cls).get(keys, use_datastore=use_datastore, 
                                         one_key=one_key)
 
-    keys = cls.getKey(title=title, order=order, num=num)  
+    keys = cls.get_key(title=title, order=order, num=num)  
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
 
   @classmethod
-  def getKey(cls,
+  def get_key(cls,
              order=None, num=-1):
     query = cls.all(keys_only=True)
 

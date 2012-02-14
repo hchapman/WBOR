@@ -26,10 +26,10 @@ class ModelError(Exception):
 class QueryError(ModelError):
   pass
 
-def isKey(obj):
+def is_key(obj):
   return isinstance(obj, db.Key) or isinstance(obj, str)
 
-def asKey(obj):
+def as_key(obj):
   if isinstance(obj, str):
     return db.Key(obj)
   if isinstance(obj, db.Key):
@@ -38,8 +38,8 @@ def asKey(obj):
     return obj.key()
   return None
 
-def asKeys(key_list):
-  return filter(None, [asKey(key) for key in key_list])
+def as_keys(key_list):
+  return filter(None, [as_key(key) for key in key_list])
 
 class CachedModel(db.Model):
   ''' A CachedModel is a database model which tries its best to keep
@@ -60,7 +60,7 @@ class CachedModel(db.Model):
                                       key_nae=key_name, **kwargs)
 
   @classmethod
-  def cacheSet(cls, value, cache_key, *args):
+  def cache_set(cls, value, cache_key, *args):
     '''
     Classmethod to access memcache.set
 
@@ -72,7 +72,7 @@ class CachedModel(db.Model):
     return value
 
   @classmethod
-  def cacheDelete(cls, cache_key, *args):
+  def cache_delete(cls, cache_key, *args):
     '''
     Classmethod to access memcache.delete
     '''
@@ -81,18 +81,18 @@ class CachedModel(db.Model):
       logging.error(cls.LOG_DEL_ERROR %(cache_key, response))
 
   @classmethod
-  def cacheGet(cls, cache_key, *args):
+  def cache_get(cls, cache_key, *args):
     '''
     Classmethod to access memcache.get
     '''
     return memcache.get(cache_key %args)
 
-  def addObjectCache(self):
-    self.cacheSet(self, self.ENTRY %self.key())
-  def purgeObjectCache(self):
-    self.cacheDelete(self.ENTRY %self.key())
+  def add_object_cache(self):
+    self.cache_set(self, self.ENTRY %self.key())
+  def purge_object_cache(self):
+    self.cache_delete(self.ENTRY %self.key())
 
-  def addToCache(self):
+  def add_to_cache(self):
     '''
     Populate the memcache with self. The base only stores the object
     associated to its key, but children may wish to also cache queries
@@ -100,15 +100,15 @@ class CachedModel(db.Model):
 
     For chaining purposes, returns self
     '''
-    self.addObjectCache()
+    self.add_object_cache()
     return self
 
-  def purgeFromCache(self):
+  def purge_from_cache(self):
     '''
     Remove self from the memcache where applicable. The opposite of
-    "addToCache".
+    "add_to_cache".
     '''
-    self.purgeObjectCache()
+    self.purge_object_cache()
     return self
 
   @classmethod
@@ -122,7 +122,7 @@ class CachedModel(db.Model):
     if isinstance(keys, cls):
       return keys
 
-    if isKey(keys) or one_key:
+    if is_key(keys) or one_key:
       keys = (keys,)
       one_key = True
 
@@ -135,7 +135,7 @@ class CachedModel(db.Model):
         return None,
       if isinstance(key, cls):
         return key
-      obj = cacheGet(cls.ENTRY %key)
+      obj = cache_get(cls.ENTRY %key)
 
       if obj is not None:
         if one_key:
@@ -153,14 +153,14 @@ class CachedModel(db.Model):
     db_fetch_zip = zip(db_fetch_keys) #[0]: idx, [1]: key
     for i, obj in zip(db_fetch_zip[0], 
                       super(CachedModel, cls).get(db_fetch_zip[1])):
-      objs[i] = obj.addToCache()
+      objs[i] = obj.add_to_cache()
 
     return filter(None, objs)
 
   @classmethod
-  def getByIndex(cls, index, *args, **kwargs):
+  def get_by_index(cls, index, *args, **kwargs):
     keys_only = True if kwargs.get("keys_only") else False
-    cached = cls.cacheGet(index, *args)
+    cached = cls.cache_get(index, *args)
 
     if cached is not None:
       if keys_only:
@@ -176,14 +176,14 @@ class CachedModel(db.Model):
     Update datastore with self, and then update memcache for self.
     '''
     ret_val = super(CachedModel, self).put()
-    self.addToCache()
+    self.add_to_cache()
     return ret_val
 
   def delete(self):
     '''
     Remove self from memcache, then from datastore.
     '''
-    self.purgeFromCache()
+    self.purge_from_cache()
     super(CachedModel, self).delete()
 
 class ApiModel(CachedModel):

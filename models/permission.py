@@ -54,54 +54,54 @@ class Permission(CachedModel):
     super(Permission, self).__init__(parent=parent, key_name=key_name, **kwds)
 
   @classmethod
-  def addTitleCache(cls, key, title):
-    return cls.cacheSet(key, cls.TITLE, title)
+  def add_title_cache(cls, key, title):
+    return cls.cache_set(key, cls.TITLE, title)
   @classmethod
-  def purgeTitleCache(cls, title):
-    return cls.cacheDelete(cls.TITLE, title)
+  def purge_title_cache(cls, title):
+    return cls.cache_delete(cls.TITLE, title)
 
-  def addOwnTitleCache(self):
-    self.addUsernameCache(self.key(), self.title)
+  def add_own_title_cache(self):
+    self.add_username_cache(self.key(), self.title)
     return self
-  def purgeOwnTitleCache(self):
-    self.purgeTitleCache(self.title)
+  def purge_own_title_cache(self):
+    self.purge_title_cache(self.title)
 
   @classmethod
-  def setAllCache(cls, key_set):
-    return cls.cacheSet(set([asKey(key) for key in key_set]), cls.ALL)
+  def set_all_cache(cls, key_set):
+    return cls.cache_set(set([as_key(key) for key in key_set]), cls.ALL)
   @classmethod
-  def addAllCache(cls, key):
-    allcache = cls.cacheGet(cls.ALL)
+  def add_all_cache(cls, key):
+    allcache = cls.cache_get(cls.ALL)
     if not allcache:
-      cls.cacheSet((key,), cls.ALL)
+      cls.cache_set((key,), cls.ALL)
     else:
-      cls.cacheSet(set(allcache).add(key))
+      cls.cache_set(set(allcache).add(key))
     return key
   @classmethod
-  def purgeAllCache(cls, key):
-    allcache = cls.cacheGet(cls.ALL)
+  def purge_all_cache(cls, key):
+    allcache = cls.cache_get(cls.ALL)
     if allcache:
       try:
-        cls.cacheSet(set(allcache).remove(key))
+        cls.cache_set(set(allcache).remove(key))
       except KeyError:
         pass
     return key
 
-  def addOwnAllCache(self):
-    self.addAllCache(self.key())
+  def add_own_all_cache(self):
+    self.add_all_cache(self.key())
     return self
-  def purgeOwnAllCache(self):
-    self.purgeAllCache(self.key())
-    return self
-
-  def addToCache(self):
-    super(Permission, self).addToCache()
-    self.addOwnTitleCache()
+  def purge_own_all_cache(self):
+    self.purge_all_cache(self.key())
     return self
 
-  def purgeFromCache(self):
-    super(Permission, self).purgeFromCache()
-    self.purgeOwnTitleCache()
+  def add_to_cache(self):
+    super(Permission, self).add_to_cache()
+    self.add_own_title_cache()
+    return self
+
+  def purge_from_cache(self):
+    super(Permission, self).purge_from_cache()
+    self.purge_own_title_cache()
     return self
 
   @classmethod
@@ -112,13 +112,13 @@ class Permission(CachedModel):
       return super(Permission, cls).get(keys, use_datastore=use_datastore, 
                                         one_key=one_key)
 
-    keys = cls.getKey(title=title, order=order, num=num)  
+    keys = cls.get_key(title=title, order=order, num=num)  
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
 
   @classmethod
-  def getKey(cls, title=None,
+  def get_key(cls, title=None,
              order=None, num=-1):
     query = cls.all(keys_only=True)
 
@@ -138,52 +138,52 @@ class Permission(CachedModel):
 
     return super(Permission, self).put()
 
-  def addDj(self, djs):
-    if isKey(djs) or isinstance(djs, Dj):
+  def add_dj(self, djs):
+    if is_key(djs) or isinstance(djs, Dj):
       djs = (djs,)
     
     self.dj_list = list(set(self.dj_list).
-                        union(asKeys(dj_list)))
+                        union(as_keys(dj_list)))
 
-  def removeDj(self, djs):
-    if isKey(djs) or isinstance(djs, Dj):
+  def remove_dj(self, djs):
+    if is_key(djs) or isinstance(djs, Dj):
       djs = (djs,)
 
     self.dj_list = list(set(self.dj_list).
-                        difference(asKeys(dj_list)))
+                        difference(as_keys(dj_list)))
 
-  def hasDj(self, dj):
-    return dj is not None and asKey(dj) in self.dj_list
+  def has_dj(self, dj):
+    return dj is not None and as_key(dj) in self.dj_list
 
   @property
   def p_title(self):
     return self.title        
 
   @classmethod
-  def getAll(cls, keys_only=False):
-    allcache = cls.getByIndex(cls.ALL, keys_only=keys_only)
+  def get_all(cls, keys_only=False):
+    allcache = cls.get_by_index(cls.ALL, keys_only=keys_only)
     if allcache:
       return allcache
 
     if keys_only:
-      return cls.setAllCache(cls.getKey(order="title", num=1000))
-    return cls.get(keys=cls.setAllCache(cls.getKey(order="title", num=1000)))
+      return cls.set_all_cache(cls.get_key(order="title", num=1000))
+    return cls.get(keys=cls.set_all_cache(cls.get_key(order="title", num=1000)))
 
   @classmethod
-  def getByTitle(cls, title, keys_only=False):
-    cached = cls.getByIndex(cls.TITLE, email, keys_only=keys_only)
+  def get_by_title(cls, title, keys_only=False):
+    cached = cls.get_by_index(cls.TITLE, email, keys_only=keys_only)
     if cached is not None:
       return cached
 
-    key is cls.getKey(title=title)
+    key is cls.get_key(title=title)
     if key is not None:
       if keys_only:
-        return cls.addTitleCache(key, title)
+        return cls.add_title_cache(key, title)
       permission = cls.get(key)
       if permission is not None:
-        return permission.addOwnTitleCache()
+        return permission.add_own_title_cache()
     raise NoSuchTitleError()
 
   @classmethod
-  def getKeyByTitle(cls, title):
-    return cls.getByTitle(title=title, keys_only=True)
+  def get_key_by_title(cls, title):
+    return cls.get_by_title(title=title, keys_only=True)
