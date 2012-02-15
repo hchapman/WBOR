@@ -4,18 +4,19 @@
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 
-from models.dj import Dj
+from models.dj import *
+from models.permission import *
 
-from handlers import BaseHandler
+#from handlers import BaseHandler
 from configuration import webapp2conf
 
 def run():
-    runCacheTests()
+    run_cache_tests()
 
-def runCacheTests():
-    runDjCacheTests()
+def run_cache_tests():
+    run_dj_cache_tests()
 
-def runDjCacheTests():
+def run_dj_cache_tests():
   try:
     # Put some Djs
     dj1 = Dj.new(email="tcase",
@@ -45,21 +46,23 @@ def runDjCacheTests():
     try:
         dj1.p_fullname = "Tess Case"
         dj1.put()
-    except Exception as e:
+    except ModelError as e:
         print dj1.key(), e
 
     try:
         dj1.p_email = "tesscase"
         dj1.p_username = "ttcase"
         dj1.put()
-    except Exception as e:
+    except ModelError as e:
         print dj1.key(), e
+
+    print dj1.to_xml()
 
     try:
         dj1.p_email = "tesscase@"
         dj1.p_fullname = "Tessa Case"
         dj1.put()
-    except Exception as e:
+    except NoSuchUsernameError as e:
         print dj1.key(), e
 
    # dj3 = cache.putDj(email="chase", fullname="Chase Case", 
@@ -77,11 +80,17 @@ def runDjCacheTests():
 
     print "--------------------"
     
-    login_dj = Dj.login("tcase", "esact")
-    print login_dj.to_xml()
-    login_dj = Dj.login("ttcase", "esact")
-    print login_dj.to_xml()
-    
+    try:
+        login_dj = Dj.login("tcase", "esact")
+        print login_dj.to_xml()
+    except NoSuchUsernameError:
+        print "Login to tcase failed. No such username."
+    try:
+        login_dj = Dj.login("ttcase", "esact")
+        print login_dj.to_xml()
+    except NoSuchUsernameError:
+        print "Login to ttcase failed. No such username."
+
     # Try logging in
     #print cache.djLogin("ctest", "chest")
     #print cache.djLogin("ctest", "secret")
@@ -96,7 +105,7 @@ def runDjCacheTests():
     #print cache.djLogin("ctest", "supersecret2")
     #print cache.djLogin("ctest", "chest")
 
-class RunTests(BaseHandler):
+class RunTests(webapp.RequestHandler):
     def get(self):
         run()
 

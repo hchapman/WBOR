@@ -85,7 +85,7 @@ class BlogPost(db.Model):
   slug = db.StringProperty()
 
 class Play(ApiModel):
-  song = db.ReferenceProperty(Song)
+#  song = db.ReferenceProperty(Song)
   program = db.ReferenceProperty(Program)
   play_date = db.DateTimeProperty()
   isNew = db.BooleanProperty()

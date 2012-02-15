@@ -12,6 +12,7 @@ from google.appengine.ext import db
 # Local module imports
 from passwd_crypto import hash_password, check_password
 from base_models import (CachedModel, QueryError, ModelError)
+from base_models import quantummethod, as_key
 
 # Global python imports
 import datetime
@@ -52,16 +53,17 @@ class Dj(CachedModel):
     super(Dj, self).__init__(parent=parent, 
                              key_name=key_name, cached=cached, **kwargs)
 
-  @classmethod
-  def add_username_cache(cls, key, username):
-    return cls.cache_set(key, cls.USERNAME, username)
+  @quantummethod
+  def add_username_cache(obj, inst, key=None, username=None):
+    if inst:
+      key = obj.key()
+      username = obj.p_username
+    return obj.cache_set(key, obj.USERNAME, username)
+
   @classmethod
   def purge_username_cache(cls, username):
     cls.cache_delete(cls.USERNAME, username)
 
-  def add_own_username_cache(self):
-    self.add_username_cache(self.key(), self.p_username)
-    return self
   def purge_own_username_cache(self):
     self.purge_username_cache(self.p_username)
     return self
@@ -82,7 +84,7 @@ class Dj(CachedModel):
 
   def add_to_cache(self):
     super(Dj, self).add_to_cache()
-    self.add_own_username_cache()
+    self.add_username_cache()
     self.add_own_email_cache()
     return self
 
@@ -178,15 +180,18 @@ class Dj(CachedModel):
   def p_username(self):
     return self.username
   
-  @p_fullname.setter
+  @p_username.setter
   def p_username(self, username):
     username = username.strip()
-    other = self.get_key_by_username(username)
-    if other is not None and other != self.key():
-      raise ModelError("There is already a Dj with this username", other)
-    else:
-      self.purge_own_username_cache()
-      self.username = username
+    try:
+      other = self.get_key_by_username(username)
+      if as_key(other) != as_key(self.key()):
+        raise ModelError("There is already a Dj with this username", other)
+    except NoSuchUsernameError:
+      pass
+
+    self.purge_own_username_cache()
+    self.username = username
 
   @property
   def p_email(self):
@@ -195,17 +200,20 @@ class Dj(CachedModel):
   @p_email.setter
   def p_email(self, email):
     email = fix_bare_email(email.strip())
-    other = self.get_key_by_email(email)
-    print other, self.key()
-    if other is not None and other != self.key():
-      raise ModelError("There is already a Dj with this email", other)
-    else:
-      self.purge_own_email_cache()
-      self.email = email
+    try:
+      other = self.get_key_by_email(email)
+      if other is not None and other != self.key():
+        print other
+        raise ModelError("There is already a Dj with this email", other)
+    except NoSuchEmailError:
+      pass
+
+    self.purge_own_email_cache()
+    self.email = email
 
   @property
   def p_password(self):
-    return self.pasword_hash
+    return self.password_hash
 
   @p_password.setter
   def p_password(self, password):
@@ -229,7 +237,7 @@ class Dj(CachedModel):
         return cls.add_username_cache(key, username)
       dj = cls.get(key)
       if dj is not None:
-        return dj.add_own_username_cache()
+        return dj.add_username_cache()
     raise NoSuchUsernameError()
 
   @classmethod

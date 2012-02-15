@@ -19,12 +19,48 @@ import logging
 import datetime
 import logging
 import itertools
+from functools import wraps
 
 class ModelError(Exception):
   pass
 
 class QueryError(ModelError):
   pass
+
+def quantummethod(f):
+  '''
+  Class method decorator specific to the instance.
+
+  It uses a descriptor to delay the definition of the 
+  method wrapper.
+  '''
+  class descript(object):
+    def __init__(self, f):
+      self.f = f
+      
+    def __get__(self, instance, klass):
+      print "poop"
+      if instance is None:
+        # Class method was requested
+        return self.make_unbound(klass)
+      return self.make_bound(instance)
+
+    def make_unbound(self, klass):
+      @wraps(self.f)
+      def wrapper(False, *args, **kwargs):
+        pass
+      return wrapper
+
+    def make_bound(self, instance):
+      @wraps(self.f)
+      def wrapper(*args, **kwargs):
+        return self.f(instance, True, *args, **kwargs)
+      # This instance does not need the descriptor anymore,
+      # let it find the wrapper directly next time:
+      #setattr(instance, self.f.__name__, wrapper)
+      return wrapper
+
+  return descript(f)
 
 def is_key(obj):
   return isinstance(obj, db.Key) or isinstance(obj, str)
@@ -66,7 +102,7 @@ class CachedModel(db.Model):
 
     Returns the cached value, for chaining purposes.
     '''
-    logging.debug(cls.LOG_SET_DEBUG %(cache_key %args, value))
+    logging.error(cls.LOG_SET_DEBUG %(cache_key %args, value))
     if not memcache.set(cache_key %args, value):
       logging.error(cls.LOG_SET_FAIL % (cache_key %args, value))
     return value
@@ -78,7 +114,7 @@ class CachedModel(db.Model):
     '''
     response = memcache.delete(cache_key %args)
     if response < 2:
-      logging.error(cls.LOG_DEL_ERROR %(cache_key, response))
+      logging.error(cls.LOG_DEL_ERROR %(cache_key %args, response))
 
   @classmethod
   def cache_get(cls, cache_key, *args):
@@ -135,7 +171,7 @@ class CachedModel(db.Model):
         return None,
       if isinstance(key, cls):
         return key
-      obj = cache_get(cls.ENTRY %key)
+      obj = cls.cache_get(cls.ENTRY %key)
 
       if obj is not None:
         if one_key:

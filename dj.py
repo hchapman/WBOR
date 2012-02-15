@@ -35,7 +35,7 @@ from passwd_crypto import hash_password
 from slughifi import slughifi
 import models_old as models
 
-from models.dj import (Dj, InvalidLoginError,)
+from models.dj import (Dj, InvalidLoginError, NoSuchUsernameError)
 from models.permission import (Permission,)
 
 from configuration import webapp2conf
@@ -135,7 +135,7 @@ class Login(UserHandler):
     # Try to log in.
     try:
       dj = Dj.login(username, password)
-    except NoSuchUserError:
+    except NoSuchUsernameError:
       self.flash = "Invalid username. Please try again."
       self.redirect('/dj/login/')
       return
@@ -177,7 +177,7 @@ class RequestPassword(UserHandler):
 
       try:
         reset_dj = Dj.recoveryLogin(username, reset_key)
-      except NoSuchUserError:
+      except NoSuchUsernameError:
         self.session.add_flash("There is no user by that name")
         self.redirect("/dj/reset/")
         return
@@ -233,7 +233,7 @@ class RequestPassword(UserHandler):
 
     try:
       reset_dj = Dj.getByUsernameCheckEmail(username, email)
-    except NoSuchUserError as e:
+    except NoSuchUsernameError as e:
       self.session.add_flash(str(e))
       self.redirect("/dj/reset")
       return
