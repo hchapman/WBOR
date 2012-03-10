@@ -967,6 +967,12 @@ class EditBlogPost(UserHandler):
       self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
     else:
       post.put()
+      # TODO don't hack contacts editing so much
+      if slug == "contacts-page":
+        cache.mcset_t(post, 3600, "contacts_page_html")
+        self.session.add_flash("Successfully altered (contacts) post %s" % post.title)
+        self.redirect("/contact")
+        return
       self.session.add_flash("Successfully altered post %s" % post.title)
       self.redirect("/")
 

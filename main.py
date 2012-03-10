@@ -459,7 +459,15 @@ class HistoryPage(BaseHandler):
 
 class ContactPage(BaseHandler):
   def get(self):
-    template_values = {}
+    # TODO: Please please fix this. Although realistically it will be fixed on
+    # models rework in future. 
+    # So general MGMT can edit contacts page
+    contacts = memcache.get("contacts_page_html")
+    if contacts is None:
+      contacts = models.BlogPost.all().filter("slug =", "contacts-page").get()
+    cache.mcset_t(contacts, 3600, "contacts_page_html")
+    template_values = {
+      'contacts': contacts}
     self.response.out.write(template.render(getPath("contact.html"), template_values))
 
 class ConvertArtistNames(BaseHandler):
