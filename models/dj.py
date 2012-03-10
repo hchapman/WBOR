@@ -54,10 +54,9 @@ class Dj(CachedModel):
                              key_name=key_name, cached=cached, **kwargs)
 
   @quantummethod
-  def add_username_cache(obj, inst, key=None, username=None):
-    if inst:
-      key = obj.key()
-      username = obj.p_username
+  def add_username_cache(obj, key=None, username=None):
+    key = obj.key() if key is None else key
+    username = obj.p_username if username is None else username
     return obj.cache_set(key, obj.USERNAME, username)
 
   @classmethod

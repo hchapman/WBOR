@@ -47,14 +47,14 @@ def quantummethod(f):
 
     def make_unbound(self, klass):
       @wraps(self.f)
-      def wrapper(False, *args, **kwargs):
+      def wrapper(*args, **kwargs):
         pass
       return wrapper
 
     def make_bound(self, instance):
       @wraps(self.f)
       def wrapper(*args, **kwargs):
-        return self.f(instance, True, *args, **kwargs)
+        return self.f(instance, *args, **kwargs)
       # This instance does not need the descriptor anymore,
       # let it find the wrapper directly next time:
       #setattr(instance, self.f.__name__, wrapper)
