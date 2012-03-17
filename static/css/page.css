@@ -14,7 +14,7 @@ body {
 }
 
 #outer-wrap {
-    width: 960px;
+
     padding: 8px;
     background: transparent url(../images/shadow.png) repeat;
     margin: 20px auto;
@@ -282,9 +282,9 @@ label { display: block; }
 
 #showdesc h4 a, #showdesc h4 a:visited {
     color: black;
-}
+} 
 
-#footer {
+footer{
     text-align: center;
     background-color: #131218;
     color: #DDD;
