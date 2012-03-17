@@ -35,30 +35,10 @@ acronym {
     border-bottom: 1px dotted white;
 }
 
-#navigation {
-    width: 1062px;
-    //width: 1060px;
-    margin: 0;
-    position: absolute;
-    left: -50px;
-    top: 120px;
-}
-
-#navigation { width: 1060px\9 }
-
-#navigation ul {
-    list-style: none;
-    height: 40px;
-    margin-bottom: 0px;
-    -moz-border-radius: 5px;
-    -webkit-border-radius: 5px;
-}
-
 #nowplaying {
     margin: 0 auto;
     background-color: #66F;
     display: block;
-    width: 626px;
     text-align: center;
     border-bottom: 2px solid black;
     border-left: 2px solid black;
@@ -74,8 +54,11 @@ acronym {
 
 #nowplaying hr {
     width: 80%;
+    margin-left: auto;
+    margin-right: auto;
     margin-top: 10px;
     margin-bottom: 10px;
+    border-bottom: 0px solid black;
 }
 
 #nowplaying a {
@@ -84,68 +67,6 @@ acronym {
 
 #nowplaying a:visited {
     color: white;
-}
-
-#navigation ul li {
-    display: inline-block;
-    border-top: 2px solid black;
-    border-bottom: 2px solid black;
-    width: 115px;
-    margin-left: 0;
-    background-color: #A7A0F7;
-    height: 100%;
-    color: black;
-    font-size: 1em;
-    text-align: center;
-    float: left;
-    border-right: 2px solid black;
-}
-
-#navigation ul li.selected {
-    background-color: white;
-    color: black;
-}
-
-#navigation ul li.selected a, #navigation ul li.selected a:visited {
-    color: black;
-}
-
-#navigation ul li.selected a:hover {
-    color: white;
-}
-
-#navigation ul li:first-child {
-    border-left: 2px solid black;
-    -moz-border-radius-topleft: 5px;
-    -moz-border-radius-bottomleft: 5px;
-    -webkit-border-top-left-radius: 5px;
-    -webkit-border-bottom-left-radius: 5px;
-}
-
-#navigation ul li:last-child {
-    border-right: 2px solid black;
-    -moz-border-radius-topright: 5px;
-    -moz-border-radius-bottomright: 5px;
-    -webkit-border-top-right-radius: 5px;
-    -webkit-border-bottom-right-radius: 5px;
-}
-
-#navigation ul li:hover {
-    background-color: #434343;
-    color: white;
-}
-
-#navigation ul li:hover a, #navigation ul li:hover a:visited {
-    color: white;
-}
-
-#navigation ul li a, #navigation ul li a:visited {
-    color: black;
-    display: block;
-    width: 100%;
-    height: 100%;
-    padding-top: 9px;
-    text-decoration: none;
 }
 
 #header {
@@ -394,8 +315,6 @@ div.charttable {
 
 #showdeschidden p {
   margin-bottom: 10px;
-  margin-left: 10px;
-  margin-right: 10px;
   text-align: center;
 }
 
