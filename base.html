@@ -6,13 +6,13 @@
 <title>{% block title %}WBOR{% endblock %}</title>
 
 <link rel="icon" type="image/png" href="/static/images/favicon.png">
-<link rel="stylesheet" href="/static/css/text.css" />
+
 <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
 
 <link rel="stylesheet" href="/static/css/page.css" />
 <link rel="stylesheet" href="/static/css/jquery-ui.css" />
 <link rel="stylesheet" type="text/css" href="/static/css/lightbox.css" media="screen" />
-<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js'></script>
+<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js'></script>
 <script type='text/javascript' src='/static/js/jquery-ui.js'></script>
 <script type='text/javascript' src='/static/js/jquery.autocomplete.js'></script>
 <script type='text/javascript' src='/static/js/jquery.lightbox.js'></script>
@@ -30,17 +30,7 @@
             theme: "advanced",
           });
         }
-        $(".chart-toggler").click(function() {
-          $(".chart-toggler").removeClass("chart-selected");
-          $(this).addClass("chart-selected");
-          if ($.trim($(this).html()) == "Songs") {
-            $("#albumtable").hide();
-            $("#songtable").show();
-          } else {
-            $("#songtable").hide();            
-            $("#albumtable").show();
-          }
-        });
+
         $("#nowplaying").mouseenter(function() {
             $("#showdeschidden").slideDown("medium");
         });
@@ -150,8 +140,8 @@
     <!-- This is for the "floating" navbar -->
 
     <div class='navbar' style="margin-left:-20px; margin-right:-20px; margin-bottom:60px;">
-	 <div class='navbar-inner'><div class='container row'><div class="span12">
-          <ul class="nav">
+	 <div class='navbar-inner'><div class='container'><div class='row'><div class="span12">
+          <ul class="nav pull-left">
             <li {% if news_selected %}class='active'{% endif %}><a href='/'>News</a></li>
             <li {% if events_selected %}class='active'{% endif %}><a href='/events'>Events</a></li>
             <li {% if schedule_selected %}class='active'{% endif %}><a href='/schedule'>Schedule</a></li>
@@ -160,9 +150,10 @@
 	    <li {% if fun_selected %}class='active'{% endif %}><a href='/fun'>Fun</a></li>
             <li {% if history_selected %}class='active'{% endif %}><a href='/history'>History</a></li>
             <li {% if contact_selected %}class='active'{% endif %}><a href='/contact'>Contact</a></li>
+	</ul><ul class="nav pull-right">
             <li><a href='/dj/login'>DJ Login</a></li>
         </ul>
-      </div></div></div></div><div class="row"  style="margin-top:-60px;position:absolute; z-index:4"><div class="span8 offset2">
+      </div></div></div></div></div><div class="row"  style="margin-top:-60px;position:absolute; z-index:4"><div class="span8 offset2">
         <div id='nowplaying'>
             <strong>&#9835; NOW PLAYING &#9835;</strong>
             <br>
@@ -180,8 +171,8 @@
     <div class="row">
     {% block main_content %}
       {% for msg in flash %}
-    <div class='span8 offset2' id='msgbox'><div class='alert'>
-      <a class="close" data-dismiss="alert">×</a>
+    <div class='span10 offset1' id='msgbox'><div class='alert fade in'>
+      <a class="close" data-dismiss="alert" href="#">×</a>
         {{ msg.0|safe }}
     </div></div>
       {% endfor %}
@@ -211,5 +202,7 @@
     </footer><!-- end footer -->
 </div><!-- End wrap -->
 </div><!-- End outer wrap -->
+<script type="text/javascript" src="/static/js/bootstrap-alert.js"></script>
+<script type="text/javascript" src="/static/js/bootstrap-tab.js"></script>
 </body>
 </html>
