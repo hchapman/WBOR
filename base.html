@@ -139,7 +139,8 @@
 
     <!-- This is for the "floating" navbar -->
 
-    <div class='navbar' style="margin-left:-20px; margin-right:-20px; margin-bottom:60px;">
+    <div class='navbar' style="margin-left:-20px; margin-right:-20px;
+         margin-bottom:0px;">
 	 <div class='navbar-inner'><div class='container'><div class='row'><div class="span12">
           <ul class="nav pull-left">
             <li {% if news_selected %}class='active'{% endif %}><a href='/'>News</a></li>
@@ -153,14 +154,14 @@
 	</ul><ul class="nav pull-right">
             <li><a href='/dj/login'>DJ Login</a></li>
         </ul>
-      </div></div></div></div></div><div class="row"  style="margin-top:-60px;position:absolute; z-index:4"><div class="span8 offset2">
+      </div></div></div></div></div><div class="row"><div class="span8 offset2">
         <div id='nowplaying'>
             <strong>&#9835; NOW PLAYING &#9835;</strong>
             <br>
             <span id='currentsong'>gathering info...</span>
             <br>
             on <a href='show/hitgitsplit' id='currentshow'>wait for it...</a>
-            <div id='showdeschidden'>
+            <div id='showdeschidden'  style="position:absolute; z-index:10">
                 <hr>
                 <p id='currentshowdesc'>
                   <!-- The Hit Git &amp; Split is celebrating Tom Wait's 60th birthday for this college season. The theme is "Just Another Dime Store Novel". From "Pasties and a G-string", an adventure in tassel twirling, along with "Hang on St. Christopher", we'll take you "Straight to the Top" of "Frank's Wild Years". "Jesus Gonna Be Here", along with "Chocolate Jesus", because "God's Away on Business". The AWB will prevail as your "Late Night Evening Prostitute". A good gardener knows when to put his hose down and roll it up. "Well, that ain't half of it, man, you know - boy have I got a show for you!" --> loading show description
@@ -171,7 +172,7 @@
     <div class="row">
     {% block main_content %}
       {% for msg in flash %}
-    <div class='span10 offset1' id='msgbox'><div class='alert fade in'>
+    <div class='span12 offset1' id='msgbox'><div class='alert fade in'>
       <a class="close" data-dismiss="alert" href="#">×</a>
         {{ msg.0|safe }}
     </div></div>
