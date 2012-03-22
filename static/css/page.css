@@ -434,3 +434,13 @@ td.forminput {
 td.forminput input{
     width: 100%;
 }
+
+.dropdown p {
+  display: block;
+  padding: 3px 15px;
+  clear: both;
+  font-weight: normal;
+  line-height: 18px;
+  color: #555;
+  white-space: nowrap;
+}

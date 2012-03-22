@@ -4,13 +4,13 @@
 #
 ##############################
 # Some quick notes:
-# 
+#
 # Anything which prints out simplejson.dumps MUST have
 # self.response.headers['Content-Type'] = 'text/json'
 # preferably towards the beginning.  This allows JQuery on
 # the client to read in the data appropriately and act on it.
-# 
-# 
+#
+#
 
 import os
 import models
@@ -48,7 +48,7 @@ from configuration import webapp2conf
 
 # This is a decoration for making sure that the user
 # is logged in before they view the page.
-def login_required(func):  
+def login_required(func):
   def wrapper(self, *args, **kw):
     if self.session.has_key("dj"):
       func(self, *args, **kw)
@@ -106,7 +106,7 @@ class MainPage(UserHandler):
       'posts': models.getLastPosts(3),
     }
     self.response.out.write(template.render(getPath("dj_main.html"), template_values))
-  
+
 
 # Logs the user out
 class Logout(UserHandler):
@@ -114,7 +114,7 @@ class Logout(UserHandler):
     self.session_logout()
     self.session.add_flash("You have been logged out.")
     self.redirect('/')
-  
+
 
 # Logs the user in
 # get(): the login form
@@ -128,7 +128,7 @@ class Login(UserHandler):
       'flashes': self.session.get_flashes(),
     }
     self.response.out.write(template.render(getPath("dj_login.html"), template_values))
-  
+
   def post(self):
     username = self.request.get("username")
     password = self.request.get("password")
@@ -145,7 +145,7 @@ class Login(UserHandler):
       return
     elif len(programList) == 1:
       self.set_session_program(programList[0])
-      self.session.add_flash("Successfully logged in with program %s."% 
+      self.session.add_flash("Successfully logged in with program %s."%
                              programList[0].title)
       self.redirect("/dj/")
       return
@@ -203,7 +203,7 @@ class RequestPassword(UserHandler):
         'session': self.session,
         'flash': self.flash,
         }
-      self.response.out.write(template.render(getPath("dj_reset_password.html"), 
+      self.response.out.write(template.render(getPath("dj_reset_password.html"),
                                               template_values))
 
   def post(self):
@@ -211,7 +211,7 @@ class RequestPassword(UserHandler):
       self.session.add_flash("There was an error, please try again")
       self.redirect("/dj/reset/")
       return
-    
+
     # Check that the user exists and information is valid
     username = self.request.get("username")
     email = self.request.get("email")
@@ -277,7 +277,7 @@ class SelectProgram(UserHandler):
     }
     self.response.out.write(template.render(getPath("dj_selectprogram.html"),
       template_values))
-  
+
   @login_required
   def post(self):
     program_key = self.request.get("programkey")
@@ -306,7 +306,7 @@ class ChartSong(UserHandler):
       if self.flash.msg == "Station ID recorded.":
         station_id = True
     except AttributeError:
-      pass 
+      pass
     posts = models.getLastPosts(2)
     memcache_key = "playlist_html_%s"%self.session.get('program').get('key')
     playlist_html = memcache.get(memcache_key)
@@ -314,7 +314,7 @@ class ChartSong(UserHandler):
       playlist_html = template.render("dj_chartsong_playlist_div.html",
         {'playlist': cache.getLastPlays(num=50,
                                         program=self.program_key,
-                                        after=(datetime.datetime.now() - 
+                                        after=(datetime.datetime.now() -
                                                datetime.timedelta(days=1))),
          }
       )
@@ -328,10 +328,10 @@ class ChartSong(UserHandler):
       new_albums = cache.getNewAlbums(by_artist=True)
       if new_albums:
         logging.debug(new_albums)
-        album_songs = [cache.getSong(k) for k in 
+        album_songs = [cache.getSong(k) for k in
                        new_albums[0].songList]
       new_song_div_html = template.render(
-        getPath("dj_chartsong_newsongdiv.html"), 
+        getPath("dj_chartsong_newsongdiv.html"),
         {'new_albums': new_albums,
          'album_songs': album_songs,}
         )
@@ -350,7 +350,7 @@ class ChartSong(UserHandler):
       'station_id': station_id,
     }
     self.response.out.write(template.render(getPath("dj_chartsong.html"), template_values))
-  
+
   @login_required
   def post(self):
     if self.request.get("submit") == "Chart Song":
@@ -361,7 +361,7 @@ class ChartSong(UserHandler):
       if isNew:
         # if it's "new", the album should be in the datastore already with
         # a valid key.
-        album = models.Album.get(self.request.get("album_key"))      
+        album = models.Album.get(self.request.get("album_key"))
         if not album:
           self.session.add_flash("Missing album information for new song, please try again.")
           self.redirect("/dj/chartsong/")
@@ -374,8 +374,8 @@ class ChartSong(UserHandler):
           return
         trackname = song.title
         track_artist = song.artist
-        cache.addNewPlay(song=song, program=self.program_key, 
-                          play_date=datetime.datetime.now(), isNew=True, 
+        cache.addNewPlay(song=song, program=self.program_key,
+                          play_date=datetime.datetime.now(), isNew=True,
                           artist=album.artist)
       else:
         # a song needs to have an artist and a track name
@@ -385,21 +385,21 @@ class ChartSong(UserHandler):
           return
         song = cache.putSong(title=trackname, artist=track_artist)
         song.put()
-        
-        cache.addNewPlay(song=song, program=self.program_key, 
-                          play_date=datetime.datetime.now(), isNew=False, 
+
+        cache.addNewPlay(song=song, program=self.program_key,
+                          play_date=datetime.datetime.now(), isNew=False,
                           artist=track_artist)
       memcache_key = "playlist_html_%s"%self.session.get('program').get('key')
       playlist_html = template.render("dj_chartsong_playlist_div.html",
-      {'playlist': models.getLastPlays(program=self.program_key, 
-                                       after=(datetime.datetime.now() - 
+      {'playlist': models.getLastPlays(program=self.program_key,
+                                       after=(datetime.datetime.now() -
                                               datetime.timedelta(days=1)))}
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
       if not models.getArtist(track_artist):
         # this is for autocomplete purposes. if the artist hasn't been charted
         # before, save the artist name in the datastore.
-        an = models.ArtistName(artist_name=track_artist, 
+        an = models.ArtistName(artist_name=track_artist,
           lowercase_name=track_artist.lower(),
           search_names=models.artistSearchName(track_artist).split())
         an.put()
@@ -411,9 +411,9 @@ class ChartSong(UserHandler):
         lastfm_password = "WBOR911!"
         lastfm_api_key = "59925bd7155e59bd39f14adcb70b7b77"
         lastfm_secret_key = "6acf5cc79a41da5a16f36d5baac2a484"
-        network = pylast.get_lastfm_network(api_key=lastfm_api_key, 
+        network = pylast.get_lastfm_network(api_key=lastfm_api_key,
           api_secret=lastfm_secret_key,
-          username=lastfm_username, 
+          username=lastfm_username,
           password_hash=pylast.md5(lastfm_password))
         scrobbler = network.get_scrobbler("tst", "1.0")
         scrobbler.scrobble(track_artist, trackname, int(time.time()),
@@ -430,7 +430,7 @@ class ChartSong(UserHandler):
       # End of song charting.
     elif self.request.get("submit") == "Station ID":
       # If the DJ has recorded a station ID
-      station_id = models.StationID(program=self.program_key, 
+      station_id = models.StationID(program=self.program_key,
                                     play_date=datetime.datetime.now())
       station_id.put()
       self.session.add_flash("Station ID recorded.")
@@ -443,7 +443,7 @@ class ChartSong(UserHandler):
       self.session.add_flash("PSA recorded.")
       self.redirect("/dj/chartsong/")
       return
-  
+
   # This is a helper method to update which artists are recorded as
   # the most-played artists for a given program.
   # If the artist just played is already within the top 10, then
@@ -469,13 +469,13 @@ class ChartSong(UserHandler):
     program.put()
   def getPlayCountByArtist(self, program, artist):
     return len(models.Play.all().filter("program =", program).filter("artist =", artist).fetch(1000))
-  
+
 
 
 # Displays the top-played songs for a given period.
 # get(): Print log for the last week, display form for choosing endpoint.
 # post(): Print log of week-long period.
-class ViewCharts(UserHandler):  
+class ViewCharts(UserHandler):
   @login_required
   def get(self):
     default_songs = 20
@@ -492,7 +492,7 @@ class ViewCharts(UserHandler):
       'end': end,
     }
     self.response.out.write(template.render(getPath("dj_charts.html"), template_values))
-  
+
   @login_required
   def post(self):
     default_songs = 20
@@ -539,7 +539,7 @@ class ViewLogs(UserHandler):
       'end': end,
     }
     self.response.out.write(template.render(getPath("dj_logs.html"), template_values))
-  
+
   @login_required
   def post(self):
     try:
@@ -547,7 +547,7 @@ class ViewLogs(UserHandler):
     except ValueError:
       self.session.add_flash("Unable to select date. Enter a date in the form mm/dd/yyyy.")
       self.redirect("/dj/logs/")
-      return      
+      return
     end = start + datetime.timedelta(weeks=2)
     psas = models.getPSAsInRange(start=start, end=end)
     ids = models.getIDsInRange(start=start, end=end)
@@ -560,7 +560,7 @@ class ViewLogs(UserHandler):
       'end': end,
     }
     self.response.out.write(template.render(getPath("dj_logs.html"), template_values))
-  
+
 
 
 # For administration, manages the DJs in the system.
@@ -579,7 +579,7 @@ class ManageDJs(UserHandler):
     }
     self.response.out.write(template.render(getPath("dj_manage_djs.html"),
       template_values))
-  
+
   @authorization_required("Manage DJs")
   def post(self):
     if self.request.get("submit") != "Add DJ":
@@ -634,7 +634,7 @@ class ManageDJs(UserHandler):
 
       self.session.add_flash(dj.fullname + " successfully added as a DJ.")
       self.redirect("/dj/djs/")
-  
+
 
 # Displays and edits a DJ's details in the datastore
 # get(): Display DJ's details
@@ -656,7 +656,7 @@ class EditDJ(UserHandler):
         'posts': models.getLastPosts(3),
       }
       self.response.out.write(template.render(getPath("dj_manage_djs.html"), template_values))
-  
+
   @authorization_required("Manage DJs")
   def post(self, dj_key):
     dj = models.Dj.get(dj_key)
@@ -696,12 +696,12 @@ class ManagePrograms(UserHandler):
 
     template_values = {
       'current_programs': tuple({"prog" : program,
-                                 "dj_list" : (tuple(models.Dj.get(dj) 
+                                 "dj_list" : (tuple(models.Dj.get(dj)
                                                     for dj in program.dj_list) if program.dj_list
                                               else None)}
                                 for program in program_list if program.current),
       'legacy_programs': tuple({"prog" : program,
-                                "dj_list" : (tuple(models.Dj.get(dj) 
+                                "dj_list" : (tuple(models.Dj.get(dj)
                                                    for dj in program.dj_list) if program.dj_list
                                               else None)}
                                for program in program_list if not program.current),
@@ -710,7 +710,7 @@ class ManagePrograms(UserHandler):
       'posts': models.getLastPosts(3),
     }
     self.response.out.write(template.render(getPath("dj_manage_programs.html"), template_values))
-  
+
   @authorization_required("Manage Programs")
   def post(self):
     if (self.request.get("submit") != "Add Program"):
@@ -725,10 +725,10 @@ class ManagePrograms(UserHandler):
         return
 
       # Set up the program entry, and then put it in the DB
-      program = models.Program(title=self.request.get("title"), 
+      program = models.Program(title=self.request.get("title"),
                                slug=self.request.get("slug"),
-                               desc=self.request.get("desc"), 
-                               dj_list=[], 
+                               desc=self.request.get("desc"),
+                               dj_list=[],
                                page_html=self.request.get("page_html"),
                                current=bool(self.request.get("current")))
       program.put()
@@ -736,11 +736,11 @@ class ManagePrograms(UserHandler):
       self.session.add_flash("%s was successfully created associated a program. "
                         "Click <a href='/dj/programs/%s'>here</a> "
                         "to edit it (you probably want to do "
-                        "this as there are no DJs on it currently)."% 
+                        "this as there are no DJs on it currently)."%
                         (program.title, str(program.key())))
 
     self.redirect('/dj/programs/')
-  
+
 
 # Displays and edits details of a program.
 class EditProgram(UserHandler):
@@ -759,7 +759,7 @@ class EditProgram(UserHandler):
         'posts': models.getLastPosts(3),
       }
       self.response.out.write(template.render(getPath("dj_manage_programs.html"), template_values))
-  
+
   @authorization_required("Manage Programs")
   def post(self, program_key):
     program = models.Program.get(program_key)
@@ -778,7 +778,7 @@ class EditProgram(UserHandler):
       program.delete()
       self.session.add_flash(program.title + " successfully deleted.")
     self.redirect("/dj/programs/")
-  
+
 
 class MySelf(UserHandler):
   @login_required
@@ -791,7 +791,7 @@ class MySelf(UserHandler):
       'posts': models.getLastPosts(1),
     }
     self.response.out.write(template.render(getPath("dj_self.html"), template_values))
-  
+
   @login_required
   def post(self):
     dj = models.Dj.get(self.request.get("dj_key"))
@@ -843,7 +843,7 @@ class MyShow(UserHandler):
       'posts': models.getLastPosts(2),
     }
     self.response.out.write(template.render(getPath("dj_myshow.html"), template_values))
-  
+
   @login_required
   def post(self):
     program = models.Program.get(self.request.get("program_key"))
@@ -865,7 +865,7 @@ class MyShow(UserHandler):
     self.set_session_program(program)
     self.session.add_flash("Program successfully changed.")
     self.redirect("/dj/myshow")
-  
+
 
 # How DJs with the appropriate permissions can create a blog post
 # get(): Display "new blog post" form
@@ -880,7 +880,7 @@ class NewBlogPost(UserHandler):
       'posts': posts,
     }
     self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
-  
+
   @authorization_required("Manage Blog")
   def post(self):
     errors = ""
@@ -926,7 +926,7 @@ class EditBlogPost(UserHandler):
       'posts': posts,
     }
     self.response.out.write(template.render(getPath("dj_createpost.html"), template_values))
-  
+
   @authorization_required("Manage Blog")
   def post(self, date_string, slug):
     errors = ""
@@ -1015,7 +1015,7 @@ class NewEvent(UserHandler):
     except ValueError:
       self.session.add_flash("Unable to work with date \"%s\". Enter a valid date in the form mm/dd/yyyy, and an hour/minute as well." % date_string)
       self.redirect("/dj/event/")
-      return    
+      return
     event = models.Event(event_date=event_date, title=title, url=url, desc=desc)
     event.put()
     self.session.add_flash("Event %s successfully created." % title)
@@ -1097,7 +1097,7 @@ class ManagePermissions(UserHandler):
       'posts': models.getLastPosts(2),
     }
     self.response.out.write(template.render(getPath("dj_permissions.html"), template_values))
-  
+
   @authorization_required("Manage Permissions")
   def post(self):
     self.response.headers['Content-Type'] = 'text/json'
@@ -1138,7 +1138,7 @@ class ManagePermissions(UserHandler):
         'err': '',
         'msg': status
       }))
-  
+
 
 # Add and edit which albums are marked as "new"
 # get(): Display list of new albums
@@ -1166,7 +1166,7 @@ class ManageAlbums(UserHandler):
       'flash': self.flash,
     }
     self.response.out.write(template.render(getPath("dj_manage_albums.html"), template_values))
-  
+
   @authorization_required("Manage Albums")
   def post(self):
     self.response.headers['Content-Type'] = 'text/json'
@@ -1291,7 +1291,7 @@ class ManageAlbums(UserHandler):
                                  "Hit back and try again.")
           self.redirect("/dj/albums")
         return
-      
+
       large_filetype = cover_url[-4:].strip('.')
       smallCover = images.resize(largeCover, 100, 100)
       small_filetype = large_filetype
@@ -1320,7 +1320,7 @@ class ManageAlbums(UserHandler):
 
     files.finalize(small_file)
     files.finalize(large_file)
-    
+
     cover_small=files.blobstore.get_blob_key(small_file)
     cover_large=files.blobstore.get_blob_key(large_file)
 

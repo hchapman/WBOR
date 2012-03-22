@@ -151,8 +151,55 @@
             <li {% if contact_selected %}class='active'{% endif %}><a href='/contact'>Contact</a></li>
 	</ul><ul class="nav pull-right">
             {% if "dj" in session %}
-            <li><a href="/dj/chartsong">Chart Song</a></li>  
-            <li><a href="/dj">DJ Panel ({{ session.dj.fullname }})</a></li>{% else %}
+            <form class="navbar-form pull-left">
+              <a class="btn btn-primary" href="/dj/chartsong">Chart Song</a>
+            </form> 
+            <li class="divider"></li>
+            <li class="dropdown" id="djpanel">
+              <a href="#djpanel" class="dropdown-toggle"
+                 data-toggle="dropdown">
+                DJ Panel ({{ session.dj.fullname }})
+                <b class="caret"></b>
+              </a>
+              <ul class="dropdown-menu">
+                <li><p>
+                  <strong>{{ session.dj.fullname }}</strong>
+                  <br>{{ session.program.title }}
+                </p></li>
+                <li><a href='/dj/logout'>Log out</a></li>
+                <li class="divider">
+                {% if session.dj.permissions %}
+                {% if session.dj.permissions.manage_djs %}<li>
+                  <a href='/dj/djs'>Manage DJs</a>
+                </li>{% endif %}
+                {% if session.dj.permissions.manage_programs %}<li>
+                  <a href='/dj/programs'>Manage Programs</a>
+                </li>{% endif %}
+                {% if session.dj.permissions.manage_albums %}<li>
+                  <a href='/dj/albums'>Manage Albums</a>
+                </li>{% endif %}
+                {% if session.dj.permissions.manage_events %}<li>
+                  <a href='/dj/event'>New Event</a>
+                </li>{% endif %}
+                {% if session.dj.permissions.manage_genres %}<!-- <li>
+                  <a href='/dj/genres'>Session.Dj.Manage Genres</a>
+                </li> -->{% endif %}
+                {% if session.dj.permissions.manage_permissions %}<li>
+                  <a href='/dj/permissions'>Manage Permissions</a>
+                </li>{% endif %}
+                {% if session.dj.permissions.manage_blog %}<li>
+                  <a href='/dj/newpost'>New Blog Post</a>
+                </li>{% endif %}
+                <li class="divider"></li>
+                {% endif %}
+                <li><a href='/dj/chartsong'>Chart Song</a></li>
+                <li><a href='/dj/charts'>View Charts</a></li>
+                <li><a href='/dj/logs'>View Logs</a></li>
+                <li><a href='/dj/myshow'>Edit Show Information</a></li>
+                <li><a href='/dj/myself'>Edit DJ Information</a></li>
+              </ul>
+            </li>
+            {% else %}
             <li><a href='/dj/login'>DJ Login</a>{% endif %}</li>
         </ul>
       </div></div></div></div></div><div class="row"><div class="span8 offset2">
@@ -210,5 +257,7 @@
         src="/static/js/bootstrap-tab.js"></script>
 <script type="text/javascript"
         src="/static/js/bootstrap-button.js"></script>
+<script type="text/javascript"
+        src="/static/js/bootstrap-dropdown.js"></script>
 </body>
 </html>
