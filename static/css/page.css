@@ -248,11 +248,12 @@ footer{
   cursor: pointer;
 }
 
+#albumlist li {
+}
 
-#albumlist li a img {
-  width: 75px;
-  height: 75px;
-  border: 2px solid black;
+#albumlist li.span2 a img {
+  width: 130px;
+  height: 130px;
 }
 
 table.charttable, ol.charttable, div.charttable {

@@ -3,14 +3,31 @@
 {% block extra_scripts %}
 <script type='text/javascript'>
 $(function() {
-    $("#isNew-checkbox").click(function() {
-        if (this.checked) {
-            $("#new-song-div").slideDown("fast");
-            $("#old-song-div").slideUp("fast");
-        } else {
-            $("#new-song-div").slideUp("fast");
-            $("#old-song-div").slideDown("fast");
-        }
+    $("div.btn-group[data-toggle-name=isNew]").each(function() {
+        var group = $(this);
+        var form = group.parents("form").eq(0);
+        var name = group.attr("data-toggle-name");
+        var hidden = $('input[name="' + name + '"]', form);
+        $("button", group).each(function() {
+            var button = $(this);
+            button.live("click", function() {
+                hidden.val($(this).val());
+                if(button.val() == "no") {
+                    $("#new-song-div").slideUp("fast");
+                    $("#old-song-div").slideDown("fast");
+                }
+                if(button.val() == "yes") {
+                    $("#new-song-div").slideDown("fast");
+                    $("#old-song-div").slideUp("fast");
+                }
+            });
+            if(button.val() == hidden.val()) {
+                button.addClass('active');
+            }
+        });
+    });
+    $("#is-new").change(function() {
+
     });
     $("#played_list li a").click(function() {
       var play_key = $(this).parent().attr("id");
@@ -52,17 +69,23 @@ $(function() {
         <b>If you are unable to chart, please <a href='mailto:cmsmith@bowdoin.edu'>email me</a> ASAP with your full name, the name of your program, and the names of your co-DJs, if any.</b>
     </div>
     <div>
-        <h4>Chart Song</h4>
+        <h2>Chart Song</h2>
         <form action='/dj/chartsong/' method='post'>
-            <label><input type='checkbox' name='isNew' value='yes' id='isNew-checkbox' /> Check if new</label>
-            <br>
-            
+          <label>My song is...
+          </label>
+            <div class="btn-group" data-toggle-name="isNew" data-toggle="buttons-radio">
+              <button type="button" class="btn" value="no">An older song</button>
+              <button type="button" class="btn" value="yes">Off the new shelf</button>
+            </div>
+              <input id="is-new" type="hidden" name='isNew' value="no">
             <div id='old-song-div'><label>Track Name:
-                <br><input type='text' name='trackname' id='trackname' tabindex='1' /></label>
-            <br>
-            <br>
-            <label>Artist:
-                <br><input type='text' class='artist-autocomplete' name='artist' tabindex='2' id='artist' /></label>
+                <input type='text' name='trackname' id='trackname'
+                       tabindex='1'>
+              </label>
+            <label>Artist
+              <input type='text' class='artist-autocomplete'
+                     name='artist' tabindex='2' id='artist'>
+            </label>
             </div>
             <div id='new-song-div'>
               {% if new_song_div_html %}
@@ -75,10 +98,7 @@ $(function() {
                     <option value='{{ album.key }}'>{{ album.artist }} - {{ album.title }}</option>
                     {% endfor %}
                 </select>
-                <br>
-                <br>
                 <label>Song</label>
-                <br>
                 <select name='song_key' id='song_key_list'>
                     {% for song in album_songs %}
                     <option value='{{ song.key }}'>{{ song.title }}</option>
@@ -86,15 +106,16 @@ $(function() {
                 </select>
               {% endif %}
             </div>
-            <input type='submit' name='submit' value='Chart Song'>
+            <input type='submit' name='submit' value='Chart Song'
+                   class="btn btn-primary">
         </form>
     </div>
     <div id='current-playlist'>
-        <h4>Last Played</h4>
+        <h2>Last Played</h2>
         <ul id='played_list'>
             {{ playlist_html|safe }}
         </ul>
-    </div>        
+    </div>
 {% endblock %}
 
 {% block right_column %}
@@ -104,7 +125,7 @@ $(function() {
     </div>
     <div id='psa-status'>
         {% if last_psa %} The last PSA (<i>{{ last_psa.desc }}</i>) was played at {{ last_psa.play_date|date:"h:i" }}, or {{ last_psa.play_date|timesince }} ago.
-	{% else %} There have been no PSAs played. {% endif %}
+        {% else %} There have been no PSAs played. {% endif %}
         <br>
         <form action='/dj/chartsong/' method='post'>
             <input type='submit' name='submit' value='Station ID'>
@@ -113,7 +134,7 @@ $(function() {
         <p>Station ID recorded.</p>
         {% endif %}
         <br>
-        
+
         <form action='/dj/chartsong/' method='post'>
             <label>PSA Description: <input type='text' name='psa_desc' /></label> <input type='submit' name='submit' value='PSA'>
         </form>

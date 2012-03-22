@@ -11,7 +11,7 @@ class BaseHandler(webapp2.RequestHandler):
   """Enables session management"""
   def dispatch(self):
     self.session_store = sessions.get_store(request = self.request)
-    
+
     try:
       webapp2.RequestHandler.dispatch(self)
     finally:
@@ -37,7 +37,7 @@ class UserHandler(BaseHandler):
         'lowername' : dj.lowername,
         'email' : dj.email,
         }
-  
+
   def set_session_program(self, pgm):
     """Takes a Program model, and stores values to the session"""
     self.session['program'] = {

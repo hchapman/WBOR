@@ -60,7 +60,7 @@ class MainPage(BaseHandler):
     album_num = 10
     top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
     posts = models.getLastPosts(3)
-    events = models.getEventsAfter(datetime.datetime.now() - 
+    events = models.getEventsAfter(datetime.datetime.now() -
                                    datetime.timedelta(days=1), 3)
     template_values = {
       'flash': self.flash,
@@ -71,7 +71,7 @@ class MainPage(BaseHandler):
       'posts': posts,
       'events': events,
       }
-    self.response.out.write(template.render(getPath("index.html"), 
+    self.response.out.write(template.render(getPath("index.html"),
                                             template_values))
 
 class DjComplete(BaseHandler):
@@ -90,7 +90,7 @@ class ArtistComplete(BaseHandler):
     artists = cache.artistAutocomplete(q)
     self.response.out.write(json.dumps({
           'query': q,
-          'suggestions': [ar.artist_name for ar in artists],      
+          'suggestions': [ar.artist_name for ar in artists],
           }))
 
 class AlbumTable(BaseHandler):
@@ -110,6 +110,7 @@ class AlbumTable(BaseHandler):
     if album_table_html is None:
       albums = models.getNewAlbums(20, page)
       template_values = {
+        'session': self.session,
         'album_list': albums,
         }
       album_table_html = template.render(getPath("newalbums.html"), template_values)
@@ -122,7 +123,7 @@ class AlbumInfo(BaseHandler):
     album = self.request.get('album')
     keywords = self.request.get('keywords')
 
-    keywords = (urllib.quote(keywords) + "%20" + 
+    keywords = (urllib.quote(keywords) + "%20" +
                 urllib.quote(artist) + "%20" + urllib.quote(album))
     # AKIAJIXECWA77X5XX4DQ
     # 6oYjAsiXTz8xZzpKZC8zkqXnkYV72CNuCRh9hUsQ
@@ -141,11 +142,11 @@ class AlbumInfo(BaseHandler):
     json_data['updatehtml'] = updatehtml
     self.response.headers['Content-Type'] = 'text/json'
     self.response.out.write(json.dumps(json_data))
-  
+
 
 class Setup(BaseHandler):
   def get(self):
-    labels = ["Manage DJs", "Manage Programs", "Manage Permissions", 
+    labels = ["Manage DJs", "Manage Programs", "Manage Permissions",
               "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
     for l in labels:
       if not models.getPermission(l):
@@ -153,11 +154,11 @@ class Setup(BaseHandler):
         permission.put()
     seth = models.getDjByEmail("seth.glickman@gmail.com")
     if not seth:
-      seth = models.Dj(fullname='Seth Glickman', lowername='seth glickman', 
-                       email='seth.glickman@gmail.com', username='seth', 
+      seth = models.Dj(fullname='Seth Glickman', lowername='seth glickman',
+                       email='seth.glickman@gmail.com', username='seth',
                        password_hash=hash_password('testme'))
       seth.put()
-      program = models.Program(title='Seth\'s Show', slug='seth', 
+      program = models.Program(title='Seth\'s Show', slug='seth',
                                desc='This is the show where Seth plays his favorite music.',
         dj_list=[seth.key()], page_html='a <b>BOLD</b> show!')
       program.put()
@@ -195,7 +196,7 @@ class Setup(BaseHandler):
         ar.put()
     self.session.add_flash("Permissions set up, ArtistNames set up, Blog posts set up, DJ Seth entered.")
     self.redirect('/')
-  
+
 
 
 class BlogDisplay(BaseHandler):
@@ -207,6 +208,7 @@ class BlogDisplay(BaseHandler):
       self.redirect('/')
       return
     template_values = {
+      'session': self.session,
       'post': post,
       }
     self.response.out.write(template.render("blog_post.html", template_values))
@@ -240,7 +242,7 @@ class UpdateInfo(webapp2.RequestHandler):
     logging.debug(recent_songs)
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
-      song, program = (cache.getSong(last_play.song_key), 
+      song, program = (cache.getSong(last_play.song_key),
                        cache.getProgram(last_play.program_key))
       song_string = song.title + " &mdash; " + song.artist
       program_title, program_desc, program_slug = (program.title,
@@ -293,7 +295,7 @@ class SongList(BaseHandler):
               }),
           'generated': 'generated',
           }))
-    
+
 
 
 class EventPage(BaseHandler):
@@ -301,15 +303,18 @@ class EventPage(BaseHandler):
     start_date = datetime.datetime.now() - datetime.timedelta(days=2)
     events = models.getEventsAfter(start_date)
     template_values = {
+      'session': self.session,
       'events': events,
       }
-    self.response.out.write(template.render(getPath("events.html"), 
+    self.response.out.write(template.render(getPath("events.html"),
                                             template_values))
 
 class SchedulePage(BaseHandler):
   def get(self):
-    template_values = {}
-    self.response.out.write(template.render(getPath("schedule.html"), 
+    template_values = {
+      'session': self.session,
+    }
+    self.response.out.write(template.render(getPath("schedule.html"),
                                             template_values))
 
 class PlaylistPage(BaseHandler):
@@ -335,10 +340,10 @@ class PlaylistPage(BaseHandler):
         self.redirect("/")
         return
       if selected_date:
-        plays = models.getPlaysBetween(program=selected_program, 
-                                       after=(selected_date - 
-                                              datetime.timedelta(hours=24)), 
-                                       before=(selected_date + 
+        plays = models.getPlaysBetween(program=selected_program,
+                                       after=(selected_date -
+                                              datetime.timedelta(hours=24)),
+                                       before=(selected_date +
                                                datetime.timedelta(hours=24)))
       else:
         lastplay = models.getLastPlays(program=selected_program, num=1)
@@ -346,7 +351,7 @@ class PlaylistPage(BaseHandler):
           lastplay = lastplay[0]
           last_date = lastplay.play_date
           plays = models.getPlaysBetween(program=selected_program,
-                                         after=(last_date - 
+                                         after=(last_date -
                                                 datetime.timedelta(days=1)))
         else:
           plays = []
@@ -360,12 +365,13 @@ class PlaylistPage(BaseHandler):
         plays = models.getPlaysForDate(selected_date)
       else:
         plays = cache.getLastPlays(60)
-    
+
     template_values = {
+      'session': self.session,
       'plays': plays,
       'shows': shows,
       }
-    self.response.out.write(template.render(getPath("playlist.html"), 
+    self.response.out.write(template.render(getPath("playlist.html"),
                                             template_values))
 
 class PlaylistExport(BaseHandler):
@@ -393,10 +399,10 @@ class PlaylistExport(BaseHandler):
         self.redirect("/")
         return
       if selected_date:
-        plays = models.getPlaysBetween(program=selected_program, 
-                                       after=(selected_date - 
-                                              datetime.timedelta(hours=24)), 
-                                       before=(selected_date + 
+        plays = models.getPlaysBetween(program=selected_program,
+                                       after=(selected_date -
+                                              datetime.timedelta(hours=24)),
+                                       before=(selected_date +
                                                datetime.timedelta(hours=24)))
       else:
         lastplay = models.getLastPlays(program=selected_program, num=1)
@@ -404,7 +410,7 @@ class PlaylistExport(BaseHandler):
           lastplay = lastplay[0]
           last_date = lastplay.play_date
           plays = models.getPlaysBetween(program=selected_program,
-                                         after=(last_date - 
+                                         after=(last_date -
                                                 datetime.timedelta(days=1)))
         else:
           plays = []
@@ -420,19 +426,21 @@ class PlaylistExport(BaseHandler):
         plays = models.getRetardedNumberOfPlaysForDate(selected_date)
       else:
         plays = cache.getLastPlays(60)
-    
+
     csv_sep = "\t"
     out_data = [("Date", "Time", "Title", "Artist")]
     for p in plays:
       s = cache.getSong(p.song_key)
       out_data.append((p.play_date.isoformat(csv_sep), s.title, s.artist))
-    
+
     self.response.out.write("\n".join([csv_sep.join(row) for row in out_data]))
 
 class FunPage(BaseHandler):
   def get(self):
-    template_values = {}
-    self.response.out.write(template.render(getPath("fun.html"), 
+    template_values = {
+      'session': self.session,
+    }
+    self.response.out.write(template.render(getPath("fun.html"),
                                             template_values))
 
 class ChartsPage(UserHandler):
@@ -444,6 +452,7 @@ class ChartsPage(UserHandler):
     album_num = 60
     songs, albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
     template_values = {
+      'session': self.session,
       'songs': songs,
       'albums': albums,
       'start': start,
@@ -454,20 +463,24 @@ class ChartsPage(UserHandler):
 
 class HistoryPage(BaseHandler):
   def get(self):
-    template_values = {}
+    template_values = {
+      'session': self.session,
+    }
     self.response.out.write(template.render(getPath("history.html"), template_values))
 
 class ContactPage(BaseHandler):
   def get(self):
     # TODO: Please please fix this. Although realistically it will be fixed on
-    # models rework in future. 
+    # models rework in future.
     # So general MGMT can edit contacts page
     contacts = memcache.get("contacts_page_html")
     if contacts is None:
       contacts = models.BlogPost.all().filter("slug =", "contacts-page").get()
     cache.mcset_t(contacts, 3600, "contacts_page_html")
     template_values = {
-      'contacts': contacts}
+      'session': self.session,
+      'contacts': contacts
+    }
     self.response.out.write(template.render(getPath("contact.html"), template_values))
 
 class ConvertArtistNames(BaseHandler):
@@ -483,7 +496,7 @@ class ConvertArtistNames(BaseHandler):
       self.response.out.write("converted %d artist names." % total)
     except DeadlineExceededError:
       self.response.out.write("converted %d artist names, incomplete." % total)
-    
+
 
 class ConvertPlays(BaseHandler):
   def get(self):
@@ -508,7 +521,7 @@ class ProgramPage(BaseHandler):
       'session': self.session,
       'flash': self.flash,
       'program': program,
-      'djs' :  (tuple(models.Dj.get(dj) 
+      'djs' :  (tuple(models.Dj.get(dj)
                       for dj in program.dj_list) if program.dj_list
                 else None),
       'posts': posts,

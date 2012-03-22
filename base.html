@@ -127,13 +127,11 @@
         </div>
     
         <div class='span3'>
-            <div id='download-m3u'>
-                <a href='/static/wbor.m3u'>
+                <a href='/static/wbor.m3u' class="btn btn-warning">
                 <strong>Listen now</strong>
                 <br>
                 Live internet stream
                 </a>
-            </div>
         </div><!-- End header -->
     </div></div>
 
@@ -152,7 +150,10 @@
             <li {% if history_selected %}class='active'{% endif %}><a href='/history'>History</a></li>
             <li {% if contact_selected %}class='active'{% endif %}><a href='/contact'>Contact</a></li>
 	</ul><ul class="nav pull-right">
-            <li><a href='/dj/login'>DJ Login</a></li>
+            {% if "dj" in session %}
+            <li><a href="/dj/chartsong">Chart Song</a></li>  
+            <li><a href="/dj">DJ Panel ({{ session.dj.fullname }})</a></li>{% else %}
+            <li><a href='/dj/login'>DJ Login</a>{% endif %}</li>
         </ul>
       </div></div></div></div></div><div class="row"><div class="span8 offset2">
         <div id='nowplaying'>
@@ -164,15 +165,15 @@
             <div id='showdeschidden'  style="position:absolute; z-index:10">
                 <hr>
                 <p id='currentshowdesc'>
-                  <!-- The Hit Git &amp; Split is celebrating Tom Wait's 60th birthday for this college season. The theme is "Just Another Dime Store Novel". From "Pasties and a G-string", an adventure in tassel twirling, along with "Hang on St. Christopher", we'll take you "Straight to the Top" of "Frank's Wild Years". "Jesus Gonna Be Here", along with "Chocolate Jesus", because "God's Away on Business". The AWB will prevail as your "Late Night Evening Prostitute". A good gardener knows when to put his hose down and roll it up. "Well, that ain't half of it, man, you know - boy have I got a show for you!" --> loading show description
-                  </p>
+                 Loading show description
+                </p>
             </div>
     </div></div></div>
 
     <div class="row">
     {% block main_content %}
       {% for msg in flash %}
-    <div class='span12 offset1' id='msgbox'><div class='alert fade in'>
+    <div class='span12' id='msgbox'><div class='alert fade in'>
       <a class="close" data-dismiss="alert" href="#">×</a>
         {{ msg.0|safe }}
     </div></div>
@@ -182,14 +183,14 @@
     {% block top_row %}{% endblock %}
     </div>
     <div class="row">
-    <div class='span7 left'><!-- Left-hand column on front page -->
+    <div class='span8 left'><!-- Left-hand column on front page -->
         {% block left_column %}
 
         {% endblock %}
     </div><!-- End left-hand column -->
     
     <!-- Right-hand column on front page -->
-    <div class='span5 right'>
+    <div class='span4 right'>
         {% block right_column %}
 
         {% endblock %}
@@ -203,7 +204,11 @@
     </footer><!-- end footer -->
 </div><!-- End wrap -->
 </div><!-- End outer wrap -->
-<script type="text/javascript" src="/static/js/bootstrap-alert.js"></script>
-<script type="text/javascript" src="/static/js/bootstrap-tab.js"></script>
+<script type="text/javascript"
+        src="/static/js/bootstrap-alert.js"></script>
+<script type="text/javascript"
+        src="/static/js/bootstrap-tab.js"></script>
+<script type="text/javascript"
+        src="/static/js/bootstrap-button.js"></script>
 </body>
 </html>
