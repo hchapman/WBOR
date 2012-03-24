@@ -244,13 +244,15 @@ class UpdateInfo(webapp2.RequestHandler):
       last_play = recent_songs[0]
       song, program = (cache.getSong(last_play.song_key),
                        cache.getProgram(last_play.program_key))
-      song_string = song.title + " &mdash; " + song.artist
+      song_string = song.title
+      artist_string = song.artist
       program_title, program_desc, program_slug = (program.title,
                                                    program.desc,
                                                    program.slug)
     else:
       song, program = None, None
       song_string = "Nothing is playing"
+      artist_string = ""
       program_title, program_desc, program_slug = ("No show",
                                                    "No description",
                                                    "")
@@ -258,6 +260,7 @@ class UpdateInfo(webapp2.RequestHandler):
     self.response.headers["Content-Type"] = "text/json"
     self.response.out.write(json.dumps({
           'song_string': song_string,
+          'artist_string': artist_string,
           'program_title': program_title,
           'program_desc': program_desc,
           'program_slug': program_slug,
@@ -266,6 +269,22 @@ class UpdateInfo(webapp2.RequestHandler):
           'recent_songs_html': template.render(getPath("recent_songs.html"), {'plays': recent_songs}),
           }))
 
+class CallVoice(webapp2.RequestHandler):
+  def get(self):
+    url = "https://clients4.google.com/voice/embed/webButtonConnect"
+    form_fields = {
+      'buttonId': self.request.get("button_id"),
+      'callerNumber': self.request.get("cid_number"),
+      'name': self.request.get("cid_name"),
+      'showCallerNumber': "1",
+    }
+    form_data = urllib.urlencode(form_fields)
+    result = urlfetch.fetch(
+      url=url,
+      payload=form_data,
+      method=urlfetch.POST,
+      headers={'Content-Type': 'application/x-www-form-urlencoded'})
+    self.response.out.write(result)
 
 class SongList(BaseHandler):
   def get(self):
@@ -604,4 +623,5 @@ app = webapp2.WSGIApplication([
     ('/searchnames/?', ConvertArtistNames),
     ('/convertplays/?', ConvertPlays),
     ('/albums/([^/]*)/?', ViewCoverHandler),
+    ('/callvoice/?', CallVoice),
     ], debug=True, config=webapp2conf)

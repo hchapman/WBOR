@@ -2,24 +2,13 @@
 
 {% block left_column %}
 <div>
-  <h4>{{ program.title }}</h4>
+  <h1>{{ program.title }}</h1>
   {{ program.page_html|safe }}
 </div>
-
-<div id='show-djs'>
-  <h4>DJs</h4>
-  <ul>
-	{% for dj in djs %}
-	<li>{{ dj.fullname }}
-	{% endfor %}
-  </ul>
-</div>
-
+<hr>
 <div id='charts'>
-  <h4>Show Stats</h4>
-  <div class='chart-toggler chart-selected'>
-    Top Artists
-  </div>
+  <h2>Show Stats</h2>
+  <h3>Top artists</h3>
   <ol class='charttable' id='songtable'>
     {% for a in program.top_artists|slice:":5" %}
       <li>{{ a }}
@@ -29,9 +18,16 @@
 {% endblock %}
 
 {% block right_column %}
+<div id='show-djs' class="well">
+  <h2>With...</h2>
+  <ul>
+	{% for dj in djs %}
+	<li>{{ dj.fullname }}
+	{% endfor %}
+  </ul>
+</div>
 <div>
-  <h4>Brief</h4>
+  <h2>Brief</h2>
   {{ program.desc }}
 </div>
-{% include "last_n_posts.html" %}
 {% endblock %}

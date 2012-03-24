@@ -35,39 +35,6 @@ acronym {
     border-bottom: 1px dotted white;
 }
 
-#nowplaying {
-    margin: 0 auto;
-    background-color: #66F;
-    display: block;
-    text-align: center;
-    border-bottom: 2px solid black;
-    border-left: 2px solid black;
-    border-right: 2px solid black;
-    color: white;
-    padding-left: 10px;
-    padding-right: 10px;
-    -moz-border-radius-bottomleft: 20px;
-    -moz-border-radius-bottomright: 20px;
-    -webkit-border-bottom-left-radius: 20px;
-    -webkit-border-bottom-right-radius: 20px;
-}
-
-#nowplaying hr {
-    width: 80%;
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    border-bottom: 0px solid black;
-}
-
-#nowplaying a {
-    color: white;
-}
-
-#nowplaying a:visited {
-    color: white;
-}
 
 #header {
     background-color: #66F;
@@ -79,6 +46,11 @@ acronym {
 
 .header {
     height: 100%;
+}
+
+.navbar-nowplaying {
+  margin-left: -10px;
+  margin-right: -10px;
 }
 
 #download-m3u {
@@ -203,7 +175,7 @@ label { display: block; }
 } 
 
 footer{
-  margin: 0px -10px -10px -10px;
+  margin: 10px -10px -10px -10px;
     text-align: center;
     background-color: #131218;
     color: #DDD;
