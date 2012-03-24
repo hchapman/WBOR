@@ -64,81 +64,102 @@ $(function() {
 </script>
 {% endblock %}
 
-{% block left_column %}
+{% block main_content %}
+<div class="row">
+<div class="span12">
+  <h1>Chart a Song</h1>
+  <p>Hello, <strong>{{ session.dj.fullname }}</strong>. You are presently charting for
+    the show, <em>{{ session.program.title }}</em>.</p>
+</div>
+</div>
+<div class="row">
+  <div class="span6">
+
     <div>
-        <b>If you are unable to chart, please <a href='mailto:cmsmith@bowdoin.edu'>email me</a> ASAP with your full name, the name of your program, and the names of your co-DJs, if any.</b>
-    </div>
-    <div>
-        <h2>Chart Song</h2>
-        <form action='/dj/chartsong/' method='post'>
-          <label>My song is...
+      <h2>Chart Song</h2>
+      <form action='/dj/chartsong/' method='post'>
+        <label>My song is...
+        </label>
+        <div class="btn-group" data-toggle-name="isNew" data-toggle="buttons-radio">
+          <button type="button" class="btn" value="no">An older song</button>
+          <button type="button" class="btn" value="yes">Off the new shelf</button>
+        </div>
+        <br>
+        <input id="is-new" type="hidden" name='isNew' value="no">
+        <div id='old-song-div'><label>Track Name:
+            <input type='text' name='trackname' id='trackname'
+                   tabindex='1'>
           </label>
-            <div class="btn-group" data-toggle-name="isNew" data-toggle="buttons-radio">
-              <button type="button" class="btn" value="no">An older song</button>
-              <button type="button" class="btn" value="yes">Off the new shelf</button>
-            </div>
-              <input id="is-new" type="hidden" name='isNew' value="no">
-            <div id='old-song-div'><label>Track Name:
-                <input type='text' name='trackname' id='trackname'
-                       tabindex='1'>
-              </label>
-            <label>Artist
-              <input type='text' class='artist-autocomplete'
-                     name='artist' tabindex='2' id='artist'>
-            </label>
-            </div>
-            <div id='new-song-div'>
-              {% if new_song_div_html %}
-              {{ new_song_div_html|safe }}
-              {% else %}
-                <label>Album</label>
-                <br>
-                <select name='album_key' id='album_key'>
-                    {% for album in new_albums %}
-                    <option value='{{ album.key }}'>{{ album.artist }} - {{ album.title }}</option>
-                    {% endfor %}
-                </select>
-                <label>Song</label>
-                <select name='song_key' id='song_key_list'>
-                    {% for song in album_songs %}
-                    <option value='{{ song.key }}'>{{ song.title }}</option>
-                    {% endfor %}
-                </select>
-              {% endif %}
-            </div>
-            <input type='submit' name='submit' value='Chart Song'
-                   class="btn btn-primary">
-        </form>
+          <label>Artist
+            <input type='text' class='artist-autocomplete'
+                   name='artist' tabindex='2' id='artist'>
+          </label>
+        </div>
+        <div id='new-song-div'>
+          {% if new_song_div_html %}
+          {{ new_song_div_html|safe }}
+          {% else %}
+          <label>Album</label>
+          <br>
+          <select name='album_key' id='album_key'>
+            {% for album in new_albums %}
+            <option value='{{ album.key }}'>{{ album.artist }} - {{ album.title }}</option>
+            {% endfor %}
+          </select>
+          <label>Song</label>
+          <select name='song_key' id='song_key_list'>
+            {% for song in album_songs %}
+            <option value='{{ song.key }}'>{{ song.title }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
+        </div>
+        <button name='submit' class="btn btn-primary" 
+                value="Chart Song">
+          <i class="icon-ok icon-white"></i> Chart!
+        </button>
+      </form>
     </div>
-    <div id='current-playlist'>
-        <h2>Last Played</h2>
-        <ul id='played_list'>
-            {{ playlist_html|safe }}
-        </ul>
-    </div>
-{% endblock %}
-
-{% block right_column %}
-
-    <div>
-        <a href='/dj/'>Return to main index</a>
-    </div>
-    <div id='psa-status'>
-        {% if last_psa %} The last PSA (<i>{{ last_psa.desc }}</i>) was played at {{ last_psa.play_date|date:"h:i" }}, or {{ last_psa.play_date|timesince }} ago.
-        {% else %} There have been no PSAs played. {% endif %}
-        <br>
-        <form action='/dj/chartsong/' method='post'>
-            <input type='submit' name='submit' value='Station ID'>
-        </form>
-        {% if station_id %}
-        <p>Station ID recorded.</p>
-        {% endif %}
-        <br>
-
-        <form action='/dj/chartsong/' method='post'>
-            <label>PSA Description: <input type='text' name='psa_desc' /></label> <input type='submit' name='submit' value='PSA'>
-        </form>
+    <div class="alert">
+      If you are unable to chart, please <a href='mailto:cmsmith@bowdoin.edu'>email me</a> ASAP with your full name, the name of your program, and the names of your co-DJs, if any.
     </div>
 
+  </div>
+  <div id='psa-status' class="span3">
+    <h2>Log a PSA</h2>
+    <form action='/dj/chartsong/' method='post'>
+      <label>PSA Description: 
+        <input type='text' name='psa_desc' /></label> 
+      <button class="btn btn-primary" name='submit' value="PSA">
+        Log PSA
+      </button>
+    </form>
+    <p>{% if last_psa %} The last PSA (<i>{{ last_psa.desc }}</i>)
+      was played at {{ last_psa.play_date|date:"h:i" }}, or 
+      {{ last_psa.play_date|timesince }} ago.
+      {% else %} There have been no PSAs played. {% endif %}</p>
+  </div>
+  <div id='station-id' class="span3">
+    <h2>Log a Station ID</h2>
+    <form action='/dj/chartsong/' method='post'>
+      <button class="btn btn-primary" name='submit'
+              value="Station ID">
+        Log Station ID
+      </button>
+    </form>
+  </div>
+</div>
+<div class="row">
+  <div id='current-playlist' class="span6">
+    <div class="well">
+    <h2>Last Played</h2>
+    <ul id='played_list'>
+      {{ playlist_html|safe }}
+    </ul>
+    </div>
+  </div>
+  <div id='blog-posts' class="span6">
     {% include "last_n_posts.html" %}
-{% endblock %}
+  </div>
+</div>
+  {% endblock %}

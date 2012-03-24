@@ -99,7 +99,7 @@
         <a class="thumbnail" 
            href="/albums/{{ album.cover_large_key|urlencode }}"
            title="{{ album.title|escape }} - {{ album.artist|escape }}">
-          <img src="/albums/{{ album.cover_large_key|urlencode }}">
+          <img src="/albums/{{ album.cover_small_key|urlencode }}">
       </a>
       </li>{% endfor %}
     </ul>

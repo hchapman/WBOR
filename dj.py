@@ -301,12 +301,6 @@ class ChartSong(UserHandler):
       self.session.add_flash("You can't chart songs until you have an associated program in the system.  Please contact a member of management immediately.")
       self.redirect("/dj/")
       return
-    station_id = False
-    try:
-      if self.flash.msg == "Station ID recorded.":
-        station_id = True
-    except AttributeError:
-      pass
     posts = models.getLastPosts(2)
     memcache_key = "playlist_html_%s"%self.session.get('program').get('key')
     playlist_html = memcache.get(memcache_key)
@@ -347,7 +341,6 @@ class ChartSong(UserHandler):
       'album_songs': album_songs,
       'new_song_div_html': new_song_div_html,
       'posts': posts,
-      'station_id': station_id,
     }
     self.response.out.write(template.render(getPath("dj_chartsong.html"), template_values))
 

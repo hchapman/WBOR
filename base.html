@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="/static/images/favicon.png">
 
 <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+<link rel="stylesheet" href="/static/css/bootstrap-responsive.min.css" />
 
 <link rel="stylesheet" href="/static/css/page.css" />
 <link rel="stylesheet" href="/static/css/jquery-ui.css" />
@@ -22,7 +23,7 @@
     background = function() {
         document.body.style.background = 'url(/static/images/bg/' + (Math.round(Math.random() * 21) + 1) + '.gif)';
     }
-        
+
     $(document).ready(function() {
         if ($('textarea.tinymce').length > 0) {
           $('textarea.tinymce').tinymce({
@@ -31,15 +32,17 @@
           });
         }
 
+        $("#djpanel-dropdown").attr("href", "#djpanel");
+
         $("#nowplaying").mouseenter(function() {
             $("#showdeschidden").slideDown("medium");
         });
         $("#nowplaying").mouseleave(function() {
             $("#showdeschidden").slideUp("medium");
         });
-        
+
         $(".datepicker").datepicker();
-        
+
         nowPlaying();
         if ($("#delete-button")) {
             $("#delete-button").click(function() {
@@ -53,7 +56,7 @@
                 width: $(".artist-autocomplete").width(),
                 maxHeight: 400,
                 onSelect: function(value, data) {
-                    
+
                 },
             });
         }
@@ -89,14 +92,15 @@
         if ($("#albumlist li a").length > 0) {
             $("#albumlist li a").lightBox({
                 imageLoading: '/static/images/lightbox-ico-loading.gif',
-            	imageBtnClose: '/static/images/lightbox-btn-close.gif',
-            	imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
-            	imageBtnNext: '/static/images/lightbox-btn-next.gif',
-            	imageBlank: '/static/images/lightbox-blank.gif',
+                imageBtnClose: '/static/images/lightbox-btn-close.gif',
+                imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
+                imageBtnNext: '/static/images/lightbox-btn-next.gif',
+                imageBlank: '/static/images/lightbox-blank.gif',
             });
         }
     });
-    
+
+
     function nowPlaying() {
         // request currently-playing information; update page accordingly.
         // requests both now-playing box and recently-played box, if you're on the main page.
@@ -121,12 +125,12 @@
         <div class='span6' id='logo'><!-- Start header -->
             <a title='May 9, 7:00 pm' href='/'><img src='/static/images/transparentlogo.png'></a>
         </div>
-    
+
         <div class='span3' id='voicewidget'>
           <object type="application/x-shockwave-flash" data="https://clients4.google.com/voice/embed/webCallButton" width="230" height="85"><param name="movie" value="https://clients4.google.com/voice/embed/webCallButton" /><param name="wmode" value="transparent" /><param name="FlashVars" value="id=149751eac6a0d999583c849fb23a20e411e05cf7&style=0" /></object>
         </div>
-    
-        <div class='span3'>
+
+        <div class='span3' style="">
                 <a href='/static/wbor.m3u' class="btn btn-warning">
                 <strong>Listen now</strong>
                 <br>
@@ -135,41 +139,78 @@
         </div><!-- End header -->
     </div></div>
 
-    <!-- This is for the "floating" navbar -->
+  <!-- This is for the "floating" navbar -->
 
-    <div class='navbar' style="margin-left:-20px; margin-right:-20px;
-         margin-bottom:0px;">
-	 <div class='navbar-inner'><div class='container'><div class='row'><div class="span12">
+  <div class='navbar' style="margin-left:-20px; margin-right:-20px;
+                             margin-bottom:0px;">
+    <div class='navbar-inner'>
+      <div class='container'>
+
+        <a class="btn btn-navbar" 
+           data-toggle="collapse" 
+           data-target=".nav-collapse#whole-nav">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </a>
+        <a class="btn btn-navbar" 
+           data-toggle="collapse" 
+           data-target=".nav-collapse#dj-panel"
+           style="height:12px; overflow:hidden;">
+          <span class="icon-cog icon-white" style="height:12px;margin-top:-1px;">
+        </a>
+        <div class="nav-collapse" id="whole-nav">
           <ul class="nav pull-left">
-            <li {% if news_selected %}class='active'{% endif %}><a href='/'>News</a></li>
-            <li {% if events_selected %}class='active'{% endif %}><a href='/events'>Events</a></li>
-            <li {% if schedule_selected %}class='active'{% endif %}><a href='/schedule'>Schedule</a></li>
-            <li {% if playlists_selected %}class='active'{% endif %}><a href='/playlists'>Playlists</a></li>
-            <li {% if charts_selected %}class='active'{% endif %}><a href='/charts'>Charts</a></li>
-	    <li {% if fun_selected %}class='active'{% endif %}><a href='/fun'>Fun</a></li>
-            <li {% if history_selected %}class='active'{% endif %}><a href='/history'>History</a></li>
-            <li {% if contact_selected %}class='active'{% endif %}><a href='/contact'>Contact</a></li>
-	</ul><ul class="nav pull-right">
+            <li {% if news_selected %}class='active'{% endif %}>
+              <a href='/'>News</a>
+            </li>
+            <li {% if events_selected %}class='active'{% endif %}>
+              <a href='/events'>Events</a>
+            </li>
+            <li {% if schedule_selected %}class='active'{% endif %}>
+              <a href='/schedule'>Schedule</a>
+            </li>
+            <li {% if playlists_selected %}class='active'{% endif %}>
+              <a href='/playlists'>Playlists</a>
+            </li>
+            <li {% if charts_selected %}class='active'{% endif %}>
+              <a href='/charts'>Charts</a>
+            </li>
+            <li {% if fun_selected %}class='active'{% endif %}>
+              <a href='/fun'>Fun</a>
+            </li>
+            <li {% if history_selected %}class='active'{% endif %}>
+              <a href='/history'>History</a>
+            </li>
+            <li {% if contact_selected %}class='active'{% endif %}>
+              <a href='/contact'>Contact</a>
+            </li>
+          </ul>
+        </div>
+        <div class="nav-collapse" id="dj-panel">
+          <ul class="nav pull-right">
             {% if "dj" in session %}
+            
             <form class="navbar-form pull-left">
               <a class="btn btn-primary" href="/dj/chartsong">Chart Song</a>
-            </form> 
+            </form>
             <li class="divider"></li>
             <li class="dropdown" id="djpanel">
-              <a href="#djpanel" class="dropdown-toggle"
+              <a href="/dj/" id="djpanel-dropdown" class="dropdown-toggle"
                  data-toggle="dropdown">
-                DJ Panel ({{ session.dj.fullname }})
+                <strong>DJ Panel</strong>
                 <b class="caret"></b>
               </a>
               <ul class="dropdown-menu">
-                <li><p>
-                  <strong>{{ session.dj.fullname }}</strong>
-                  <br>{{ session.program.title }}
-                </p></li>
-                <li><a href='/dj/logout'>Log out</a></li>
+                <li class="dropdown-header"><a href="/dj/">
+                    <strong>{{ session.dj.fullname }}</strong>
+                    <br>{{ session.program.title }}
+                </a></li>
+                <li><a href='/dj/selectprogram'>Switch Show</a></li>
+                <li><a href='/dj/logout'>Log Out</a></li>
                 <li class="divider">
-                {% if session.dj.permissions %}
-                {% if session.dj.permissions.manage_djs %}<li>
+                  {% if session.dj.permissions %}
+                  {% if session.dj.permissions.manage_djs %}<li>
                   <a href='/dj/djs'>Manage DJs</a>
                 </li>{% endif %}
                 {% if session.dj.permissions.manage_programs %}<li>
@@ -181,7 +222,8 @@
                 {% if session.dj.permissions.manage_events %}<li>
                   <a href='/dj/event'>New Event</a>
                 </li>{% endif %}
-                {% if session.dj.permissions.manage_genres %}<!-- <li>
+                {% if session.dj.permissions.manage_genres %}
+                <!-- <li>
                   <a href='/dj/genres'>Session.Dj.Manage Genres</a>
                 </li> -->{% endif %}
                 {% if session.dj.permissions.manage_permissions %}<li>
@@ -201,49 +243,60 @@
             </li>
             {% else %}
             <li><a href='/dj/login'>DJ Login</a>{% endif %}</li>
-        </ul>
-      </div></div></div></div></div><div class="row"><div class="span8 offset2">
-        <div id='nowplaying'>
-            <strong>&#9835; NOW PLAYING &#9835;</strong>
-            <br>
-            <span id='currentsong'>gathering info...</span>
-            <br>
-            on <a href='show/hitgitsplit' id='currentshow'>wait for it...</a>
-            <div id='showdeschidden'  style="position:absolute; z-index:10">
-                <hr>
-                <p id='currentshowdesc'>
-                 Loading show description
-                </p>
+            </ul>
             </div>
-    </div></div></div>
+          </div>
+        </div>
+      </div>
+   
+  
+
+  <div class="row" style="margin-bottom:18px"><div class="span8 offset2">
+      <div id='nowplaying'>
+        <strong>&#9835; NOW PLAYING &#9835;</strong>
+        <br>
+        <span id='currentsong'>gathering info...</span>
+        <br>
+          on <a href='show/hitgitsplit' id='currentshow'>wait for it...</a>
+          <div id='showdeschidden'  style="position:absolute; z-index:10">
+            <hr>
+            <p id='currentshowdesc'>
+              Loading show description
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="row">
-    {% block main_content %}
       {% for msg in flash %}
-    <div class='span12' id='msgbox'><div class='alert fade in'>
-      <a class="close" data-dismiss="alert" href="#">×</a>
-        {{ msg.0|safe }}
-    </div></div>
+      <div class='span12' id='msgbox'>
+        <div class='alert fade in'>
+          <a class="close" data-dismiss="alert" href="#">&times;</a>
+          {{ msg.0|safe }}
+        </div>
+      </div>
       {% endfor %}
     </div>
+    {% block main_content %}
     <div class="row">
-    {% block top_row %}{% endblock %}
+      {% block top_row %}{% endblock %}
     </div>
     <div class="row">
-    <div class='span8 left'><!-- Left-hand column on front page -->
+      <div class='span8'><!-- Left-hand column on front page -->
         {% block left_column %}
 
         {% endblock %}
-    </div><!-- End left-hand column -->
-    
-    <!-- Right-hand column on front page -->
-    <div class='span4 right'>
+      </div><!-- End left-hand column -->
+
+      <!-- Right-hand column on front page -->
+      <div class='span4'>
         {% block right_column %}
 
         {% endblock %}
-    </div><!-- End right-hand column -->
-    {% endblock %}
+      </div><!-- End right-hand column -->
     </div>
+    {% endblock %}
     <footer>
         {% block footer %}<!-- footer, obviously -->
         &copy; 2010-2011, WBOR Brunswick, 91.1 FM
@@ -252,12 +305,6 @@
 </div><!-- End wrap -->
 </div><!-- End outer wrap -->
 <script type="text/javascript"
-        src="/static/js/bootstrap-alert.js"></script>
-<script type="text/javascript"
-        src="/static/js/bootstrap-tab.js"></script>
-<script type="text/javascript"
-        src="/static/js/bootstrap-button.js"></script>
-<script type="text/javascript"
-        src="/static/js/bootstrap-dropdown.js"></script>
+        src="/static/js/bootstrap.js"></script>
 </body>
 </html>
