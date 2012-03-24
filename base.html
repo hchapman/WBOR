@@ -36,10 +36,10 @@
         $(".datepicker").datepicker();
 
         $("#call-me-button").click(function() {
-            var button_id  = "70e3620d182effab182eb21d91808249cfff9658";
-            // My GVId for now 70e3620d182effab182eb21d91808249cfff9658
+            //var button_id  = "70e3620d182effab182eb21d91808249cfff9658";
+            //// My GVId for now 70e3620d182effab182eb21d91808249cfff9658
             // WBOR GVID:
-            // var button_id = "149751eac6a0d999583c849fb23a20e411e05cf7";
+            var button_id = "149751eac6a0d999583c849fb23a20e411e05cf7";
             var cid_number = $('#cid_number').val();
             var cid_name   = $('#cid_name').val();
             $.get("/callvoice", {
@@ -157,9 +157,7 @@
               </a>
             </div>
           </div>
-          <a class="btn btn-primary btn-large"
-             data-toggle="modal"
-             href="#call-me-modal">Call us!</a>
+
           <!--<object type="application/x-shockwave-flash"
           data="https://clients4.google.com/voice/embed/webCallButton"
           width="230" height="85"><param name="movie"
@@ -168,14 +166,7 @@
           /><param name="FlashVars"
           value="id=149751eac6a0d999583c849fb23a20e411e05cf7&style=0"
           /></object>-->
-        </div>
 
-        <div class='span3' style="">
-                <a href='/static/wbor.m3u' class="btn btn-large btn-warning">
-                <strong>Listen now</strong>
-                <br>
-                Live internet stream
-                </a>
         </div><!-- End header -->
     </div></div>
 
@@ -225,6 +216,16 @@
             <li {% if contact_selected %}class='active'{% endif %}>
               <a href='/contact'>Contact</a>
             </li>
+            <form class="navbar-form pull-left">
+              <a class="btn btn-inverse"
+                 data-toggle="modal"
+                 href="#call-me-modal">
+                Call us!
+              </a>
+              <a href='/static/wbor.m3u' class="btn btn-inverse">
+                <strong>Listen now!</strong>
+                </a>
+            </form>
           </ul>
         </div>
         <div class="nav-collapse" id="dj-panel">
