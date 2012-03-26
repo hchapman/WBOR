@@ -351,7 +351,7 @@ class ChartSong(UserHandler):
       track_artist = self.request.get("artist").encode("latin1", 'replace')
       trackname = self.request.get("trackname").encode("latin1", 'replace')
       isNew = self.request.get("isNew")
-      if isNew:
+      if isNew == "1":
         # if it's "new", the album should be in the datastore already with
         # a valid key.
         album = models.Album.get(self.request.get("album_key"))

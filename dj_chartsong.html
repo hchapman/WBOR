@@ -12,11 +12,11 @@ $(function() {
             var button = $(this);
             button.live("click", function() {
                 hidden.val($(this).val());
-                if(button.val() == "no") {
+                if(button.val() == "0") {
                     $("#new-song-div").slideUp("fast");
                     $("#old-song-div").slideDown("fast");
                 }
-                if(button.val() == "yes") {
+                if(button.val() == "1") {
                     $("#new-song-div").slideDown("fast");
                     $("#old-song-div").slideUp("fast");
                 }
@@ -81,12 +81,12 @@ $(function() {
         <label>My song is...
         </label>
         <div class="btn-group" data-toggle-name="isNew" data-toggle="buttons-radio">
-          <button type="button" class="btn" value="no">An older song</button>
-          <button type="button" class="btn" value="yes">Off the new shelf</button>
+          <button type="button" class="btn" value="0">An older song</button>
+          <button type="button" class="btn" value="1">Off the new shelf</button>
         </div>
         <br>
-        <input id="is-new" type="hidden" name='isNew' value="no">
-        <div id='old-song-div'><label>Track Name:
+        <input id="is-new" type="hidden" name='isNew' value="0">
+        <div id='old-song-div'><label>Track Name
             <input type='text' name='trackname' id='trackname'
                    tabindex='1'>
           </label>
@@ -128,7 +128,7 @@ $(function() {
   <div id='psa-status' class="span3">
     <h2>Log a PSA</h2>
     <form action='/dj/chartsong/' method='post'>
-      <label>PSA Description: 
+      <label>PSA Description
         <input type='text' name='psa_desc' /></label> 
       <button class="btn btn-primary" name='submit' value="PSA">
         Log PSA

@@ -108,6 +108,9 @@
         }
     });
 
+    function popupAlert(message, title, type) {
+
+    }
 
     function nowPlaying() {
         // request currently-playing information; update page accordingly.
@@ -291,7 +294,14 @@
     <div class="navbar-inner">
       <div class="container" id='nowplaying'>
         <ul class="nav pull-left">
-          <li><a style="font-size:150%;">&#9835;</a></li>
+          <form class="navbar-form
+          pull-left">
+            <a class="btn btn-wbor"
+               style="font-size:150%;"
+               rel="tooltip"
+               data-placement="bottom"
+               title="Recently played tracks">&#9835;</a>
+          </form>
           <li><a id='currentsong'>gathering info...</a></li>
           <li><a id='currentartist' style="font-weight:strong;">gathering info...</a></li>
           <li><a href='show/hitgitsplit' id='currentshow'
@@ -312,15 +322,15 @@
   </div>
 
 
-  <div class="row">
-    {% for msg in flash %}
+  <div class="row" id="flash_row">
     <div class='span12' id='msgbox'>
+    {% for msg in flash %}
       <div class='alert fade in'>
         <a class="close" data-dismiss="alert" href="#">&times;</a>
         {{ msg.0|safe }}
       </div>
-      </div>
       {% endfor %}
+      </div>
     </div>
     {% block main_content %}
     <div class="row">
@@ -353,6 +363,7 @@
 <script type="text/javascript">
 $(function() {
     $('a[rel="popover"]').popover();
+    $('a[rel="tooltip"]').tooltip();
 });
 </script>
 <script type="text/javascript" src="/static/js/click2call.js"></script>
