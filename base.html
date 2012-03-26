@@ -129,14 +129,6 @@
 {% block extra_scripts %}{% endblock %}
 </head>
 <body onLoad="background();">
-<div id='outer-wrap' class='container' style='padding:18px;'>
-<div id='wrap' style="margin:-10px; padding:10px;"><div id='header' style="margin:-10px; padding:10px;">
-    <div class="row">
-        <div class='span6' id='logo'><!-- Start header -->
-            <a title='May 9, 7:00 pm' href='/'><img src='/static/images/transparentlogo.png'></a>
-        </div>
-
-        <div class='span3 pull-right' id='voicewidget'>
           <div class="modal fade" id="call-me-modal">
             <div class="modal-header">
               <a class="close" data-dismiss="modal">&times;</a>
@@ -157,16 +149,29 @@
               </a>
             </div>
           </div>
+     
+<div id='outer-wrap' class='container' style='padding:18px;'>
+<div id='wrap' style="margin:-10px; padding:10px;"><div id='header' style="margin:-10px; padding:10px;">
+    <div class="row" style="position:relative">
+        <div class='span6' id='logo'><!-- Start header -->
+            <a title='May 9, 7:00 pm' href='/'><img src='/static/images/transparentlogo.png'></a>
+        </div>
 
-          <!--<object type="application/x-shockwave-flash"
-          data="https://clients4.google.com/voice/embed/webCallButton"
-          width="230" height="85"><param name="movie"
-          value="https://clients4.google.com/voice/embed/webCallButton"
-          /><param name="wmode" value="transparent"
-          /><param name="FlashVars"
-          value="id=149751eac6a0d999583c849fb23a20e411e05cf7&style=0"
-          /></object>-->
-
+        <div class='span5 pull-right' 
+             style="position:absolute; bottom:5px; right:-5px;">
+            <div class="pull-right">
+              <a class="btn btn-primary btn-large"
+                 data-toggle="modal"
+                 href="#call-me-modal">
+                <strong>Call us!</strong>
+                <br>We'll connect you
+              </a>
+              <a href='/static/wbor.m3u' class="btn btn-warning
+                                                btn-large">
+                <strong>Listen now!</strong>
+                <br>Live Internet stream
+                </a>
+            </div>
         </div><!-- End header -->
     </div></div>
 
@@ -216,16 +221,7 @@
             <li {% if contact_selected %}class='active'{% endif %}>
               <a href='/contact'>Contact</a>
             </li>
-            <form class="navbar-form pull-left">
-              <a class="btn btn-inverse"
-                 data-toggle="modal"
-                 href="#call-me-modal">
-                Call us!
-              </a>
-              <a href='/static/wbor.m3u' class="btn btn-inverse">
-                <strong>Listen now!</strong>
-                </a>
-            </form>
+
           </ul>
         </div>
         <div class="nav-collapse" id="dj-panel">
@@ -302,8 +298,9 @@
         </ul>
         <ul class="nav pull-right">
           {% if "dj" in session %}
-            <form class="navbar-form pull-right">
-              <a class="btn btn-wbor" href="/dj/chartsong">Chart Song</a>
+          <form class="navbar-form pull-right">
+              <a class="btn btn-wbor" href="/dj/chartsong">Chart
+              Song</a>
             </form>
           {% endif %}
         </ul>

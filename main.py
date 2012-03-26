@@ -63,6 +63,7 @@ class MainPage(BaseHandler):
     events = models.getEventsAfter(datetime.datetime.now() -
                                    datetime.timedelta(days=1), 3)
     template_values = {
+      'news_selected': True,
       'flash': self.flash,
       'session': self.session,
       'album_list': album_list,
