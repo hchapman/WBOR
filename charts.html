@@ -15,7 +15,7 @@
 <div id='topsongs'>
     <h2>Top {{ songs|length }} Songs</h2>
     {% if songs %}
-    <table class='big-chart-songs'>
+    <table class='big-chart-songs table'>
       <thead>
         <tr>
 	  <th scope='col'>#</th>
@@ -43,7 +43,7 @@
 <div id='topalbums'>
   <h2>Top {{ albums|length }} Albums</h2>
   {% if albums %}
-  <table class='big-chart-albums'>
+  <table class='big-chart-albums table'>
     <thead>
       <tr>
 	<th scope='col'>#</th>
