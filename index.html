@@ -99,9 +99,7 @@
   <div id='newalbums-poop'>
     <h2>On The New Shelf</h2>
     <ul id='albumlist'>{% for album in album_list %}
-      <li {% if forloop.counter0|divisibleby:4 == 0 %}
-                                       class="span2"{% else %}
-                                       class="span2"{% endif %}>
+      <li>
         <a class="thumbnail" 
            href="/albums/{{ album.cover_large_key|urlencode }}"
            title="{{ album.title|escape }} - {{ album.artist|escape }}">
