@@ -36,3 +36,20 @@ handlers:
 libraries:
 - name: django
   version: latest
+
+skip_files:
+- ^(.*/)?app\.yaml
+- ^(.*/)?app\.yml
+- ^(.*/)?index\.yaml
+- ^(.*/)?index\.yml
+- ^(.*/)?#.*#
+- ^(.*/)?.*~
+- ^(.*/)?.*\.py[co]
+- ^(.*/)?.*/RCS/.*
+- ^(.*/)?\..*
+- ^(.*/)?.*\.bak$
+- ^(.*/)?static/less/.*
+- ^(.*/)?static/docs/.*
+- ^(.*/)?README\.md
+- ^(.*/)?Makefile
+- ^(.*/)?LICENSE

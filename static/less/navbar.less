@@ -98,7 +98,7 @@
 }
 
 .navbar-nowplaying {
-  color: @white;
+  color: @nowplayingText;
 }
 
 // Navbar forms
@@ -244,6 +244,18 @@
   background-color: @navbarLinkBackgroundHover; // "transparent" is default to differentiate :hover from .active
   color: @navbarLinkColorHover;
   text-decoration: none;
+}
+
+.navbar-nowplaying .nav > li > a:hover {
+  background-color: @navbarLinkBackgroundHover;
+  color: @nowplayingLinkColorHover;
+  text-devoration: none;
+}
+
+.navbar-nowplaying .nav > li > a.nohref:hover {
+  background-color: @navbarLinkBackgroundHover;
+  color: @nowplayingLinkColor;
+  text-devoration: none;
 }
 
 // Active nav items

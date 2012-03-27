@@ -32,6 +32,7 @@
         }
 
         $("#djpanel-dropdown").attr("href", "#djpanel");
+        $("a#dj-login").attr("href", "#log-in-modal");
 
         $(".datepicker").datepicker();
 
@@ -132,27 +133,48 @@
 {% block extra_scripts %}{% endblock %}
 </head>
 <body onLoad="background();">
-          <div class="modal fade" id="call-me-modal">
-            <div class="modal-header">
-              <a class="close" data-dismiss="modal">&times;</a>
-              <h3>Call us!</h3>
-            </div>
-            <div class="modal-body">
-              <p>Enter in your name and phone number, and Google
-              Voice will connect you automatically!</p>
-              <label>Your name
-                <input type="text" id="cid_name"></label>
-              <label>Your phone number
-                <input type="text" id="cid_number"></label>
-            </div>
-            <div class="modal-footer">
-              <a href="#" class="btn btn-primary" id="call-me-button"
-                 data-dismiss="modal">
-                Dial!
-              </a>
-            </div>
-          </div>
-     
+  <div class="modal fade" id="call-me-modal">
+    <div class="modal-header">
+      <a class="close" data-dismiss="modal">&times;</a>
+      <h3>Call us!</h3>
+    </div>
+    <div class="modal-body">
+      <p>Enter in your name and phone number, and Google
+        Voice will connect you automatically!</p>
+      <label>Your name
+        <input type="text" id="cid_name"></label>
+      <label>Your phone number
+        <input type="text" id="cid_number"></label>
+    </div>
+    <div class="modal-footer">
+      <a href="#" class="btn btn-primary" id="call-me-button"
+         data-dismiss="modal">
+        Dial!
+      </a>
+    </div>
+  </div>
+
+<div class="modal fade" id="log-in-modal">
+  <div class="modal-header">
+    <a class="close" data-dismiss="modal">&times;</a>
+    <h3>Log in</h3>
+  </div>
+  <form method='post' action='/dj/login/' style="margin:0px;">
+    <div class="modal-body">
+      <label for='username'>Username
+        <input type='text' name='username' id='username' />
+      </label>  
+      <label for='password'>Password
+        <input type='password' name='password' id='password' />
+      </label>
+    </div>
+    <div class="modal-footer">
+      <input class="btn btn-primary" 
+             type='submit' name='submit' value="Log in">
+    </div>
+  </form>
+</div>
+
 <div id='outer-wrap' class='container' style='padding:18px;'>
 <div id='wrap' style="margin:-10px; padding:10px;"><div id='header' style="margin:-10px; padding:10px;">
     <div class="row" style="position:relative">
@@ -169,7 +191,7 @@
                 <strong>Call us!</strong>
                 <br>We'll connect you
               </a>
-              <a href='/static/wbor.m3u' class="btn btn-warning
+              <a href='/static/wbor.m3u' class="btn btn-listen
                                                 btn-large">
                 <strong>Listen now!</strong>
                 <br>Live Internet stream
@@ -279,7 +301,9 @@
               </ul>
             </li>
             {% else %}
-            <li><a href='/dj/login'>DJ Login</a>{% endif %}</li>
+            <li><a href='/dj/login' id="dj-login"
+                    data-toggle="modal">
+                DJ Login</a>{% endif %}</li>
           </ul>
         </div>
       </div>
@@ -298,8 +322,10 @@
                data-placement="bottom"
                title="Recently played tracks">&#9835;</a>
           </form>
-          <li><a id='currentsong'>gathering info...</a></li>
-          <li><a id='currentartist' style="font-weight:strong;">gathering info...</a></li>
+          <li><a id='currentsong' class="nohref">gathering info...</a></li>
+          <li><a id='currentartist'
+          style="font-weight:strong;" class="nohref">gathering
+          info...</a></li>
           <li><a href='show/hitgitsplit' id='currentshow'
                  rel="popover" data-placement="bottom"
                  data-original-title="Show Description"

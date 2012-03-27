@@ -253,7 +253,7 @@ class UpdateInfo(webapp2.RequestHandler):
     else:
       song, program = None, None
       song_string = "Nothing is playing"
-      artist_string = ""
+      artist_string = "No body"
       program_title, program_desc, program_slug = ("No show",
                                                    "No description",
                                                    "")
