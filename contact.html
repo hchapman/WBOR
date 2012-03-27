@@ -3,14 +3,19 @@
 {% block title %}Contact WBOR{% endblock %}
 
 {% block main_content %}
-
-<div class='center contact'>
-  <h4>{{ contacts.title }}</h4>
-  
+<div class="row">
+<div class='span12 contact'>
+  <h1>{{ contacts.title }}</h1>
+  <hr>
+</div>
+</div>
+<div class="row">
+<div class="span12 contact">
   {{ contacts.text|safe }}
   
-  <hr />
-  <a href='/blog/{{ contacts.post_date|date:"Y-m-d" }}/{{ contacts.slug }}/edit'>Edit</a>  
+  <hr >
+  <a ref='/blog/{{ contacts.post_date|date:"Y-m-d" }}/{{ contacts.slug }}/edit'>Edit</a>  
+</div>
 </div>
 
 {% endblock %}
