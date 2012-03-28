@@ -1,402 +1,406 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
-<title>{% block title %}WBOR{% endblock %}</title>
+    <title>{% block title %}WBOR{% endblock %}</title>
 
-<link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
 
-<link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
 
-<link rel="stylesheet" href="/static/css/page.css" />
-<link rel="stylesheet" href="/static/css/jquery-ui.css" />
-<link rel="stylesheet" type="text/css" href="/static/css/lightbox.css" media="screen" />
-<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js'></script>
-<script type='text/javascript' src='/static/js/jquery-ui.js'></script>
-<script type='text/javascript' src='/static/js/jquery.autocomplete.js'></script>
-<script type='text/javascript' src='/static/js/jquery.lightbox.js'></script>
-<script type='text/javascript' src='/static/js/jquery.tinymce.js'></script>
-<script type='text/javascript' src='/static/js/jquery.form.js'></script>
-<script type='text/javascript'>
-    background = function() {
-        document.body.style.background = 'url(/static/images/bg/' + (Math.round(Math.random() * 21) + 1) + '.gif)';
-    }
+    <link rel="stylesheet" href="/static/css/page.css" />
+    <link rel="stylesheet" href="/static/css/jquery-ui.css" />
+    <link rel="stylesheet" type="text/css" href="/static/css/lightbox.css" media="screen" />
+    <script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js'></script>
+    <script type='text/javascript' src='/static/js/jquery-ui.js'></script>
+    <script type='text/javascript' src='/static/js/jquery.autocomplete.js'></script>
+    <script type='text/javascript' src='/static/js/jquery.lightbox.js'></script>
+    <script type='text/javascript' src='/static/js/jquery.tinymce.js'></script>
+    <script type='text/javascript' src='/static/js/jquery.form.js'></script>
+    <script type='text/javascript'>
+      background = function() {
+      document.body.style.background = 'url(/static/images/bg/' + (Math.round(Math.random() * 21) + 1) + '.gif)';
+      }
 
-    $(document).ready(function() {
-        if ($('textarea.tinymce').length > 0) {
-          $('textarea.tinymce').tinymce({
-            script_url: '/static/js/tiny_mce.js',
-            theme: "advanced",
-          });
-        }
+      $(document).ready(function() {
+      if ($('textarea.tinymce').length > 0) {
+      $('textarea.tinymce').tinymce({
+      script_url: '/static/js/tiny_mce.js',
+      theme: "advanced",
+      });
+      }
 
-        $("#djpanel-dropdown").attr("href", "#djpanel");
-        $("a#dj-login").attr("href", "#log-in-modal");
+      $("#djpanel-dropdown").attr("href", "#djpanel");
+      $("a#dj-login").attr("href", "#log-in-modal");
 
-        $(".datepicker").datepicker();
+      $(".datepicker").datepicker();
 
-        $("#call-me-button").click(function() {
-            //var button_id  = "70e3620d182effab182eb21d91808249cfff9658";
-            //// My GVId for now 70e3620d182effab182eb21d91808249cfff9658
-            // WBOR GVID:
-            var button_id = "149751eac6a0d999583c849fb23a20e411e05cf7";
-            var cid_number = $('#cid_number').val();
-            var cid_name   = $('#cid_name').val();
-            $.get("/callvoice", {
-                button_id: button_id,
-                cid_number: cid_number,
-                cid_name: cid_name},
-                  function(data) {
-                      alert(data);
-                  });
-        });
+      $("#call-me-button").click(function() {
+      //var button_id  = "70e3620d182effab182eb21d91808249cfff9658";
+      //// My GVId for now 70e3620d182effab182eb21d91808249cfff9658
+      // WBOR GVID:
+      var button_id = "149751eac6a0d999583c849fb23a20e411e05cf7";
+      var cid_number = $('#cid_number').val();
+      var cid_name   = $('#cid_name').val();
+      $.get("/callvoice", {
+      button_id: button_id,
+      cid_number: cid_number,
+      cid_name: cid_name},
+      function(data) {
+      alert(data);
+      });
+      });
 
-        nowPlaying();
-        if ($("#delete-button")) {
-            $("#delete-button").click(function() {
-                return confirm("Are you sure you want to do this?");
-            });
-        }
-        if ($(".artist-autocomplete").length > 0) {
-            $(".artist-autocomplete").autocomplete({
-                serviceUrl: '/ajax/artistcomplete',
-                minChars: 1,
-                width: $(".artist-autocomplete").width(),
-                maxHeight: 400,
-                onSelect: function(value, data) {
+      nowPlaying();
+      if ($("#delete-button")) {
+      $("#delete-button").click(function() {
+      return confirm("Are you sure you want to do this?");
+      });
+      }
+      if ($(".artist-autocomplete").length > 0) {
+      $(".artist-autocomplete").autocomplete({
+      serviceUrl: '/ajax/artistcomplete',
+      minChars: 1,
+      width: $(".artist-autocomplete").width(),
+      maxHeight: 400,
+      onSelect: function(value, data) {
 
-                },
-            });
-        }
-        if ($(".dj-autocomplete").length > 0) {
-          $(".dj-autocomplete").each(function(index) {
-            var p_key = $(this).attr("key");
-            $(this).autocomplete({
-              serviceUrl: '/ajax/djcomplete',
-              minChars: 1,
-              width: $(".dj-autocomplete").width(),
-              maxHeight: 400,
-              onSelect: function(value, data) {
-                $.post("/dj/permissions",
-                {
-                  'dj_key': data,
-                  'permission_key': p_key,
-                  'action': "add",
-                },
-                function(data) {
-                  if (data.err) {
-                    alert(data.err);
-                  } else {
-                    var li = document.createElement("li");
-                    li.innerHTML = value;
-                    $("#" + p_key).append(li);
-                    $("#msgbox").html(data.msg);
-                  }
-                }, "json");
-              },
-            });
-          });
-        }
-        if ($("#albumlist li a").length > 0) {
-            $("#albumlist li a").lightBox({
-                imageLoading: '/static/images/lightbox-ico-loading.gif',
-                imageBtnClose: '/static/images/lightbox-btn-close.gif',
-                imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
-                imageBtnNext: '/static/images/lightbox-btn-next.gif',
-                imageBlank: '/static/images/lightbox-blank.gif',
-            });
-        }
-    });
+      },
+      });
+      }
+      if ($(".dj-autocomplete").length > 0) {
+      $(".dj-autocomplete").each(function(index) {
+      var p_key = $(this).attr("key");
+      $(this).autocomplete({
+      serviceUrl: '/ajax/djcomplete',
+      minChars: 1,
+      width: $(".dj-autocomplete").width(),
+      maxHeight: 400,
+      onSelect: function(value, data) {
+      $.post("/dj/permissions",
+      {
+      'dj_key': data,
+      'permission_key': p_key,
+      'action': "add",
+      },
+      function(data) {
+      if (data.err) {
+      alert(data.err);
+      } else {
+      var li = document.createElement("li");
+      li.innerHTML = value;
+      $("#" + p_key).append(li);
+      $("#msgbox").html(data.msg);
+      }
+      }, "json");
+      },
+      });
+      });
+      }
+      if ($("#albumlist li a").length > 0) {
+      $("#albumlist li a").lightBox({
+      imageLoading: '/static/images/lightbox-ico-loading.gif',
+      imageBtnClose: '/static/images/lightbox-btn-close.gif',
+      imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
+      imageBtnNext: '/static/images/lightbox-btn-next.gif',
+      imageBlank: '/static/images/lightbox-blank.gif',
+      });
+      }
+      });
 
-    function popupAlert(message, title, type) {
+      function popupAlert(message, title, type) {
 
-    }
+      }
 
-    function nowPlaying() {
-        // request currently-playing information; update page accordingly.
-        // requests both now-playing box and recently-played box, if you're on the main page.
-        $.get('/updateinfo', function(data) {
-            $("#currentsong").html(data.song_string);
-            $("#currentartist").html(data.artist_string);
-            $("#currentshow").html(data.program_title);
-            $("#currentshow").attr("data-original-title", data.program_title);
-            $("#currentshow").attr('href', '/programs/' + data.program_slug);
-            $("#currentshow").attr("data-content", data.program_desc + "<hr />" + data.top_played);
-            if ($("#latestplays")) {
-                $("#latestplays").html(data.recent_songs_html);
-            }
-        }, "json");
-        nowPlayingTimer = setTimeout("nowPlaying()", 30000);
-    }
-</script>
-{% block extra_scripts %}{% endblock %}
-</head>
-<body onLoad="background();">
-  <div class="modal fade" id="call-me-modal">
-    <div class="modal-header">
-      <a class="close" data-dismiss="modal">&times;</a>
-      <h3>Call us!</h3>
+      function nowPlaying() {
+      // request currently-playing information; update page accordingly.
+      // requests both now-playing box and recently-played box, if you're on the main page.
+      $.get('/updateinfo', function(data) {
+      $("#currentsong").html(data.song_string);
+      $("#currentartist").html(data.artist_string);
+      $("#currentshow").html(data.program_title);
+      $("#currentshow").attr("data-original-title", data.program_title);
+      $("#currentshow").attr('href', '/programs/' + data.program_slug);
+      $("#currentshow").attr("data-content", data.program_desc + "<hr />" + data.top_played);
+      if ($("#latestplays")) {
+      $("#latestplays").html(data.recent_songs_html);
+      }
+      }, "json");
+      nowPlayingTimer = setTimeout("nowPlaying()", 30000);
+      }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+  </head>
+  <body onLoad="background();">
+    <div class="modal fade" id="call-me-modal">
+      <div class="modal-header">
+        <a class="close" data-dismiss="modal">&times;</a>
+        <h3>Call us!</h3>
+      </div>
+      <div class="modal-body">
+        <p>Enter in your name and phone number, and Google
+          Voice will connect you automatically!</p>
+        <label>Your name
+          <input type="text" id="cid_name"></label>
+        <label>Your phone number
+          <input type="text" id="cid_number"></label>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn btn-primary" id="call-me-button"
+           data-dismiss="modal">
+          Dial!
+        </a>
+      </div>
     </div>
-    <div class="modal-body">
-      <p>Enter in your name and phone number, and Google
-        Voice will connect you automatically!</p>
-      <label>Your name
-        <input type="text" id="cid_name"></label>
-      <label>Your phone number
-        <input type="text" id="cid_number"></label>
-    </div>
-    <div class="modal-footer">
-      <a href="#" class="btn btn-primary" id="call-me-button"
-         data-dismiss="modal">
-        Dial!
-      </a>
-    </div>
-  </div>
 
-<div class="modal fade" id="log-in-modal">
-  <div class="modal-header">
-    <a class="close" data-dismiss="modal">&times;</a>
-    <h3>Log in</h3>
-  </div>
-  <form method='post' action='/dj/login/' style="margin:0px;">
-    <div class="modal-body">
-      <label for='username'>Username
-        <input type='text' name='username' id='username' />
-      </label>  
-      <label for='password'>Password
-        <input type='password' name='password' id='password' />
-      </label>
-    </div>
-    <div class="modal-footer">
-      <input class="btn btn-primary" 
-             type='submit' name='submit' value="Log in">
-    </div>
-  </form>
-</div>
-
-<div id='outer-wrap' class='container' style='padding:18px;'>
-<div id='wrap' style="margin:-10px; padding:10px;"><div id='header' style="margin:-10px; padding:10px;">
-    <div class="row" style="position:relative">
-        <div class='span6' id='logo'><!-- Start header -->
-            <a title='May 9, 7:00 pm' href='/'><img src='/static/images/transparentlogo.png'></a>
+    <div class="modal fade" id="log-in-modal">
+      <div class="modal-header">
+        <a class="close" data-dismiss="modal">&times;</a>
+        <h3>Log in</h3>
+      </div>
+      <form method='post' action='/dj/login/' style="margin:0px;">
+        <div class="modal-body">
+          <label for='username'>Username
+            <input type='text' name='username' id='username' />
+          </label>  
+          <label for='password'>Password
+            <input type='password' name='password' id='password' />
+          </label>
         </div>
+        <div class="modal-footer">
+          <input class="btn btn-primary" 
+                 type='submit' name='submit' value="Log in">
+        </div>
+      </form>
+    </div>
 
-        <div class='span5 pull-right' 
-             style="position:absolute; bottom:5px; right:-5px;">
-            <div class="pull-right">
-              <a class="btn btn-primary btn-large"
-                 data-toggle="modal"
-                 href="#call-me-modal">
-                <strong>Call us!</strong>
-                <br>We'll connect you
-              </a>
-              <a href='/static/wbor.m3u' class="btn btn-listen
-                                                btn-large">
-                <strong>Listen now!</strong>
-                <br>Live Internet stream
-                </a>
+    <div id='outer-wrap' class='container' style='padding:18px;'>
+      <div id='wrap' style="margin:-10px; padding:10px;"><div id='header' style="margin:-10px; padding:10px;">
+          <div class="row" style="position:relative">
+            <div class='span6' id='logo'><!-- Start header -->
+              <a title='May 9, 7:00 pm' href='/'><img src='/static/images/transparentlogo.png'></a>
             </div>
-        </div><!-- End header -->
-    </div></div>
 
-  <!-- This is for the "floating" navbar -->
-
-  <div class='navbar' style="margin-left:-20px; margin-right:-20px;
-                             margin-bottom:0px;">
-    <div class='navbar-inner'>
-      <div class='container'>
-
-        <a class="btn btn-navbar"
-           data-toggle="collapse"
-           data-target=".nav-collapse#whole-nav">
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-        </a>
-        <a class="btn btn-navbar"
-           data-toggle="collapse"
-           data-target=".nav-collapse#dj-panel"
-           style="height:12px; overflow:hidden;">
-          <span class="icon-cog icon-white" style="height:12px;margin-top:-1px;">
-        </a>
-        <div class="nav-collapse" id="whole-nav">
-          <ul class="nav pull-left">
-            <li {% if news_selected %}class='active'{% endif %}>
-              <a href='/'>News</a>
-            </li>
-            <li {% if events_selected %}class='active'{% endif %}>
-              <a href='/events'>Events</a>
-            </li>
-            <li {% if schedule_selected %}class='active'{% endif %}>
-              <a href='/schedule'>Schedule</a>
-            </li>
-            <li {% if playlists_selected %}class='active'{% endif %}>
-              <a href='/playlists'>Playlists</a>
-            </li>
-            <li {% if charts_selected %}class='active'{% endif %}>
-              <a href='/charts'>Charts</a>
-            </li>
-            <li {% if fun_selected %}class='active'{% endif %}>
-              <a href='/fun'>Fun</a>
-            </li>
-            <li {% if history_selected %}class='active'{% endif %}>
-              <a href='/history'>History</a>
-            </li>
-            <li {% if contact_selected %}class='active'{% endif %}>
-              <a href='/contact'>Contact</a>
-            </li>
-
-          </ul>
+            <div class='span5 pull-right' 
+                 style="position:absolute; bottom:5px; right:-5px;">
+              <div class="pull-right">
+                <a class="btn btn-primary btn-large"
+                   data-toggle="modal"
+                   href="#call-me-modal">
+                  <strong>Call us!</strong>
+                  <br>We'll connect you
+                </a>
+                <a href='/static/wbor.m3u' class="btn btn-listen
+                                                  btn-large">
+                  <strong>Listen now!</strong>
+                  <br>Live Internet stream
+                </a>
+              </div>
+            </div><!-- End header -->
+          </div>
         </div>
-        <div class="nav-collapse" id="dj-panel">
-          <ul class="nav pull-right">
-            {% if "dj" in session %}
 
-            <li class="divider"></li>
-            <li class="dropdown" id="djpanel">
-              <a href="/dj/" id="djpanel-dropdown" class="dropdown-toggle"
-                 data-toggle="dropdown">
-                <strong>DJ Panel</strong>
-                <b class="caret"></b>
+        <!-- This is for the "floating" navbar -->
+
+        <div class='navbar' style="margin-left:-20px; margin-right:-20px;
+                                   margin-bottom:0px;">
+          <div class='navbar-inner'>
+            <div class='container'>
+
+              <a class="btn btn-navbar"
+                 data-toggle="collapse"
+                 data-target=".nav-collapse#whole-nav">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
               </a>
-              <ul class="dropdown-menu">
-                <li class="dropdown-header"><a href="/dj/">
-                    <strong>{{ session.dj.fullname }}</strong>
-                    <br>{{ session.program.title }}
-                </a></li>
-                <li><a href='/dj/selectprogram'>Switch Show</a></li>
-                <li><a href='/dj/logout'>Log Out</a></li>
-                <li class="divider">
-                  {% if session.dj.permissions %}
-                  {% if session.dj.permissions.manage_djs %}<li>
-                  <a href='/dj/djs'>Manage DJs</a>
-                </li>{% endif %}
-                {% if session.dj.permissions.manage_programs %}<li>
-                  <a href='/dj/programs'>Manage Programs</a>
-                </li>{% endif %}
-                {% if session.dj.permissions.manage_albums %}<li>
-                  <a href='/dj/albums'>Manage Albums</a>
-                </li>{% endif %}
-                {% if session.dj.permissions.manage_events %}<li>
-                  <a href='/dj/event'>New Event</a>
-                </li>{% endif %}
-                {% if session.dj.permissions.manage_genres %}
-                <!-- <li>
-                  <a href='/dj/genres'>Session.Dj.Manage Genres</a>
-                </li> -->{% endif %}
-                {% if session.dj.permissions.manage_permissions %}<li>
-                  <a href='/dj/permissions'>Manage Permissions</a>
-                </li>{% endif %}
-                {% if session.dj.permissions.manage_blog %}<li>
-                  <a href='/dj/newpost'>New Blog Post</a>
-                </li>{% endif %}
-                <li class="divider"></li>
-                {% endif %}
-                <li><a href='/dj/chartsong'>Chart Song</a></li>
-                <li><a href='/dj/charts'>View Charts</a></li>
-                <li><a href='/dj/logs'>View Logs</a></li>
-                <li><a href='/dj/myshow'>Edit Show Information</a></li>
-                <li><a href='/dj/myself'>Edit DJ Information</a></li>
-              </ul>
-            </li>
-            {% else %}
-            <li><a href='/dj/login' id="dj-login"
-                    data-toggle="modal">
-                DJ Login</a>{% endif %}</li>
-          </ul>
+              <a class="btn btn-navbar"
+                 data-toggle="collapse"
+                 data-target=".nav-collapse#dj-panel"
+                 style="height:12px; overflow:hidden;">
+                <span class="icon-cog icon-white" style="height:12px;margin-top:-1px;">
+              </a>
+              <div class="nav-collapse" id="whole-nav">
+                <ul class="nav pull-left">
+                  <li {% if news_selected %}class='active'{% endif %}>
+                    <a href='/'>News</a>
+                  </li>
+                  <li {% if events_selected %}class='active'{% endif %}>
+                    <a href='/events'>Events</a>
+                  </li>
+                  <li {% if schedule_selected %}class='active'{% endif %}>
+                    <a href='/schedule'>Schedule</a>
+                  </li>
+                  <li {% if playlists_selected %}class='active'{% endif %}>
+                    <a href='/playlists'>Playlists</a>
+                  </li>
+                  <li {% if charts_selected %}class='active'{% endif %}>
+                    <a href='/charts'>Charts</a>
+                  </li>
+                  <li {% if fun_selected %}class='active'{% endif %}>
+                    <a href='/fun'>Fun</a>
+                  </li>
+                  <li {% if history_selected %}class='active'{% endif %}>
+                    <a href='/history'>History</a>
+                  </li>
+                  <li {% if contact_selected %}class='active'{% endif %}>
+                    <a href='/contact'>Contact</a>
+                  </li>
+
+                </ul>
+              </div>
+              <div class="nav-collapse" id="dj-panel">
+                <ul class="nav pull-right">
+                  {% if "dj" in session %}
+
+                  <li class="divider"></li>
+                  <li class="dropdown" id="djpanel">
+                    <a href="/dj/" id="djpanel-dropdown" class="dropdown-toggle"
+                       data-toggle="dropdown">
+                      <strong>DJ Panel</strong>
+                      <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                      <li class="dropdown-header"><a href="/dj/">
+                          <strong>{{ session.dj.fullname }}</strong>
+                          <br>{{ session.program.title }}
+                      </a></li>
+                      <li><a href='/dj/selectprogram'>Switch Show</a></li>
+                      <li><a href='/dj/logout'>Log Out</a></li>
+                      <li class="divider">
+                        {% if session.dj.permissions %}
+                        {% if session.dj.permissions.manage_djs %}<li>
+                        <a href='/dj/djs'>Manage DJs</a>
+                      </li>{% endif %}
+                      {% if session.dj.permissions.manage_programs %}<li>
+                        <a href='/dj/programs'>Manage Programs</a>
+                      </li>{% endif %}
+                      {% if session.dj.permissions.manage_albums %}<li>
+                        <a href='/dj/albums'>Manage Albums</a>
+                      </li>{% endif %}
+                      {% if session.dj.permissions.manage_events %}<li>
+                        <a href='/dj/event'>New Event</a>
+                      </li>{% endif %}
+                      {% if session.dj.permissions.manage_genres %}
+                      <!-- <li>
+                           <a href='/dj/genres'>Session.Dj.Manage Genres</a>
+                      </li> -->{% endif %}
+                      {% if session.dj.permissions.manage_permissions %}<li>
+                        <a href='/dj/permissions'>Manage Permissions</a>
+                      </li>{% endif %}
+                      {% if session.dj.permissions.manage_blog %}<li>
+                        <a href='/dj/newpost'>New Blog Post</a>
+                      </li>{% endif %}
+                      <li class="divider"></li>
+                      {% endif %}
+                      <li><a href='/dj/chartsong'>Chart Song</a></li>
+                      <li><a href='/dj/charts'>View Charts</a></li>
+                      <li><a href='/dj/logs'>View Logs</a></li>
+                      <li><a href='/dj/myshow'>Edit Show Information</a></li>
+                      <li><a href='/dj/myself'>Edit DJ Information</a></li>
+                    </ul>
+                  </li>
+                  {% else %}
+                  <li><a href='/dj/login' id="dj-login"
+                         data-toggle="modal">
+                      DJ Login</a>{% endif %}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <div class="navbar navbar-nowplaying">
-    <div class="navbar-inner">
-      <div class="container" id='nowplaying'>
-        <ul class="nav pull-left">
-          <form class="navbar-form
-          pull-left">
-            <a class="btn btn-wbor"
-               style="font-size:150%;"
-               rel="tooltip"
-               data-placement="bottom"
-               title="Recently played tracks">&#9835;</a>
-          </form>
-          <li><a id='currentsong' class="nohref">gathering info...</a></li>
-          <li><a id='currentartist'
-          style="font-weight:strong;" class="nohref">gathering
-          info...</a></li>
-          <li><a href='show/hitgitsplit' id='currentshow'
-                 rel="popover" data-placement="bottom"
-                 data-original-title="Show Description"
-                 >wait for it...</a></li>
+        <div class="navbar navbar-nowplaying">
+          <div class="navbar-inner">
+            <div class="container" id='nowplaying'>
+              <ul class="nav pull-left">
+                <form class="navbar-form
+                             pull-left">
+                  <a class="btn btn-wbor"
+                     style="font-size:150%;"
+                     rel="tooltip"
+                     data-placement="bottom"
+                     title="Recently played tracks">&#9835;</a>
+                </form>
+                <li><a id='currentsong' class="nohref">gathering info...</a></li>
+                <li><a id='currentartist'
+                       style="font-weight:strong;" class="nohref">gathering
+                    info...</a></li>
+                <li><a href='show/hitgitsplit'>
+                    <span id='currentshow'
+                          rel="popover" data-placement="bottom"
+                          data-original-title="Show Description">
+                      wait for it...</span>
+                  </a>
+                </li>
 
-        </ul>
-        <ul class="nav pull-right">
-          {% if "dj" in session %}
-          <form class="navbar-form pull-right">
-              <a class="btn btn-wbor" href="/dj/chartsong">Chart
-              Song</a>
-            </form>
-          {% endif %}
-        </ul>
-      </div>
-    </div>
-  </div>
+              </ul>
+              <ul class="nav pull-right">
+                {% if "dj" in session %}
+                <form class="navbar-form pull-right">
+                  <a class="btn btn-wbor" href="/dj/chartsong">Chart
+                    Song</a>
+                </form>
+                {% endif %}
+              </ul>
+            </div>
+          </div>
+        </div>
 
 
-  <div class="row" id="flash_row">
-    <div class='span12' id='msgbox'>
-    {% for msg in flash %}
-      <div class='alert fade in'>
-        <a class="close" data-dismiss="alert" href="#">&times;</a>
-        {{ msg.0|safe }}
-      </div>
-      {% endfor %}
-      </div>
-    </div>
-    {% block main_content %}
-    <div class="row">
-      {% block top_row %}{% endblock %}
-    </div>
-    <div class="row">
-      <div class='span8'><!-- Left-hand column on front page -->
-        {% block left_column %}
+        <div class="row" id="flash_row">
+          <div class='span12' id='msgbox'>
+            {% for msg in flash %}
+            <div class='alert fade in'>
+              <a class="close" data-dismiss="alert" href="#">&times;</a>
+              {{ msg.0|safe }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% block main_content %}
+        <div class="row">
+          {% block top_row %}{% endblock %}
+        </div>
+        <div class="row">
+          <div class='span8'><!-- Left-hand column on front page -->
+            {% block left_column %}
 
+            {% endblock %}
+          </div><!-- End left-hand column -->
+
+          <!-- Right-hand column on front page -->
+          <div class='span4'>
+            {% block right_column %}
+
+            {% endblock %}
+          </div><!-- End right-hand column -->
+        </div>
         {% endblock %}
-      </div><!-- End left-hand column -->
-
-      <!-- Right-hand column on front page -->
-      <div class='span4'>
-        {% block right_column %}
-
-        {% endblock %}
-      </div><!-- End right-hand column -->
-    </div>
-    {% endblock %}
-    <footer>
-        {% block footer %}<!-- footer, obviously -->
-        &copy; 2010-2012, WBOR Brunswick, 91.1 FM
-        {% endblock %}
-    </footer><!-- end footer -->
-</div><!-- End wrap -->
-</div><!-- End outer wrap -->
-<script type="text/javascript"
-        src="/static/js/bootstrap.js"></script>
-<script type="text/javascript">
-$(function() {
-    $('a[rel="popover"]').popover();
-    $('a[rel="tooltip"]').tooltip();
-});
-</script>
-<script type="text/javascript" src="/static/js/click2call.js"></script>
-<script type="text/javascript">
-  function send_call() {
-  var button_id  = "70e3620d182effab182eb21d91808249cfff9658"; //My GVId for now
-  var cid_number = document.getElementById('cid_number').value;
-  var cid_name   = document.getElementById('cid_name').value;
-  click2call(button_id, cid_number, cid_name);
-  }
-</script>
-</body>
+        <footer>
+          {% block footer %}<!-- footer, obviously -->
+          &copy; 2010-2012, WBOR Brunswick, 91.1 FM
+          {% endblock %}
+        </footer><!-- end footer -->
+      </div><!-- End wrap -->
+    </div><!-- End outer wrap -->
+    <script type="text/javascript"
+            src="/static/js/bootstrap.js"></script>
+    <script type="text/javascript">
+      $(function() {
+      $('a[rel="popover"]').popover();
+      $('a[rel="tooltip"]').tooltip();
+      });
+    </script>
+    <script type="text/javascript" src="/static/js/click2call.js"></script>
+    <script type="text/javascript">
+      function send_call() {
+      var button_id  = "70e3620d182effab182eb21d91808249cfff9658"; //My GVId for now
+      var cid_number = document.getElementById('cid_number').value;
+      var cid_name   = document.getElementById('cid_name').value;
+      click2call(button_id, cid_number, cid_name);
+      }
+    </script>
+  </body>
 </html>
