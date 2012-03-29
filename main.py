@@ -323,6 +323,7 @@ class EventPage(BaseHandler):
     start_date = datetime.datetime.now() - datetime.timedelta(days=2)
     events = models.getEventsAfter(start_date)
     template_values = {
+      'events_selected': True,
       'session': self.session,
       'events': events,
       }
@@ -332,6 +333,7 @@ class EventPage(BaseHandler):
 class SchedulePage(BaseHandler):
   def get(self):
     template_values = {
+      'schedule_selected': True,
       'session': self.session,
     }
     self.response.out.write(template.render(getPath("schedule.html"),
@@ -387,6 +389,7 @@ class PlaylistPage(BaseHandler):
         plays = cache.getLastPlays(60)
 
     template_values = {
+      'playlists_selected': True,
       'session': self.session,
       'plays': plays,
       'shows': shows,
@@ -472,6 +475,7 @@ class ChartsPage(UserHandler):
     album_num = 60
     songs, albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
     template_values = {
+      'charts_selected': True,
       'session': self.session,
       'songs': songs,
       'albums': albums,
@@ -484,6 +488,7 @@ class ChartsPage(UserHandler):
 class HistoryPage(BaseHandler):
   def get(self):
     template_values = {
+      'history_selected': True,
       'session': self.session,
     }
     self.response.out.write(template.render(getPath("history.html"), template_values))
@@ -498,6 +503,7 @@ class ContactPage(BaseHandler):
       contacts = models.BlogPost.all().filter("slug =", "contacts-page").get()
     cache.mcset_t(contacts, 3600, "contacts_page_html")
     template_values = {
+      'contact_selected': True,
       'session': self.session,
       'contacts': contacts
     }
