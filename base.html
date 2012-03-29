@@ -311,6 +311,17 @@
           </div>
         </div>
 
+        <div id="recently">
+        <div class="row collapse" id="recently-collapse">
+          <div class="span12">
+            <h1>Recently played...</h1>
+            <div id='latestplays'>
+              <i>Loading...</i>
+            </div>
+          </div>
+        </div>
+        </div>
+
         <div class="navbar navbar-nowplaying">
           <div class="navbar-inner">
             <div class="container" id='nowplaying'>
@@ -321,7 +332,9 @@
                      style="font-size:150%;"
                      rel="tooltip"
                      data-placement="bottom"
-                     title="Recently played tracks">&#9835;</a>
+                     title="Recently played tracks"
+                     data-toggle="collapse"
+                     data-target="#recently-collapse">&#9835;</a>
                 </form>
                 <li><a id='currentsong'>gathering
                     info...</a></li>
@@ -329,11 +342,10 @@
                 <li><a id='currentartist'>gathering
                     info...</a></li>
                 <li><p class="navbar-text">on</p></li>
-                <li><a href='show/hitgitsplit'>
-                    <span id='currentshow'
+                <li><a href='show/hitgitsplit' id='currentshow'
                           rel="popover" data-placement="bottom"
                           data-original-title="Show Description">
-                      wait for it...</span>
+                      wait for it...
                   </a>
                 </li>
 

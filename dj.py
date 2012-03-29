@@ -741,29 +741,38 @@ class EditProgram(UserHandler):
   def get(self, program_key):
     program = models.Program.get(program_key)
     if not program:
-      self.session.add_flash("Unable to find program (" + program_key + ").  Please try again.")
+      self.session.add_flash(
+        "Unable to find program (" + program_key + ").  Please try again.")
       self.redirect("/dj/programs/")
     else:
       template_values = {
-        'all_dj_list': [{'dj': dj, 'in_program': dj.key() in program.dj_list} for dj in models.Dj.all()],
+        'all_dj_list': [{'dj': dj,
+                         'in_program': dj.key() in program.dj_list} for
+                        dj in models.Dj.all()],
         'program': program,
         'session': self.session,
         'flash': self.flash,
         'posts': models.getLastPosts(3),
       }
-      self.response.out.write(template.render(getPath("dj_manage_programs.html"), template_values))
+      self.response.out.write(template.render(
+        getPath("dj_manage_programs.html"), template_values))
 
   @authorization_required("Manage Programs")
   def post(self, program_key):
     program = models.Program.get(program_key)
-    if (not program) or (self.request.get("submit") != "Edit Program" and self.request.get("submit") != "Delete Program"):
-      self.session.add_flash("There was an error processing your request. Please try again.")
+    if ((not program) or
+        (self.request.get("submit") != "Edit Program" and
+         self.request.get("submit") != "Delete Program")):
+      self.session.add_flash(
+        "There was an error processing your request. Please try again.")
+
     elif self.request.get("submit") == "Edit Program":
       program.title = self.request.get("title")
       program.slug = self.request.get("slug")
       program.desc = self.request.get("desc")
       program.page_html = self.request.get("page_html")
-      program.dj_list = [models.db.Key(k) for k in self.request.get("dj_list", allow_multiple=True)]
+      program.dj_list = [models.db.Key(k) for
+                         k in self.request.get("dj_list", allow_multiple=True)]
       program.current = bool(self.request.get("current"))
       program.put()
       self.session.add_flash(program.title + " successfully edited.")
@@ -835,7 +844,8 @@ class MyShow(UserHandler):
       'program': program,
       'posts': models.getLastPosts(2),
     }
-    self.response.out.write(template.render(getPath("dj_myshow.html"), template_values))
+    self.response.out.write(
+      template.render(getPath("dj_myshow.html"), template_values))
 
   @login_required
   def post(self):
@@ -847,7 +857,8 @@ class MyShow(UserHandler):
     slug = self.request.get("slug")
     p = models.getProgramBySlug(slug)
     if p and program.key() != p.key():
-      self.session.add_flash("There is already a program with slug \"" + slug + "\".")
+      self.session.add_flash(
+        "There is already a program with slug \"" + slug + "\".")
       self.redirect("/dj/myshow")
       return
     program.title = self.request.get("title")

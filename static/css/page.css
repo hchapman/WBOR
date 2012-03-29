@@ -44,6 +44,14 @@ acronym {
     -webkit-border-top-right-radius: 5px;
 }
 
+#recently {
+  background-color: #55E;
+  margin-left: -10px;
+  margin-right: -10px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
 .header {
     height: 100%;
 }
@@ -413,4 +421,13 @@ td.forminput input{
   line-height: 18px;
   color: #444;
   white-space: nowrap;
+}
+
+.navbar-nowplaying li > a {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width:200px;
+  white-space: nowrap;
+}
+.navbar-nowplaying li > a {
 }
