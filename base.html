@@ -19,117 +19,123 @@
     <script type='text/javascript' src='/static/js/jquery.tinymce.js'></script>
     <script type='text/javascript' src='/static/js/jquery.form.js'></script>
     <script type='text/javascript'>
-      background = function() {
-      document.body.style.background = 'url(/static/images/bg/' + (Math.round(Math.random() * 21) + 1) + '.gif)';
-      }
+    background = function() {
+        document.body.style.background =
+            'url(/static/images/bg/' +
+            (Math.round(Math.random() * 21) + 1) + '.gif)';
+    }
 
-      $(document).ready(function() {
-      if ($('textarea.tinymce').length > 0) {
-      $('textarea.tinymce').tinymce({
-      script_url: '/static/js/tiny_mce.js',
-      theme: "advanced",
-      });
-      }
+$(document).ready(function() {
+    if ($('textarea.tinymce').length > 0) {
+        $('textarea.tinymce').tinymce({
+            script_url: '/static/js/tiny_mce.js',
+            theme: "advanced",
+        });
+    }
 
-      $("#djpanel-dropdown").attr("href", "#djpanel");
-      $("a#dj-login").attr("href", "#log-in-modal");
+    $("#djpanel-dropdown").attr("href", "#djpanel");
+    $("a#dj-login").attr("href", "#log-in-modal");
 
-      $(".datepicker").datepicker();
+    $(".datepicker").datepicker();
 
-      $("#call-me-button").click(function() {
-      //var button_id  = "70e3620d182effab182eb21d91808249cfff9658";
-      //// My GVId for now 70e3620d182effab182eb21d91808249cfff9658
-      // WBOR GVID:
-      var button_id = "149751eac6a0d999583c849fb23a20e411e05cf7";
-      var cid_number = $('#cid_number').val();
-      var cid_name   = $('#cid_name').val();
-      $.get("/callvoice", {
-      button_id: button_id,
-      cid_number: cid_number,
-      cid_name: cid_name},
-      function(data) {
-      alert(data);
-      });
-      });
+    $("#call-me-button").click(function() {
+        //var button_id  = "70e3620d182effab182eb21d91808249cfff9658";
+        //// My GVId for now 70e3620d182effab182eb21d91808249cfff9658
+        // WBOR GVID:
+        var button_id = "149751eac6a0d999583c849fb23a20e411e05cf7";
+        var cid_number = $('#cid_number').val();
+        var cid_name   = $('#cid_name').val();
+        $.get("/callvoice", {
+            button_id: button_id,
+            cid_number: cid_number,
+            cid_name: cid_name},
+              function(data) {
+                  alert(data);
+              });
+    });
 
-      nowPlaying();
-      if ($("#delete-button")) {
-      $("#delete-button").click(function() {
-      return confirm("Are you sure you want to do this?");
-      });
-      }
-      if ($(".artist-autocomplete").length > 0) {
-      $(".artist-autocomplete").autocomplete({
-      serviceUrl: '/ajax/artistcomplete',
-      minChars: 1,
-      width: $(".artist-autocomplete").width(),
-      maxHeight: 400,
-      onSelect: function(value, data) {
+    nowPlaying();
+    if ($("#delete-button")) {
+        $("#delete-button").click(function() {
+            return confirm("Are you sure you want to do this?");
+        });
+    }
+    if ($(".artist-autocomplete").length > 0) {
+        $(".artist-autocomplete").autocomplete({
+            serviceUrl: '/ajax/artistcomplete',
+            minChars: 1,
+            width: $(".artist-autocomplete").width(),
+            maxHeight: 400,
+            onSelect: function(value, data) {
 
-      },
-      });
-      }
-      if ($(".dj-autocomplete").length > 0) {
-      $(".dj-autocomplete").each(function(index) {
-      var p_key = $(this).attr("key");
-      $(this).autocomplete({
-      serviceUrl: '/ajax/djcomplete',
-      minChars: 1,
-      width: $(".dj-autocomplete").width(),
-      maxHeight: 400,
-      onSelect: function(value, data) {
-      $.post("/dj/permissions",
-      {
-      'dj_key': data,
-      'permission_key': p_key,
-      'action': "add",
-      },
-      function(data) {
-      if (data.err) {
-      alert(data.err);
-      } else {
-      var li = document.createElement("li");
-      li.innerHTML = value;
-      $("#" + p_key).append(li);
-      $("#msgbox").html(data.msg);
-      }
-      }, "json");
-      },
-      });
-      });
-      }
-      if ($("#albumlist li a").length > 0) {
-      $("#albumlist li a").lightBox({
-      imageLoading: '/static/images/lightbox-ico-loading.gif',
-      imageBtnClose: '/static/images/lightbox-btn-close.gif',
-      imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
-      imageBtnNext: '/static/images/lightbox-btn-next.gif',
-      imageBlank: '/static/images/lightbox-blank.gif',
-      });
-      }
-      });
+            },
+        });
+    }
+    if ($(".dj-autocomplete").length > 0) {
+        $(".dj-autocomplete").each(function(index) {
+            var p_key = $(this).attr("key");
+            $(this).autocomplete({
+                serviceUrl: '/ajax/djcomplete',
+                minChars: 1,
+                width: $(".dj-autocomplete").width(),
+                maxHeight: 400,
+                onSelect: function(value, data) {
+                    $.post("/dj/permissions",
+                           {
+                               'dj_key': data,
+                               'permission_key': p_key,
+                               'action': "add",
+                           },
+                           function(data) {
+                               if (data.err) {
+                                   alert(data.err);
+                               } else {
+                                   var li = document.createElement("li");
+                                   li.innerHTML = value;
+                                   $("#" + p_key).append(li);
+                                   $("#msgbox").html(data.msg);
+                               }
+                           }, "json");
+                },
+            });
+        });
+    }
+    if ($("#albumlist li a").length > 0) {
+        $("#albumlist li a").lightBox({
+            imageLoading: '/static/images/lightbox-ico-loading.gif',
+            imageBtnClose: '/static/images/lightbox-btn-close.gif',
+            imageBtnPrev: '/static/images/lightbox-btn-prev.gif',
+            imageBtnNext: '/static/images/lightbox-btn-next.gif',
+            imageBlank: '/static/images/lightbox-blank.gif',
+        });
+    }
+});
 
-      function popupAlert(message, title, type) {
+function popupAlert(message, title, type) {
 
-      }
+}
 
-      function nowPlaying() {
-      // request currently-playing information; update page accordingly.
-      // requests both now-playing box and recently-played box, if you're on the main page.
-      $.get('/updateinfo', function(data) {
-      $("#currentsong").html(data.song_string);
-      $("#currentartist").html(data.artist_string);
-      $("#currentshow").html(data.program_title);
-      $("#currentshow").attr("data-original-title", data.program_title);
-      $("#currentshow").attr('href', '/programs/' + data.program_slug);
-      $("#currentshow").attr("data-content", data.program_desc + "<hr />" + data.top_played);
-      if ($("#latestplays")) {
-      $("#latestplays").html(data.recent_songs_html);
-      }
-      }, "json");
-      nowPlayingTimer = setTimeout("nowPlaying()", 30000);
-      }
-    </script>
+function nowPlaying() {
+    // request currently-playing information; update page accordingly.
+    // requests both now-playing box and recently-played box,
+    // if you're on the main page.
+    $.get('/updateinfo', function(data) {
+        $("#currentsong").html(data.song_string);
+        $("#currentsong").attr("data-original-title", data.song_string);
+        $("#currentartist").html(data.artist_string);
+        $("#currentartist").attr("data-original-title", data.artist_string);
+        $("#currentshow").html(data.program_title);
+        $("#currentshow").attr("data-original-title", data.program_title);
+        $("#currentshow").attr('href', '/programs/' + data.program_slug);
+        $("#currentshow").attr("data-content",
+                               data.program_desc + "<hr />" + data.top_played);
+        if ($("#latestplays")) {
+            $("#latestplays").html(data.recent_songs_html);
+        }
+    }, "json");
+    nowPlayingTimer = setTimeout("nowPlaying()", 30000);
+}
+</script>
     {% block extra_scripts %}{% endblock %}
   </head>
   <body onLoad="background();">
@@ -162,14 +168,14 @@
       <form method='post' action='/dj/login/' style="margin:0px;">
         <div class="modal-body">
           <label for='username'>Username
-            <input type='text' name='username' id='username' />
-          </label>  
+            <input class="input-xlarge" type='text' name='username' id='username' />
+          </label>
           <label for='password'>Password
-            <input type='password' name='password' id='password' />
+            <input class="input-xlarge" type='password' name='password' id='password' />
           </label>
         </div>
         <div class="modal-footer">
-          <input class="btn btn-primary" 
+          <input class="btn btn-primary"
                  type='submit' name='submit' value="Log in">
         </div>
       </form>
@@ -182,7 +188,7 @@
               <a title='May 9, 7:00 pm' href='/'><img src='/static/images/transparentlogo.png'></a>
             </div>
 
-            <div class='span5 pull-right' 
+            <div class='span5 pull-right'
                  style="position:absolute; bottom:5px; right:-5px;">
               <div class="pull-right">
                 <a class="btn btn-primary btn-large"
@@ -221,7 +227,7 @@
                  style="height:12px; overflow:hidden;">
                 <span class="icon-cog icon-white" style="height:12px;margin-top:-1px;">
               </a>
-              <div class="nav-collapse" id="whole-nav">
+                <div class="nav-collapse" id="whole-nav">
                 <ul class="nav pull-left">
                   <li {% if news_selected %}class='active'{% endif %}>
                     <a href='/'>News</a>
@@ -311,35 +317,21 @@
           </div>
         </div>
 
-        <div id="recently">
-        <div class="row collapse" id="recently-collapse">
-          <div class="span12">
-            <h1>Recently played...</h1>
-            <div id='latestplays'>
-              <i>Loading...</i>
-            </div>
-          </div>
-        </div>
-        </div>
-
         <div class="navbar navbar-nowplaying">
           <div class="navbar-inner">
             <div class="container" id='nowplaying'>
               <ul class="nav pull-left">
-                <form class="navbar-form
-                             pull-left">
-                  <a class="btn btn-wbor"
-                     style="font-size:150%;"
-                     rel="tooltip"
-                     data-placement="bottom"
-                     title="Recently played tracks"
-                     data-toggle="collapse"
-                     data-target="#recently-collapse">&#9835;</a>
-                </form>
-                <li><a id='currentsong'>gathering
+               <li><p class="navbar-text">Now playing</p></li>
+                <li><a id='currentsong'
+                       rel="tooltip"
+                       title="Track"
+                        data-placement="bottom">gathering
                     info...</a></li>
                 <li><p class="navbar-text">by</p></li>
-                <li><a id='currentartist'>gathering
+                <li><a id='currentartist'
+                       rel="tooltip"
+                       title="Artist"
+                        data-placement="bottom">gathering
                     info...</a></li>
                 <li><p class="navbar-text">on</p></li>
                 <li><a href='show/hitgitsplit' id='currentshow'

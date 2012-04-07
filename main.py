@@ -252,9 +252,9 @@ class UpdateInfo(webapp2.RequestHandler):
                                                    program.slug)
     else:
       song, program = None, None
-      song_string = "Nothing is playing"
-      artist_string = "No body"
-      program_title, program_desc, program_slug = ("No show",
+      song_string = "nothing"
+      artist_string = "nobody"
+      program_title, program_desc, program_slug = ("no show",
                                                    "No description",
                                                    "")
 
@@ -265,9 +265,11 @@ class UpdateInfo(webapp2.RequestHandler):
           'program_title': program_title,
           'program_desc': program_desc,
           'program_slug': program_slug,
-          'top_played': ("Top artists: " + ", ".join([a for a in program.top_artists[:3]]) if
+          'top_played': ("Top artists: " + ", ".join(
+            [a for a in program.top_artists[:3]]) if
                          program is not None else None),
-          'recent_songs_html': template.render(getPath("recent_songs.html"), {'plays': recent_songs}),
+          'recent_songs_html': template.render(
+            getPath("recent_songs.html"), {'plays': recent_songs}),
           }))
 
 class CallVoice(webapp2.RequestHandler):
@@ -302,7 +304,8 @@ class SongList(BaseHandler):
     self.response.headers["Content-Type"] = "text/json"
     if not album:
       self.response.out.write(json.dumps({
-            'err': "An error occurred and the specified album could not be found.  Please try again."
+            'err': ("An error occurred and the specified album could "
+                    "not be found.  Please try again.")
             }))
       return
     songlist_html = template.render(getPath("ajax_songlist.html"), {

@@ -1,14 +1,11 @@
-<h2>Recently on WBOR</h2>
-<table>
+<table class="table table-bordered">
   <tbody>
     {% for p in plays %}
-    <tr class='highlight'>
+    <tr>
       <td>{{ p.song.title }}
         <br />
         <i>{{ p.song.artist }}</i>, {{ p.play_date|timesince }} ago
-    </tr>
-    <tr>
-      <td><hr /></td>
+      </td>
     </tr>
     {% endfor %}
   </tbody>

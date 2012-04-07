@@ -131,19 +131,6 @@ div.chart-selected {
     -webkit-border-bottom-left-radius: 0;
     -webkit-border-bottom-right-radius: 0;
 }
-
-h4 {
-    text-align: center;
-}
-
-.post h5, .events h5, #upcomingevents div h5 {
-    margin-bottom: 0;
-}
-
-.post h6, .events h6, #upcomingevents div h6 {
-    font-size: 0.9em;
-}
-
 .events, .onecol {
     width: 600px;
     margin: 0 auto;
@@ -250,18 +237,6 @@ ul.nav.nav-tabs {
   text-align: center;
 }
 
-#latestplays table {
-    width: 85%;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-#latestplays tr td {
-    padding: 10px;
-    width: 33%;
-    text-align: center;
-}
-
 .balancedtable tr td:first-child {
   text-align: right;
   padding: 5px;
@@ -272,21 +247,6 @@ ul.nav.nav-tabs {
   padding: 5px;
 }
 
-#latestplays tr td:first-child {
-    text-align: right;
-}
-
-#latestplays tr td:last-child {
-    text-align: left;
-}
-
-#latestplays tr.highlight:hover {
-    background-color: #DDD;
-}
-
-#latestplays tr td {
-    padding: 0;
-}
 .flash-msg, .error {
   text-align: center;
   color: red;

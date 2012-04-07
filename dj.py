@@ -1268,7 +1268,8 @@ class ManageAlbums(UserHandler):
         else:
           self.session.add_flash("The image you provided was too large. "
                                  "There is a 1MB limit on cover artwork. "
-                                 "Try a different version with a reasonable size.")
+                                 "Try a different version with a "
+                                 "reasonable size.")
           self.redirect("/dj/albums/")
         return
       except urlfetch.InvalidURLError:
@@ -1279,8 +1280,9 @@ class ManageAlbums(UserHandler):
                         "Hit back and try again."),
                 'result': 1,}))
         else:
-          self.session.add_flash("The URL you provided could not be downloaded. "
-                                 "Hit back and try again.")
+          self.session.add_flash("The URL you provided could "
+                                 "not be downloaded. "
+                                 "Try again.")
           self.redirect("/dj/albums/")
         return
       except urlfetch.DownloadError:
@@ -1291,8 +1293,8 @@ class ManageAlbums(UserHandler):
                       "Hit back and try again."),
               'result': 1,}))
         else:
-          self.session.add_flash("The URL you provided could not be downloaded. "
-                                 "Hit back and try again.")
+          self.session.add_flash("The URL you provided could "
+                                 "not be downloaded. Try again.")
           self.redirect("/dj/albums")
         return
 
@@ -1339,7 +1341,8 @@ class ManageAlbums(UserHandler):
     if self.request.get("ajax"):
       self.response.out.write(
         json.dumps({
-            'msg': "Album successfully added.",
+            'msg': ("The album \"%s\" by %s was successfully added."%
+                    (title, artist)),
             'result': 0,}))
 
 

@@ -10,7 +10,7 @@
         $('#manual-album-form').submit(addManualAlbum);
         $("#album-lookup").keyup(function(e) {
             if ($("#album-lookup").val() == "") {
-                $("#add-album-update").hide("slow");
+                $("#add-album-update").slideUp("slow");
             } else if ($("#album-lookup").val() != newalbumlookup || e.keyCode == 13) {
                 clearTimeout(newalbumtimeout);
                 newalbumlookup = $("#album-lookup").val();
@@ -26,11 +26,12 @@
             'keywords': keywords,
         },
         function(data) {
-            $("#add-album-update").hide("fast", function() {
-                $("#add-album-update").html(data.updatehtml);
+            $("#add-album-results").slideUp("fast",function() {
+                $("#add-album-results").html(data.updatehtml);
                 $("#add-album-list li").click(addAmazonAlbum);
-            });
-            $("#add-album-update").show("slow");
+           });
+            $("#add-album-update").slideDown("slow");
+            $("#add-album-results").slideDown("fast");
         });
     };
 
@@ -50,9 +51,10 @@
                 $(this).removeClass("album-processing");
                 $("#add-album-update").hide("slow");
                 $("#amazon_msgbox").append(
-                    '<div class="alert alert-success">'
+                    '<div class="alert alert-success alert-block">'
                         +'<a class="close" data-dismiss="alert" href="#">'
                         +'&times;</a>'
+                        +'<h4 class="alert-heading">Success!</h4>'
                         +data.msg+'</div>');
             }
         });
@@ -73,16 +75,19 @@
                    if (parseInt(data.result) != 0) {
                        $("#manual-album-form").removeClass("album-processing");
                        $("#manual_msgbox").append(
-                           '<div class="alert alert-error">'
-                               +'<a class="close" data-dismiss="alert" href="#">'
+                           '<div class="alert alert-error alert-block">'
+                               +'<a class="close" data-dismiss="alert"'
+                               +'href="#">'
                                +'&times;</a>'
+                               +'<h4 class="alert-heading">Bzzt!</h4>'
                                +data.msg+'</div>');
                    } else {
                        $("#manual-album-form").removeClass("album-processing");
                        $("#manual_msgbox").append(
-                           '<div class="alert alert-success">'
+                           '<div class="alert alert-success alert-block">'
                                +'<a class="close" data-dismiss="alert" href="#">'
                                +'&times;</a>'
+                               +'<h4 class="alert-heading">Success!</h4>'
                                +data.msg+'</div>');
                        $("#manual-album-form").clearForm();
                        $("#manual-cover-preview-image").attr("src", '/static/images/noalbumart.png');
@@ -134,25 +139,34 @@
 {% endblock %}
 
 {% block left_column %}
-    <div id='add-album'>
-        <h2>Add Album from Amazon</h2>
-        <div>
-        <form class="form-search">
-            <input type='text' class="input-medium search-query"
-                   id='album-lookup' placeholder="Search Amazon">
-        </form>
-        <div id='add-album-update'></div>
+<div id='add-album'>
+  <h2>Add Album from Amazon</h2>
+  <div>
+    <form class="form-search">
+      <input type='text' class="span7 search-query"
+             id='album-lookup' placeholder="Search Amazon">
+    </form>
+    <div class="row">
+      <div class="span8">
+        <div id='add-album-update' class="well">
+          <h3>Search Results</h3>
+          <div id='add-album-results'>
+          </div>
         </div>
+      </div>
     </div>
-    <div id="amazon_msgbox"></div>
-    <div id='new-albums'>
-        <h4>On the New Shelf</h4>
-        {% if new_album_html %}
-        {{ new_album_html|safe }}
-        {% else %}
-        {% include "dj_manage_new_albums_list.html"}
-        {% endif %}
-    </div>
+  </div>
+  
+  <div id="amazon_msgbox"></div>
+  <div id='new-albums'>
+    <h2>On the New Shelf</h2>
+    {% if new_album_html %}
+    {{ new_album_html|safe }}
+    {% else %}
+    {% include "dj_manage_new_albums_list.html"}
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
 
 
@@ -179,8 +193,7 @@
           <label>Track List
             <textarea id='manual-track-list' name='track-list'
                       class="span4"
-                      style="height: 120pt">
-            </textarea>
+                      style="height: 120pt"></textarea>
           </label>
             <input id='manual-album-submit'
                    class="btn btn-primary"

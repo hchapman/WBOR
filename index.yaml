@@ -20,3 +20,9 @@ indexes:
   properties:
   - name: isNew
   - name: play_date
+
+- kind: Play
+  properties:
+  - name: program
+  - name: play_date
+    direction: desc
