@@ -3,6 +3,8 @@ import logging
 # Google App Engine imports
 from google.appengine.ext import db
 
+import models
+
 # Webapp2 imports
 import webapp2
 from webapp2_extras import sessions
@@ -37,11 +39,24 @@ class UserHandler(BaseHandler):
   """
   def set_session_user(self, dj):
     """Takes a Dj model, and stores values into the session"""
+    djkey = dj.key()
+    permissions = {
+      'manage_djs': models.hasPermission(djkey, "Manage DJs"),
+      'manage_programs': models.hasPermission(djkey, "Manage Programs"),
+      'manage_permissions': models.hasPermission(djkey, "Manage Permissions"),
+      'manage_albums': models.hasPermission(djkey, "Manage Albums"),
+      'manage_genres': models.hasPermission(djkey, "Manage Genres"),
+      'manage_blog': models.hasPermission(djkey, "Manage Blog"),
+      'manage_events': models.hasPermission(djkey, "Manage Events"),
+    }
+    if not reduce(lambda x,y: x or y, permissions.values()):
+      permissions = None
     self.session['dj'] = {
         'key' : str(dj.key()),
         'fullname' : dj.p_fullname,
         'lowername' : dj.p_lowername,
         'email' : dj.p_email,
+        'permissions' : permissions,
         }
 
   @property

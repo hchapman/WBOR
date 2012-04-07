@@ -19,15 +19,23 @@
 </script>
 {% endblock %}
 
+{% block top_row %}
+<div class="span12">
+<h1>News</h1>
+<hr>
+</div>
+{% endblock %}
 
 {% block left_column %}
-<div id='latestplays'>
-    <h4>Recently on WBOR</h4>
+<div>
+  <h2>Recently on WBOR</h2>
+  <div id="latestplays">
     <i>Loading...</i>
+  </div>
 </div>
 
 <div id='upcomingevents'>
-  <h4>Upcoming Events</h4>
+  <h2>Upcoming Events</h2>
   {% if events %}
   {% for e in events %}
   <div>
@@ -51,39 +59,60 @@
 </div>
 
 <div id='charts'>
-    <h4>Top 10s</h4>
-    <div class='chart-toggler chart-selected'>
-    Songs
-    </div>
-    <div class='chart-toggler'>
-        Albums
-    </div>
-    {% if top_songs %}<ol class='charttable' id='songtable'>
-        {% for song in top_songs %}
-        <li>{{ song.1 }}, {{ song.2 }}, <i>{{ song.3 }}</i>
-        {% endfor %}
-    </ol>{% else %}<div class='charttable' id='songtable'>
-        There are no recent charts off the new shelf.
-    </div>{% endif %}
-    
-    {% if top_albums %}<ol class='charttable' id='albumtable'>
-        {% for album in top_albums %}
-        <li><i>{{ album.1 }}</i>, {{ album.2 }}
-        {% endfor %}
-    </ol>{% else %}<div class='charttable' id='albumtable'>
-        There are no recent charts off the new shelf.
-    </div>{% endif %}
-</div>
-
-<div id='newalbums-poop'>
-    <h4>On The New Shelf</h4>
-    <ul id='albumlist'>
-        {% for album in album_list %}<li><a href='/albums/{{ album.cover_large_key|urlencode }}' title='{{ album.title|escape }} - {{ album.artist|escape }}'><img src='/albums/{{ album.cover_large_key|urlencode }}' /></a></li>{% endfor %}
+  <h2>Top 10s</h2>
+  <div class="tabbable">
+    <ul class='nav nav-tabs'>
+      <li class="active"><a href="#topsongs" data-toggle="tab">Songs</a></li>
+      <li><a href="#topalbums" data-toggle="tab">Albums</a></li>
     </ul>
-</div>
+    <div class="tab-content">
+      <div class="tab-pane active" id="topsongs">
+	{% if top_songs %}<table class='charttable table'>
+            <thead><tr><th>#</th>
+                <th>Track Name</th>
+            <th>Artist</th>
+            <th>Album Title</th></tr></thead>
+            <tbody>
+        {% for song in top_songs %}
+        <tr><td>{{forloop.counter}}.</td><td>{{ song.1 }}</td><td>{{ song.2 }}<td><i>{{ song.3 }}</i></td></tr>
+        {% endfor %}
+        </tbody>
+	</table>{% else %}<div class='charttable'>
+        There are no recent charts off the new shelf.
+	</div>{% endif %}
+      </div>
+	<div class="tab-pane" id="topalbums">
+	  {% if top_albums %}<table class='charttable table'>
+            <thead><tr><th>#</th>
+            <th>Artist</th>
+            <th>Album Title</th></tr></thead>
+            <tbody>
+          {% for album in top_albums %}
+          <tr><td>{{forloop.counter}}.</td><td><i>{{ album.1 }}</i></td><td>{{ album.2 }}</td></tr>
+          {% endfor %}
+          </tbody>
+	  </table>{% else %}<div class='charttable'>
+          There are no recent charts off the new shelf.
+	  </div>{% endif %}
+	</div>
+      </div>
+    </div>
+  </div>
+  <div id='newalbums-poop'>
+    <h2>On The New Shelf</h2>
+    <ul id='albumlist'>{% for album in album_list %}
+      <li>
+        <a class="thumbnail" 
+           href="/albums/{{ album.cover_large_key|urlencode }}"
+           title="{{ album.title|escape }} - {{ album.artist|escape }}">
+          <img src="/albums/{{ album.cover_small_key|urlencode }}">
+      </a>
+      </li>{% endfor %}
+    </ul>
+  </div>
 
-{% endblock %}
+  {% endblock %}
 
-{% block right_column %}
-    {% include "last_n_posts.html" %}
-{% endblock %}
+  {% block right_column %}
+  {% include "last_n_posts.html" %}
+  {% endblock %}

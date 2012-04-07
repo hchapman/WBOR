@@ -3,12 +3,19 @@
 {% block title %}Weekly Charts{% endblock %}
 
 {% block main_content %}
-<div class='grid_9 left chart-col'>
+<div class="row">
+  <div class="span12">
+    <h1>Charts</h1>
+    <hr>
+  </div>
+</div>
+<div class="row">
+<div class='span9 chart-col'>
 
 <div id='topsongs'>
-    <h4>Top {{ songs|length }} Songs</h4>
+    <h2>Top {{ songs|length }} Songs</h2>
     {% if songs %}
-    <table class='big-chart-songs'>
+    <table class='big-chart-songs table'>
       <thead>
         <tr>
 	  <th scope='col'>#</th>
@@ -26,14 +33,17 @@
       {% endfor %}</tbody>
     </table>
     {% else %}
-    <center><b>No plays were found.  Is this date in the future or in the distant past?</b></center>
+    <div class="alert alert-info">
+      No plays were found.  Is this date in the future or in the
+      distant past?
+    </div>
     {% endif %}
 </div>
 
 <div id='topalbums'>
-  <h4>Top {{ albums|length }} Albums</h4>
+  <h2>Top {{ albums|length }} Albums</h2>
   {% if albums %}
-  <table class='big-chart-albums'>
+  <table class='big-chart-albums table'>
     <thead>
       <tr>
 	<th scope='col'>#</th>
@@ -52,17 +62,18 @@
     </tbody>
   </table>
   {% else %}
-  <center><b>No plays were found. Is this date in the future or in the distant past?</b></center>
+  <div class="alert alert-info">
+    No plays were found. Is this date in
+    the future or in the distant past?
+    </div>
   {% endif %}
 </div>
 
 </div>
-<div class='grid_3 right chart-opts-col'>
+<div class='span3 chart-opts-col'>
 
 <div>
-    <a href='/dj/'>Return to main index</a>
-</div>
-<div>
+  <h2>Search Range</h2>
   <h4>{{ start|date }} through {{ end|date }}</h4>
   
   <p>Select a different week below.</p>
@@ -75,5 +86,6 @@
   </form>
 </div>
 
+</div>
 </div>
 {% endblock %}

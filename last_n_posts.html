@@ -1,6 +1,7 @@
+<h2>Recently, at WBOR</h2>
 {% for post in posts %}
 <div class='post'>
-    <h5>{{ post.title }}</h5>
+    <h3>{{ post.title }}</h3>
     <h6>{{ post.post_date|date:"F j, Y" }}</h6>
     {{ post.text|safe }}
     <a href='/blog/{{ post.post_date|date:"Y-m-d" }}/{{ post.slug }}'>permalink</a>

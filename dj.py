@@ -13,6 +13,7 @@
 # 
 
 import os
+import urllib
 import cache
 import datetime
 import time
@@ -27,6 +28,7 @@ from google.appengine.api import files
 
 import webapp2
 from google.appengine.ext.webapp import template
+from google.appengine.ext.webapp import util
 
 import amazon
 import pylast
@@ -42,7 +44,7 @@ from configuration import webapp2conf
 
 # This is a decoration for making sure that the user
 # is logged in before they view the page.
-def login_required(func):  
+def login_required(func):
   def wrapper(self, *args, **kw):
     if self.session.has_key("dj"):
       func(self, *args, **kw)
@@ -113,6 +115,7 @@ class Logout(UserHandler):
     self.session_logout()
     self.flash = ("You have been logged out.")
     self.redirect('/')
+  
 
 # Logs the user in
 # get(): the login form
@@ -240,6 +243,8 @@ class RequestPassword(UserHandler):
 
     # Generate a key to be sent to the user and add the
     # new password request to the database
+    reset_key = ''.join(random.choice(string.ascii_letters +
+                                      string.digits) for x in range(20))
     reset_url="%s/dj/reset/?username=%s&reset_key=%s"%(
       self.request.host_url,username,reset_dj.resetPassword())
     mail.send_mail(
@@ -1275,8 +1280,9 @@ class ManageAlbums(UserHandler):
                         "Hit back and try again."),
                 'result': 1,}))
         else:
-          self.session.add_flash("The URL you provided could not be downloaded. "
-                                 "Hit back and try again.")
+          self.session.add_flash("The URL you provided could "
+                                 "not be downloaded. "
+                                 "Try again.")
           self.redirect("/dj/albums/")
         return
       except urlfetch.DownloadError:
@@ -1287,8 +1293,8 @@ class ManageAlbums(UserHandler):
                       "Hit back and try again."),
               'result': 1,}))
         else:
-          self.session.add_flash("The URL you provided could not be downloaded. "
-                                 "Hit back and try again.")
+          self.session.add_flash("The URL you provided could "
+                                 "not be downloaded. Try again.")
           self.redirect("/dj/albums")
         return
       
@@ -1335,7 +1341,8 @@ class ManageAlbums(UserHandler):
     if self.request.get("ajax"):
       self.response.out.write(
         json.dumps({
-            'msg': "Album successfully added.",
+            'msg': ("The album \"%s\" by %s was successfully added."%
+                    (title, artist)),
             'result': 0,}))
 
 
