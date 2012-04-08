@@ -13,6 +13,8 @@ from google.appengine.api import files
 from passwd_crypto import hash_password, check_password
 import logging
 
+from models import (Dj, Album, Permission, Song,)
+
 # class DictModel(db.Model):
 #   SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
 #   def to_dict():
@@ -85,7 +87,7 @@ class BlogPost(db.Model):
   slug = db.StringProperty()
 
 class Play(ApiModel):
-#  song = db.ReferenceProperty(Song)
+  song = db.ReferenceProperty(Song)
   program = db.ReferenceProperty(Program)
   play_date = db.DateTimeProperty()
   isNew = db.BooleanProperty()
@@ -137,18 +139,18 @@ def moveCoverToBlobstore(album):
                                       _blobinfo_uploaded_filename="%s_small.png"%fn)
   large_file = files.blobstore.create(mime_type=album.large_filetype,
                                       _blobinfo_uploaded_filename="%s_big.png"%fn)
-  
+
   with files.open(small_file, 'a') as small:
     small.write(album.small_cover)
   with files.open(large_file, 'a') as large:
     large.write(album.large_cover)
-  
+
   files.finalize(small_file)
   files.finalize(large_file)
 
   album.cover_small = files.blobstore.get_blob_key(small_file)
   album.cover_large = files.blobstore.get_blob_key(large_file)
-  
+
   del album.small_cover
   del album.large_cover
   del album.large_filetype
@@ -234,7 +236,7 @@ def getPlaysForDate(date, program=None):
   if program:
     plays.filter("program =", program)
 
-  after = date - datetime.timedelta(hours=24) 
+  after = date - datetime.timedelta(hours=24)
   before = date + datetime.timedelta(hours=24)
   plays = plays.filter("play_date >=", after)\
       .filter("play_date <=", before)
@@ -247,13 +249,13 @@ def getRetardedNumberOfPlaysForDate(date, program=None):
   if program:
     plays.filter("program =", program)
 
-  after = date - datetime.timedelta(hours=72) 
+  after = date - datetime.timedelta(hours=72)
   before = date + datetime.timedelta(hours=72)
   plays = plays.filter("play_date >=", after)\
       .filter("play_date <=", before)
   plays = plays.order("-play_date").fetch(1000)
 
-  return plays    
+  return plays
 
 def getPlaysBetween(program, before=None, after=None):
   plays = Play.all().filter("program =", program)
@@ -264,7 +266,7 @@ def getPlaysBetween(program, before=None, after=None):
   plays = plays.order("play_date").fetch(1000)
   return plays
 
-def getLastPlays(program, after=None, num=1000):  
+def getLastPlays(program, after=None, num=1000):
   plays = Play.all().filter("program =", program)
   if after:
     plays = plays.filter("play_date >=", after)

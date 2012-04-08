@@ -12,6 +12,7 @@ from google.appengine.ext import db
 # Local module imports
 from base_models import *
 
+
 # Global python imports
 import logging
 import itertools
@@ -58,9 +59,11 @@ class Album(CachedModel):
   # Right now, creating an album creates a bunch of new Songs on the spot
   # so you're probably going to want to put the album right after you make it
   # If you don't, you're a bad person and you hate good things
-  def __init__(self, title, artist, tracks, add_date=None, asin=None,
-               cover_small=None, cover_large= None, is_new=True,
-               key=None, parent=None, key_name=None, **kwds):
+  @classmethod
+  def new(cls, title, artist, tracks,
+          add_date=None, asin=None,
+          cover_small=None, cover_large= None, is_new=True,
+          key=None, parent=None, key_name=None, **kwds):
     if add_date is None:
       add_date = datetime.datetime.now()
     if key is None:
@@ -69,24 +72,28 @@ class Album(CachedModel):
       key = db.Key.from_path('Album', batch[0])
 
     # Instantiate the tracks, put them (Model.put() returns keys)
-    tracks = [Song(title=trackname,
-                   artist=artist,
-                   album=key,).put() for trackname in tracks]
-    
-    super(Album, self).__init__(parent=parent, key_name=key_name, 
-                                key=key, title=title,
-                                lower_title=title.lower(),
-                                artist=artist,
-                                add_date=add_date,
-                                isNew=is_new,
-                                songList=tracks,
-                                **kwds)
+    if tracks:
+      tracks = [Song(title=trackname,
+                     artist=artist,
+                     album=key,).put() for trackname in tracks]
+
+    album = cls(parent=parent, key_name=key_name,
+                key=key, title=title,
+                lower_title=title.lower(),
+                artist=artist,
+                add_date=add_date,
+                isNew=is_new,
+                songList=tracks,
+                **kwds)
+
     if cover_small is not None:
-      self.cover_small = cover_small
+      album.cover_small = cover_small
     if cover_large is not None:
-      self.cover_large = cover_large
+      album.cover_large = cover_large
     if asin is not None: # Amazon isn't working still as of time of writing
-      self.asin = asin
+      album.asin = asin
+
+    return album
 
   # TODO: make this a classmethod/instancemethod hybrid??? I wish I knew what
   # to friggin' Google.
@@ -110,12 +117,14 @@ class Album(CachedModel):
   @classmethod
   def get(cls, keys=None,
           title=None,
-          num=-1, use_datastore=True, one_key=False):
+          num=-1,
+          is_new=None,
+          use_datastore=True, one_key=False):
     if keys is not None:
-      return super(Album, cls).get(keys, use_datastore=use_datastore, 
+      return super(Album, cls).get(keys, use_datastore=use_datastore,
                                         one_key=one_key)
 
-    keys = cls.get_key(title=title, order=order, num=num)  
+    keys = cls.get_key(title=title, is_new=is_new, order=order, num=num)
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
@@ -174,7 +183,28 @@ class Album(CachedModel):
 
   @classmethod
   def get_new(cls, num=36, keys_only=False):
-    new_cache = cls.get_by_index(cls.NEW, keys_only=keys_only)
-    if allcache:
-      return allcache
-    pass
+    if num < 1:
+      return None
+
+    new_albums = cls.get_by_index(cls.NEW, keys_only=True)
+    if new_albums and None in new_albums:
+      new_albums = [album for album in new_albums if album is not None]
+
+    if new_albums is None or num > len(new_albums):
+      new_albums = cls.get_key(is_new=True, order="-add_date", num=num)
+
+    cls.cache_set(new_albums, cls.NEW)
+
+    if not new_albums:
+      return
+
+    if keys_only:
+      return new_albums[:num]
+    else:
+      return cls.get(new_albums[:num])
+
+  @classmethod
+  def get_new_keys(cls, num=36):
+    return cls.get_new(num, keys_only=True)
+
+from song import Song

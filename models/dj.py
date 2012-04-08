@@ -11,7 +11,7 @@ from google.appengine.ext import db
 
 # Local module imports
 from passwd_crypto import hash_password, check_password
-from base_models import (CachedModel, QueryError, ModelError)
+from base_models import (CachedModel, QueryError, ModelError, NoSuchEntry)
 from base_models import quantummethod, as_key
 
 # Global python imports
@@ -26,12 +26,12 @@ def fix_bare_email(email):
     return email + "@bowdoin.edu"
   return email
 
-class NoSuchUsernameError(QueryError):
+class NoSuchUsername(NoSuchEntry):
   pass
-class NoSuchEmailError(QueryError):
+class NoSuchEmail(NoSuchEntry):
   pass
 
-class InvalidLoginError(ModelError):
+class InvalidLogin(ModelError):
   pass
 
 class Dj(CachedModel):
@@ -48,10 +48,6 @@ class Dj(CachedModel):
   password_hash = db.StringProperty()
   pw_reset_expire = db.DateTimeProperty()
   pw_reset_hash = db.StringProperty()
-
-  def __init__(self, parent=None, key_name=None, cached=True, **kwargs):
-    super(Dj, self).__init__(parent=parent, 
-                             key_name=key_name, cached=cached, **kwargs)
 
   @quantummethod
   def add_username_cache(obj, key=None, username=None):
@@ -98,16 +94,16 @@ class Dj(CachedModel):
           username=None, email=None, order=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
-      return super(Dj, cls).get(keys, 
+      return super(Dj, cls).get(keys,
                                 use_datastore=use_datastore, one_key=one_key)
 
-    keys = cls.get_key(username=username, email=email, order=order, num=num)  
+    keys = cls.get_key(username=username, email=email, order=order, num=num)
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
 
   @classmethod
-  def get_key(cls, username=None, email=None, program=None, 
+  def get_key(cls, username=None, email=None, program=None,
              order=None, num=-1):
     query = cls.all(keys_only=True)
 
@@ -124,15 +120,15 @@ class Dj(CachedModel):
     return query.fetch(num)
 
   @classmethod
-  def new(cls, email=None, fullname=None, username=None, 
+  def new(cls, email=None, fullname=None, username=None,
           password=None, fix_email=True):
     if None in (email, fullname, username, password):
       raise Exception("Insufficient fields for new Dj")
 
-    dj = cls(fullname=fullname, 
+    dj = cls(fullname=fullname,
              lowername=fullname.lower(),
              email=fix_bare_email(email) if fix_email else email,
-             username=username, 
+             username=username,
              password_hash=hash_password(password))
 
     return dj
@@ -153,13 +149,13 @@ class Dj(CachedModel):
   def reset_password(self, put=True):
     reset_key = ''.join(random.choice(string.ascii_letters +
                                       string.digits) for x in range(20))
- 
+
     self.pw_reset_expire=datetime.datetime.now() + datetime.timedelta(2)
     self.pw_reset_hash=hash_password(reset_key)
 
     if put:
       self.put()
-    
+
     return reset_key
 
   @property
@@ -178,7 +174,7 @@ class Dj(CachedModel):
   @property
   def p_username(self):
     return self.username
-  
+
   @p_username.setter
   def p_username(self, username):
     username = username.strip()
@@ -186,7 +182,7 @@ class Dj(CachedModel):
       other = self.get_key_by_username(username)
       if as_key(other) != as_key(self.key()):
         raise ModelError("There is already a Dj with this username", other)
-    except NoSuchUsernameError:
+    except NoSuchUsername:
       pass
 
     self.purge_own_username_cache()
@@ -204,7 +200,7 @@ class Dj(CachedModel):
       if other is not None and other != self.key():
         print other
         raise ModelError("There is already a Dj with this email", other)
-    except NoSuchEmailError:
+    except NoSuchEmail:
       pass
 
     self.purge_own_email_cache()
@@ -237,7 +233,7 @@ class Dj(CachedModel):
       dj = cls.get(key)
       if dj is not None:
         return dj.add_username_cache()
-    raise NoSuchUsernameError()
+    raise NoSuchUsername()
 
   @classmethod
   def get_key_by_username(cls, username):
@@ -257,7 +253,7 @@ class Dj(CachedModel):
       dj = cls.get(key)
       if dj is not None:
         return dj.add_own_email_cache()
-    raise NoSuchEmailError()
+    raise NoSuchEmail()
 
   @classmethod
   def get_key_by_email(cls, email):
@@ -273,23 +269,23 @@ class Dj(CachedModel):
   def login(cls, username, password):
     dj = cls.get_by_username(username)
     if dj is None:
-      raise NoSuchUsernameError()
+      raise NoSuchUsername()
 
     if not dj.password_matches(password):
-      raise InvalidLoginError()
-    
+      raise InvalidLogin()
+
     return dj
 
   @classmethod
   def recovery_login(cls, username, reset_key):
     dj = cls.get_by_username(username)
     if dj is None:
-      raise NoSuchUsernameError()
+      raise NoSuchUsername()
 
     if (dj.pw_reset_expire is None or
         dj.pw_reset_hash is None or
         datetime.datetime.now() > dj.pw_reset_expire):
-      raise InvalidLoginError()
+      raise InvalidLogin()
 
     elif check_password(dj.pw_reset_hash, reset_key):
       dj.pw_reset_expire = datetime.datetime.now()

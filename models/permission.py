@@ -20,7 +20,7 @@ import logging
 import itertools
 import random
 
-class NoSuchTitleError(QueryError):
+class NoSuchTitle(NoSuchEntry):
   pass
 
 class Permission(CachedModel):
@@ -61,7 +61,7 @@ class Permission(CachedModel):
     return cls.cache_delete(cls.TITLE, title)
 
   def add_own_title_cache(self):
-    self.add_username_cache(self.key(), self.title)
+    self.add_title_cache(self.key(), self.title)
     return self
   def purge_own_title_cache(self):
     self.purge_title_cache(self.title)
@@ -109,10 +109,10 @@ class Permission(CachedModel):
           title=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
-      return super(Permission, cls).get(keys, use_datastore=use_datastore, 
+      return super(Permission, cls).get(keys, use_datastore=use_datastore,
                                         one_key=one_key)
 
-    keys = cls.get_key(title=title, order=order, num=num)  
+    keys = cls.get_key(title=title, order=order, num=num)
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
@@ -141,7 +141,7 @@ class Permission(CachedModel):
   def add_dj(self, djs):
     if is_key(djs) or isinstance(djs, Dj):
       djs = (djs,)
-    
+
     self.dj_list = list(set(self.dj_list).
                         union(as_keys(dj_list)))
 
@@ -157,7 +157,7 @@ class Permission(CachedModel):
 
   @property
   def p_title(self):
-    return self.title        
+    return self.title
 
   @classmethod
   def get_all(cls, keys_only=False):
@@ -171,18 +171,18 @@ class Permission(CachedModel):
 
   @classmethod
   def get_by_title(cls, title, keys_only=False):
-    cached = cls.get_by_index(cls.TITLE, email, keys_only=keys_only)
+    cached = cls.get_by_index(cls.TITLE, title, keys_only=keys_only)
     if cached is not None:
       return cached
 
-    key is cls.get_key(title=title)
+    key = cls.get_key(title=title)
     if key is not None:
       if keys_only:
         return cls.add_title_cache(key, title)
       permission = cls.get(key)
       if permission is not None:
         return permission.add_own_title_cache()
-    raise NoSuchTitleError()
+    raise NoSuchTitle()
 
   @classmethod
   def get_key_by_title(cls, title):

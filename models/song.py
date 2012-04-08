@@ -11,6 +11,7 @@ from google.appengine.ext import db
 
 # Local module imports
 from base_models import *
+from album import Album
 from dj import Dj
 
 # Global python imports
@@ -43,15 +44,18 @@ class Song(CachedModel):
       'album_key': str_or_none(self.album_key),
       }
 
-  def __init__(self, title, artist, album=None, 
+  @classmethod
+  def new(cls, title, artist, album=None,
                parent=None, key_name=None, **kwds):
     if parent is None:
-      parent = kwargs.get("album")
-    
-    super(Song, self).__init__(parent=parent, key_name=key_name,
-                               title=title, artist=artist, **kwds)
+      parent = album
+
+    song = cls(parent=parent, key_name=key_name,
+               title=title, artist=artist, **kwds)
     if album is not None:
-      self.album = album
+      song.album = album
+
+    return song
 
   def add_to_cache(self):
     super(Song, self).add_to_cache()
@@ -66,10 +70,11 @@ class Song(CachedModel):
           title=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
-      return super(Song, cls).get(keys, use_datastore=use_datastore, 
+      logging.error(keys)
+      return super(Song, cls).get(keys, use_datastore=use_datastore,
                                         one_key=one_key)
 
-    keys = cls.get_key(title=title, order=order, num=num)  
+    keys = cls.get_key(title=title, order=order, num=num)
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None

@@ -3,7 +3,7 @@ import logging
 # Google App Engine imports
 from google.appengine.ext import db
 
-import models
+from models import Permission
 
 # Webapp2 imports
 import webapp2
@@ -13,7 +13,7 @@ class BaseHandler(webapp2.RequestHandler):
   """Enables session management"""
   def dispatch(self):
     self.session_store = sessions.get_store(request = self.request)
-    
+
     try:
       webapp2.RequestHandler.dispatch(self)
     finally:
@@ -29,7 +29,7 @@ class BaseHandler(webapp2.RequestHandler):
     flashes = self.session.get_flashes()
     if flashes:
       return flashes[0]
-    
+
   @flash.setter
   def flash(self, value):
     self.session.add_flash(value)
@@ -40,15 +40,19 @@ class UserHandler(BaseHandler):
   def set_session_user(self, dj):
     """Takes a Dj model, and stores values into the session"""
     djkey = dj.key()
+
     permissions = {
-      'manage_djs': models.hasPermission(djkey, "Manage DJs"),
-      'manage_programs': models.hasPermission(djkey, "Manage Programs"),
-      'manage_permissions': models.hasPermission(djkey, "Manage Permissions"),
-      'manage_albums': models.hasPermission(djkey, "Manage Albums"),
-      'manage_genres': models.hasPermission(djkey, "Manage Genres"),
-      'manage_blog': models.hasPermission(djkey, "Manage Blog"),
-      'manage_events': models.hasPermission(djkey, "Manage Events"),
-    }
+      'djs': Permission.DJ_EDIT,
+      'programs': Permission.PROGRAM_EDIT,
+      'albums': Permission.ALBUM_EDIT,
+      'permissions': Permission.PERMISSION_EDIT,
+      'genres': Permission.GENRE_EDIT,
+      'blogs': Permission.BLOG_EDIT,
+      'events': Permission.EVENT_EDIT,}
+    permissions_dict = dict(('manage_%s'%key,
+                             Permission.get_by_title(perm).has_dj(djkey)) for
+                            (key, perm) in permissions.iteritems())
+
     if not reduce(lambda x,y: x or y, permissions.values()):
       permissions = None
     self.session['dj'] = {
@@ -66,13 +70,13 @@ class UserHandler(BaseHandler):
   @user.setter
   def user(self, dj):
     self.set_session_user(dj)
-  
+
   def set_session_program(self, pgm):
     """Takes a Program model, and stores values to the session"""
     self.session['program'] = {
         'key' : str(pgm.key()),
-        'slug' : pgm.p_slug,
-        'title' : pgm.p_title,
+        'slug' : pgm.slug,
+        'title' : pgm.title,
         }
 
   @property

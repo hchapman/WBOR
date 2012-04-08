@@ -27,17 +27,20 @@ class ModelError(Exception):
 class QueryError(ModelError):
   pass
 
+class NoSuchEntry(QueryError):
+  pass
+
 def quantummethod(f):
   '''
   Class method decorator specific to the instance.
 
-  It uses a descriptor to delay the definition of the 
+  It uses a descriptor to delay the definition of the
   method wrapper.
   '''
   class descript(object):
     def __init__(self, f):
       self.f = f
-      
+
     def __get__(self, instance, klass):
       print "poop"
       if instance is None:
@@ -63,10 +66,12 @@ def quantummethod(f):
   return descript(f)
 
 def is_key(obj):
-  return isinstance(obj, db.Key) or isinstance(obj, str)
+  return (isinstance(obj, db.Key) or
+          isinstance(obj, str) or
+          isinstance(obj, unicode))
 
 def as_key(obj):
-  if isinstance(obj, str):
+  if isinstance(obj, str) or isinstance(obj, unicode):
     return db.Key(obj)
   if isinstance(obj, db.Key):
     return obj
@@ -93,7 +98,7 @@ class CachedModel(db.Model):
                **kwargs):
     self._cached = True
     super(CachedModel, self).__init__(parent=parent,
-                                      key_nae=key_name, **kwargs)
+                                      key_name=key_name, **kwargs)
 
   @classmethod
   def cache_set(cls, value, cache_key, *args):
@@ -158,13 +163,17 @@ class CachedModel(db.Model):
     if isinstance(keys, cls):
       return keys
 
+    logging.error("poop")
+
     if is_key(keys) or one_key:
-      keys = (keys,)
+      keys = (as_key(keys),)
       one_key = True
 
     if not one_key:
       objs = []
       db_fetch_keys = []
+
+    logging.error(keys)
 
     for i, key in enumerate(keys):
       if key is None:
@@ -173,21 +182,27 @@ class CachedModel(db.Model):
         return key
       obj = cls.cache_get(cls.ENTRY %key)
 
-      if obj is not None:
-        if one_key:
-          return obj
+      if not one_key and obj is not None:
         objs.append(obj)
 
       if one_key:
+        logging.error("poop %s"% key)
         return super(CachedModel, cls).get(key)
 
       # Store the key to batch fetch, and the position to place it
       if use_datastore:
         db_fetch_keys.append((i, key))
 
-    # Improve this if possible. Use a batch fetch on non-memcache keys.
-    db_fetch_zip = zip(db_fetch_keys) #[0]: idx, [1]: key
-    for i, obj in zip(db_fetch_zip[0], 
+    if not use_datastore:
+      return keys
+
+    # Improve this if possible. Use a batch fetch on non-memcache
+    # keys.
+    logging.error("Fetch keys")
+    logging.error(db_fetch_keys)
+    db_fetch_zip = zip(*db_fetch_keys) #[0]: idx, [1]: key
+    logging.error(db_fetch_zip)
+    for i, obj in zip(db_fetch_zip[0],
                       super(CachedModel, cls).get(db_fetch_zip[1])):
       objs[i] = obj.add_to_cache()
 

@@ -276,26 +276,26 @@ function nowPlaying() {
                       <li><a href='/dj/logout'>Log Out</a></li>
                       <li class="divider">
                         {% if session.dj.permissions %}
-                        {% if session.dj.permissions.manage_djs %}<li>
+                        {% if session.dj.permissions.djs %}<li>
                         <a href='/dj/djs'>Manage DJs</a>
                       </li>{% endif %}
-                      {% if session.dj.permissions.manage_programs %}<li>
+                      {% if session.dj.permissions.programs %}<li>
                         <a href='/dj/programs'>Manage Programs</a>
                       </li>{% endif %}
-                      {% if session.dj.permissions.manage_albums %}<li>
+                      {% if session.dj.permissions.albums %}<li>
                         <a href='/dj/albums'>Manage Albums</a>
                       </li>{% endif %}
-                      {% if session.dj.permissions.manage_events %}<li>
+                      {% if session.dj.permissions.events %}<li>
                         <a href='/dj/event'>New Event</a>
                       </li>{% endif %}
-                      {% if session.dj.permissions.manage_genres %}
+                      {% if session.dj.permissions.genres %}
                       <!-- <li>
                            <a href='/dj/genres'>Session.Dj.Manage Genres</a>
                       </li> -->{% endif %}
-                      {% if session.dj.permissions.manage_permissions %}<li>
+                      {% if session.dj.permissions.permissions %}<li>
                         <a href='/dj/permissions'>Manage Permissions</a>
                       </li>{% endif %}
-                      {% if session.dj.permissions.manage_blog %}<li>
+                      {% if session.dj.permissions.blog %}<li>
                         <a href='/dj/newpost'>New Blog Post</a>
                       </li>{% endif %}
                       <li class="divider"></li>

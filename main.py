@@ -24,6 +24,10 @@ import time
 import json
 import logging
 
+from models import Album, Permission, Dj
+from models.song import Song
+from models.base_models import NoSuchEntry
+
 import amazon
 import models_old as models
 
@@ -53,7 +57,7 @@ class MainPage(BaseHandler):
   def get(self):
     ## Album list disabled until it is further optimized.
     #album_list = []
-    album_list = cache.getNewAlbums(num=36)
+    album_list = Album.get_new(num=36)
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
     song_num = 10
@@ -131,13 +135,20 @@ class AlbumInfo(BaseHandler):
     # datetime.datetime.now().strftime("%Y-%m-%dT%H:%M%:%SZ")
     items = amazon.productSearch(keywords)
     json_data = {'items': [{
-          'small_pic': i.getElementsByTagName("SmallImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
-          'large_pic': i.getElementsByTagName("LargeImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
-          'medium_pic': i.getElementsByTagName("MediumImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
+          'small_pic': (i.getElementsByTagName("SmallImage")[0].
+                        getElementsByTagName("URL")[0].
+                        firstChild.nodeValue),
+          'large_pic': (i.getElementsByTagName("LargeImage")[0].
+                        getElementsByTagName("URL")[0].
+                        firstChild.nodeValue),
+          'medium_pic': (i.getElementsByTagName("MediumImage")[0].
+                         getElementsByTagName("URL")[0].
+                         firstChild.nodeValue),
           'artist': i.getElementsByTagName("Artist")[0].firstChild.nodeValue,
           'title': i.getElementsByTagName("Title")[0].firstChild.nodeValue,
           'asin': i.getElementsByTagName("ASIN")[0].firstChild.nodeValue,
-          'tracks': [t.firstChild.nodeValue for t in i.getElementsByTagName("Track")],
+          'tracks': [t.firstChild.nodeValue
+                     for t in i.getElementsByTagName("Track")],
           } for i in items]}
     updatehtml = template.render(getPath("addalbumupdate.html"), json_data)
     json_data['updatehtml'] = updatehtml
@@ -149,30 +160,43 @@ class Setup(BaseHandler):
   def get(self):
     labels = ["Manage DJs", "Manage Programs", "Manage Permissions",
               "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
-    for l in labels:
-      if not models.getPermission(l):
-        permission = models.Permission(title=l, dj_list=[])
-        permission.put()
-    seth = models.getDjByEmail("seth.glickman@gmail.com")
-    if not seth:
-      seth = models.Dj(fullname='Seth Glickman', lowername='seth glickman',
-                       email='seth.glickman@gmail.com', username='seth',
-                       password_hash=hash_password('testme'))
+    try:
+      seth = Dj.get_by_email("seth.glickman@gmail.com")
+    except NoSuchEntry:
+      seth = Dj.new(fullname='Seth Glickman',
+                    email='seth.glickman@gmail.com', username='seth',
+                    password='testme')
       seth.put()
-      program = models.Program(title='Seth\'s Show', slug='seth',
-                               desc='This is the show where Seth plays his favorite music.',
-        dj_list=[seth.key()], page_html='a <b>BOLD</b> show!')
+
+      program = models.Program(
+        title='Seth\'s Show', slug='seth',
+        desc='This is the show where Seth plays his favorite music.',
+        dj_list=[seth.key()],
+        page_html='a <b>BOLD</b> show!')
       program.put()
     for l in labels:
-      permission = models.getPermission(l)
-      if seth.key() not in permission.dj_list:
-        permission.dj_list.append(seth.key())
+      try:
+        permission = Permission.get_by_title(l)
+      except NoSuchEntry:
+        permission = Permission()
+        permission.title=l
+        permission.dj_list=[]
         permission.put()
+      finally:
+        if seth.key() not in permission.dj_list:
+          permission.dj_list.append(seth.key())
+          permission.put()
     if not models.getLastPosts(3):
-      post1 = models.BlogPost(title="Blog's first post!", text="This is really just filler text on the first post.", slug="first-post", post_date=datetime.datetime.now())
+      post1 = models.BlogPost(
+        title="Blog's first post!",
+        text="This is really just filler text on the first post.",
+        slug="first-post", post_date=datetime.datetime.now())
       post1.put()
       time.sleep(2)
-      post2 = models.BlogPost(title="Blog's second post!", text="More filler text, alas.", slug="second-post", post_date=datetime.datetime.now())
+      post2 = models.BlogPost(
+        title="Blog's second post!",
+        text="More filler text, alas.",
+        slug="second-post", post_date=datetime.datetime.now())
       post2.put()
     artists = [
       "Bear In Heaven",
@@ -193,9 +217,12 @@ class Setup(BaseHandler):
       ]
     for a in artists:
       if not models.ArtistName.all().filter("artist_name =", a).fetch(1):
-        ar = models.ArtistName(artist_name=a, lowercase_name=a.lower(), search_names=models.artistSearchName(a).split())
+        ar = models.ArtistName(
+          artist_name=a, lowercase_name=a.lower(),
+          search_names=models.artistSearchName(a).split())
         ar.put()
-    self.session.add_flash("Permissions set up, ArtistNames set up, Blog posts set up, DJ Seth entered.")
+    self.session.add_flash("Permissions set up, ArtistNames set up, "
+                           "Blog posts set up, DJ Seth entered.")
     self.redirect('/')
 
 
@@ -243,7 +270,7 @@ class UpdateInfo(webapp2.RequestHandler):
     logging.debug(recent_songs)
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
-      song, program = (cache.getSong(last_play.song_key),
+      song, program = (Song.get(last_play.song_key),
                        cache.getProgram(last_play.program_key))
       song_string = song.title
       artist_string = song.artist
@@ -300,7 +327,7 @@ class SongList(BaseHandler):
             'generated': 'memcache',
             }))
       return
-    album = cache.getAlbum(album_key)
+    album = Album.get(album_key, one_key=True)
     self.response.headers["Content-Type"] = "text/json"
     if not album:
       self.response.out.write(json.dumps({
@@ -309,17 +336,15 @@ class SongList(BaseHandler):
             }))
       return
     songlist_html = template.render(getPath("ajax_songlist.html"), {
-        'songList': [cache.getSong(k) for k in album.songList],
+        'songList': Song.get(album.p_tracklist),
         })
     memcache.set("songlist_html_" + album_key, songlist_html)
     self.response.out.write(json.dumps({
           'songListHtml': template.render(getPath("ajax_songlist.html"), {
-              'songList': [cache.getSong(k) for k in album.songList],
+              'songList': Song.get(album.p_tracklist),
               }),
           'generated': 'generated',
           }))
-
-
 
 class EventPage(BaseHandler):
   def get(self):
