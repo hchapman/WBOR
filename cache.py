@@ -311,47 +311,6 @@ def getProgramKeys(dj=None, order=None):
 NEW_ALBUMS = "new_albums"
 ALBUM_ENTRY = "album_key%s"
 
-def putAlbum(title, artist, tracks, add_date=None, asin=None,
-             cover_small=None, cover_large=None, isNew=True):
-  if add_date is None:
-    add_date = datetime.datetime.now()
-
-  album_fake_key = db.Key.from_path("Album", 1)
-  batch = db.allocate_ids(album_fake_key, 1)
-  album_key = db.Key.from_path('Album', batch[0])
-
-  song_keys = [putSong(title=trackname,
-                       artist=artist,
-                       album=album_key,
-                       ).key()
-               for trackname in tracks]
-
-  tryPutArtist(artist)
-
-  album = models.Album(
-    key=album_key,
-    title=title,
-    lower_title=title.lower(),
-    artist=artist,
-    add_date=add_date,
-    isNew=isNew,
-    songList=song_keys,
-    )
-
-  if cover_small is not None:
-    album.cover_small = cover_small
-  if cover_large is not None:
-    album.cover_large = cover_large
-  if asin is not None:
-    album.asin = asin
-
-  album.put()
-
-  if isNew:
-    pass
-
-  return mcset(album, ALBUM_ENTRY, album.key())
-
 def setAlbumIsNew(key, is_new=True):
   album = getAlbum(key)
   if album is not None:

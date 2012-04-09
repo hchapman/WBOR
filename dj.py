@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 # Written by Seth Glickman
+# & modified by Harrison Chapman
 #
 ##############################
 # Some quick notes:
@@ -37,10 +38,9 @@ from passwd_crypto import hash_password
 from slughifi import slughifi
 import models_old as models
 
-from models.dj import (Dj, InvalidLogin, NoSuchUsername)
-from models.permission import (Permission,)
-from models.album import Album
-from models.song import Song
+from models.base_models import (NoSuchEntry,)
+from models.dj import (Dj, Permission, InvalidLogin, NoSuchUsername)
+from models.tracks import Album, Song
 
 from configuration import webapp2conf
 
@@ -1187,10 +1187,9 @@ class ManageAlbums(UserHandler):
       # thing will have different ASIN's, like a vinyl vs. a cd vs. a
       # special edition etc.)
       asin = self.request.get("asin")
-      album = None
-      #album = models.getAlbumByASIN(asin)
+      album = Album.get(asin=asin)
       if album:
-        album.isNew = True
+        album.set_new()
         album.put()
         self.response.out.write(json.dumps({
           'msg': "Success, already existed. The album was re-set to new."
@@ -1248,11 +1247,12 @@ class ManageAlbums(UserHandler):
       # We're removing the "new" marking from an album
       self.response.headers['Content-Type'] = 'text/json'
       key = self.request.get("key")
-      album = Album.get(key)
-      if not album.unset_new():
-        self.response.out.write(json.dumps({'err': "Album not found. Please try again."}))
-        return
-      album.put()
+      try:
+        album = Album.get(key)
+        album.unset_new()
+        album.put()
+      except NoSuchEntry:
+        pass
       self.response.out.write(json.dumps({'msg': "Made old."}))
       return
 

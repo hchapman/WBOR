@@ -13,7 +13,7 @@ from google.appengine.api import files
 from passwd_crypto import hash_password, check_password
 import logging
 
-from models import (Dj, Album, Permission, Song,)
+from models import *
 
 # class DictModel(db.Model):
 #   SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
@@ -51,77 +51,8 @@ class ApiModel(db.Model):
   def to_json():
     pass
 
-class Program(ApiModel):
-  title = db.StringProperty()
-  slug = db.StringProperty()
-  desc = db.StringProperty(multiline=True)
-  dj_list = db.ListProperty(db.Key)
-  page_html = db.TextProperty()
-  top_artists = db.StringListProperty()
-  top_playcounts = db.ListProperty(int)
-  current = db.BooleanProperty(default=False)
 
-  def to_json(self):
-    return {
-      'key': str_or_none(self.key()),
-      'title': self.title,
-      'slug': self.slug,
-      'desc': self.desc,
-      'dj_list': [str_or_none(dj_key) for dj_key in self.dj_list],
-      'page_html': self.page_html,
-      'top_artists': self.top_artists,
-      'top_playcounts': self.top_playcounts,
-      'current': self.current
-      }
 
-class ArtistName(db.Model):
-  artist_name = db.StringProperty()
-  lowercase_name = db.StringProperty()
-  search_name = db.StringProperty()
-  search_names = db.StringListProperty()
-
-class BlogPost(db.Model):
-  title = db.StringProperty()
-  text = db.TextProperty()
-  post_date = db.DateTimeProperty()
-  slug = db.StringProperty()
-
-class Play(ApiModel):
-  song = db.ReferenceProperty(Song)
-  program = db.ReferenceProperty(Program)
-  play_date = db.DateTimeProperty()
-  isNew = db.BooleanProperty()
-  artist = db.StringProperty()
-
-  @property
-  def program_key(self):
-    return Play.program.get_value_for_datastore(self)
-  @property
-  def song_key(self):
-    return Play.song.get_value_for_datastore(self)
-
-  def to_json(self):
-    return {
-      'key': str_or_none(self.key()),
-      'song_key': str_or_none(self.song_key),
-      'program_key': str_or_none(self.program_key),
-      'play_date': time.mktime(self.play_date.utctimetuple()) * 1000
-      }
-
-class Psa(db.Model):
-  desc = db.StringProperty()
-  program = db.ReferenceProperty(Program)
-  play_date = db.DateTimeProperty()
-
-class StationID(db.Model):
-  program = db.ReferenceProperty(Program)
-  play_date = db.DateTimeProperty()
-
-class Event(db.Model):
-  title = db.StringProperty()
-  event_date = db.DateTimeProperty()
-  desc = db.TextProperty()
-  url = db.StringProperty()
 
 ## The following should never need to run again
 # However, the idea is that it will remain for educational purposes

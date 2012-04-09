@@ -1,19 +1,4 @@
 #!/usr/bin/env python
-#
-# Copyright 2007 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 
 import os
 import cache
@@ -24,8 +9,8 @@ import time
 import json
 import logging
 
-from models import Album, Permission, Dj
-from models.song import Song
+from models.dj import Permission, Dj
+from models.tracks import Album, Song
 from models.base_models import NoSuchEntry
 
 import amazon
@@ -62,7 +47,8 @@ class MainPage(BaseHandler):
     end = datetime.datetime.now()
     song_num = 10
     album_num = 10
-    top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
+    top_songs, top_albums = [], []#(Play.get_top_songs(start, end, song_num),
+                            # Play.get_top_albums(start, end, album_num))
     posts = models.getLastPosts(3)
     events = models.getEventsAfter(datetime.datetime.now() -
                                    datetime.timedelta(days=1), 3)
