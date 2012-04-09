@@ -6,3 +6,6 @@ google_appengine/
 .DS_Store
 webapp2
 webapp2.py
+/base.html.orig
+/dj.py.orig
+/handlers.py.orig
