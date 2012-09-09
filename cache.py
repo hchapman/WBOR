@@ -404,7 +404,7 @@ def getPrograms(dj=None, order=None):
   return filter(None, [getProgram(key) for key in program_keys])
   
 def getProgramKeys(dj=None, order=None):
-  query = Program.all(keys_only=True)
+  query = models.Program.all(keys_only=True)
 
   if dj is not None:
     if isinstance(key, models.Dj):
