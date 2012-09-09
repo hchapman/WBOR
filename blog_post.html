@@ -3,10 +3,10 @@
 {% block main_content %}
 <div class='center post'>
   <div>
-  <h5>{{ post.title }}</h5>
+  <h3>{{ post.title }}</h3>
   <h6>{{ post.post_date|date:"F j, Y" }}</h6>
   
-  {{ post.text }}
+  {{ post.text|safe }}
   
   <hr />
   <a href='/blog/{{ post.post_date|date:"Y-m-d" }}/{{ post.slug }}/edit'>Edit</a>

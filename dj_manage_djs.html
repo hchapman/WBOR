@@ -1,40 +1,40 @@
 {% extends "base.html" %}
 
 {% block left_column %}
-    <div id='edit-dj' align='center'>
-        <h4>{% if dj %}Edit{% else %}Add{% endif %} DJ</h4>
-		<div id='edit-dj-form'>
-          <form action='/dj/djs/{% if dj %}{{ dj.key }}/{% endif %}' method='post'>
-			
-			<label for='email'>Email: </label>
-			<input id='email' type='text' name='email' value='{{ dj.email|escape }}'/><br />
-			
-			
-			<label for='fullname'>Full Name: </label>
-			<input id='fullname' type='text' name='fullname' value='{{ dj.fullname|escape }}' /><br />
-			
-			
-			<label for='username'>Username: </label>
-			<input id='username' name='username' type='text' value='{{ dj.username|escape }}'/><br />
-			
-			
-			<label for='password'>Change Password: </label>
-			<input id='password' name='password' type='password'/><br />
-			
-			
-			<label for='confirm'>Confirm Change Password: </label>
-			<input id='confirm' name='confirm' type='password'/><br />
+<div id='edit-dj' align='center'>
+  <h4>{% if dj %}Edit{% else %}Add{% endif %} DJ</h4>
+  <div id='edit-dj-form'>
+    <form action='/dj/djs/{% if dj %}{{ dj.key }}/{% endif %}' method='post'>
+      
+      <label for='email'>Email: </label>
+      <input id='email' type='text' name='email' value='{{ dj.email|escape }}'/><br />
+      
+      
+      <label for='fullname'>Full Name: </label>
+      <input id='fullname' type='text' name='fullname' value='{{ dj.fullname|escape }}' /><br />
+      
+      
+      <label for='username'>Username: </label>
+      <input id='username' name='username' type='text' value='{{ dj.username|escape }}'/><br />
+      
+      
+      <label for='password'>Change Password: </label>
+      <input id='password' name='password' type='password'/><br />
+      
+      
+      <label for='confirm'>Confirm Change Password: </label>
+      <input id='confirm' name='confirm' type='password'/><br />
 
-			<input type='submit' name='submit' value="{% if dj %}Edit{% else %}Add{% endif %} DJ" />
-			{% if dj %}
-			<input id='delete-button' type='submit' name='submit' value="Delete DJ" />
-			{% endif %}
-          </form>
-		</div>
-    </div>
+      <input type='submit' name='submit' value="{% if dj %}Edit{% else %}Add{% endif %} DJ" />
+      {% if dj %}
+      <input id='delete-button' type='submit' name='submit' value="Delete DJ" />
+      {% endif %}
+    </form>
+  </div>
+</div>
     <div id='current-djs'>
-        <h4>Current DJs</h4>
-        <ul>
+      <h4>Current DJs</h4>
+      <ul>
             {% for dj in dj_list %}
             <li><a href='/dj/djs/{{ dj.key }}'>{{ dj.fullname }}</a></li>
             {% endfor %}

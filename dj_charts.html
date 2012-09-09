@@ -7,13 +7,13 @@
 <div id='topsongs'>
     <h4>Top {{ songs|length }} Songs</h4>
     {% if songs %}
-    <table>
+    <table class="table">
       <thead>
         <tr>
-          <td>Count</td>
-          <td>Song Title</td>
-          <td>Artist</td>
-          <td>Album</td>
+          <th>Count</th>
+          <th>Song Title</th>
+          <th>Artist</th>
+          <th>Album</th>
         </tr>
       </thead>
       <tbody>
@@ -34,12 +34,12 @@
 <div id='topalbums'>
   <h4>Top {{ albums|length }} Albums</h4>
   {% if albums %}
-  <table>
+  <table class="table">
     <thead>
       <tr>
-        <td>Count</td>
-        <td>Album</td>
-        <td>Artist</td>
+        <th>Count</th>
+        <th>Album</th>
+        <th>Artist</th>
       </tr>
     </thead>
     <tbody>

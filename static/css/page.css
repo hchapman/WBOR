@@ -14,7 +14,7 @@ body {
 }
 
 #outer-wrap {
-    width: 960px;
+
     padding: 8px;
     background: transparent url(../images/shadow.png) repeat;
     margin: 20px auto;
@@ -35,130 +35,30 @@ acronym {
     border-bottom: 1px dotted white;
 }
 
-#navigation {
-    width: 1062px;
-    //width: 1060px;
-    margin: 0;
-    position: absolute;
-    left: -50px;
-    top: 120px;
-}
-
-#navigation { width: 1060px\9 }
-
-#navigation ul {
-    list-style: none;
-    height: 40px;
-    margin-bottom: 0px;
-    -moz-border-radius: 5px;
-    -webkit-border-radius: 5px;
-}
-
-#nowplaying {
-    margin: 0 auto;
-    background-color: #66F;
-    display: block;
-    width: 626px;
-    text-align: center;
-    border-bottom: 2px solid black;
-    border-left: 2px solid black;
-    border-right: 2px solid black;
-    color: white;
-    padding-left: 10px;
-    padding-right: 10px;
-    -moz-border-radius-bottomleft: 20px;
-    -moz-border-radius-bottomright: 20px;
-    -webkit-border-bottom-left-radius: 20px;
-    -webkit-border-bottom-right-radius: 20px;
-}
-
-#nowplaying hr {
-    width: 80%;
-    margin-top: 10px;
-    margin-bottom: 10px;
-}
-
-#nowplaying a {
-    color: white;
-}
-
-#nowplaying a:visited {
-    color: white;
-}
-
-#navigation ul li {
-    display: inline-block;
-    border-top: 2px solid black;
-    border-bottom: 2px solid black;
-    width: 115px;
-    margin-left: 0;
-    background-color: #A7A0F7;
-    height: 100%;
-    color: black;
-    font-size: 1em;
-    text-align: center;
-    float: left;
-    border-right: 2px solid black;
-}
-
-#navigation ul li.selected {
-    background-color: white;
-    color: black;
-}
-
-#navigation ul li.selected a, #navigation ul li.selected a:visited {
-    color: black;
-}
-
-#navigation ul li.selected a:hover {
-    color: white;
-}
-
-#navigation ul li:first-child {
-    border-left: 2px solid black;
-    -moz-border-radius-topleft: 5px;
-    -moz-border-radius-bottomleft: 5px;
-    -webkit-border-top-left-radius: 5px;
-    -webkit-border-bottom-left-radius: 5px;
-}
-
-#navigation ul li:last-child {
-    border-right: 2px solid black;
-    -moz-border-radius-topright: 5px;
-    -moz-border-radius-bottomright: 5px;
-    -webkit-border-top-right-radius: 5px;
-    -webkit-border-bottom-right-radius: 5px;
-}
-
-#navigation ul li:hover {
-    background-color: #434343;
-    color: white;
-}
-
-#navigation ul li:hover a, #navigation ul li:hover a:visited {
-    color: white;
-}
-
-#navigation ul li a, #navigation ul li a:visited {
-    color: black;
-    display: block;
-    width: 100%;
-    height: 100%;
-    padding-top: 9px;
-    text-decoration: none;
-}
 
 #header {
     background-color: #66F;
-    height: 120px;
     -moz-border-radius-topleft: 5px;
     -moz-border-radius-topright: 5px;
     -webkit-border-top-left-radius: 5px;
     -webkit-border-top-right-radius: 5px;
+}
+
+#recently {
+  background-color: #55E;
+  margin-left: -10px;
+  margin-right: -10px;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .header {
     height: 100%;
+}
+
+.navbar-nowplaying {
+  margin-left: -10px;
+  margin-right: -10px;
 }
 
 #download-m3u {
@@ -197,8 +97,6 @@ div.center {
 }
 
 .center div, .left div, .right div, .top_row div {
-    padding: 10px;
-    border: 2px solid black;
     margin-top: 5px;
     margin-bottom: 5px;
     -moz-border-radius: 5px;
@@ -233,28 +131,12 @@ div.chart-selected {
     -webkit-border-bottom-left-radius: 0;
     -webkit-border-bottom-right-radius: 0;
 }
-
-h4 {
-    text-align: center;
-}
-
-.post h5, .events h5, #upcomingevents div h5 {
-    margin-bottom: 0;
-}
-
-.post h6, .events h6, #upcomingevents div h6 {
-    font-size: 0.9em;
-}
-
 .events, .onecol {
     width: 600px;
     margin: 0 auto;
 }
 
 div.history, div.contact {
-    width: 600px;
-    margin-left: auto;
-    margin-right: auto;
     text-align: justify;
 }
 
@@ -282,9 +164,10 @@ label { display: block; }
 
 #showdesc h4 a, #showdesc h4 a:visited {
     color: black;
-}
+} 
 
-#footer {
+footer{
+  margin: 10px -10px -10px -10px;
     text-align: center;
     background-color: #131218;
     color: #DDD;
@@ -329,62 +212,19 @@ label { display: block; }
   cursor: pointer;
 }
 
+#albumlist li {
+}
 
 #albumlist li a img {
   width: 75px;
   height: 75px;
-  border: 2px solid black;
-}
-
-.charttable tr.headers {
-	background-color: #66F;
-	padding: 5px;
-	color: white;
-	align: left;
-}
-
-.charttable tr.headers th {
-	text-align: left;
-}
-
-.charttable tr.dark-row {
-	background-color: #55E;
-}
-
-.charttable tr.light-row {
-	backgroun-color: #66F;
 }
 
 table.charttable, ol.charttable, div.charttable {
-    background-color: #66F;
-    width: ;
-    padding: 1em;
-    color: white;
 }
 
-div.charttable {
-    margin: 0;
-    -moz-border-radius-topright: 0;
-    -moz-border-radius-topleft: 0;
-    -webkit-border-top-left-radius: 0;
-    -webkit-border-top-right-radius: 0;
-}
-
-#topsongs table, #topalbums table {
-	width: 100%;
-}
-
-#topsongs thead tr, #topalbums thead tr {
-	background-color: #AAF;
-}
-
-#topsongs tr, #topalbums tr {
-	border-bottom: 1px solid #FFF;
-}
-
-#topsongs th, #topalbums th {
-	text-align: left;
-	padding: 10px 5px 10px;
+ul.nav.nav-tabs {
+  margin-bottom: 0px;
 }
 
 #showdeschidden {
@@ -394,21 +234,7 @@ div.charttable {
 
 #showdeschidden p {
   margin-bottom: 10px;
-  margin-left: 10px;
-  margin-right: 10px;
   text-align: center;
-}
-
-#latestplays table {
-    width: 85%;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-#latestplays tr td {
-    padding: 10px;
-    width: 33%;
-    text-align: center;
 }
 
 .balancedtable tr td:first-child {
@@ -421,21 +247,6 @@ div.charttable {
   padding: 5px;
 }
 
-#latestplays tr td:first-child {
-    text-align: right;
-}
-
-#latestplays tr td:last-child {
-    text-align: left;
-}
-
-#latestplays tr.highlight:hover {
-    background-color: #DDD;
-}
-
-#latestplays tr td {
-    padding: 0;
-}
 .flash-msg, .error {
   text-align: center;
   color: red;
@@ -496,6 +307,7 @@ div.charttable {
   max-height: 200px;
   margin-left: auto;
   margin-right: auto;
+  margin-bottom: 9px;
   display: block;
 }
 
@@ -506,18 +318,6 @@ div.charttable {
 
 #select-program {
   text-align: center;
-}
-
-#psas td, #ids td, #topsongs td, #topalbums td {
-  padding: 5px;
-}
-
-#topsongs tbody tr, #topalbums tbody tr {
-	background-color: #DDF;
-}
-
-#psas tbody tr:hover, #ids tbody tr:hover, #topsongs tbody tr:hover, #topalbums tbody tr:hover {
-  background-color: #ddd;
 }
 
 textarea.tinymce {
@@ -571,4 +371,23 @@ td.forminput {
 }
 td.forminput input{
     width: 100%;
+}
+
+.dropdown .dropdown-header p {
+  display: block;
+  padding: 3px 15px;
+  clear: both;
+  font-weight: normal;
+  line-height: 18px;
+  color: #444;
+  white-space: nowrap;
+}
+
+.navbar-nowplaying li > a {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width:200px;
+  white-space: nowrap;
+}
+.navbar-nowplaying li > a {
 }

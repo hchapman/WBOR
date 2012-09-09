@@ -2,9 +2,16 @@
 
 {% block title %}Events{% endblock %}
 
-{% block main_content %}
+{% block top_row %}
+<div class="span12">
+  <h1>Events</h1>
+  <hr>
+</div>
+{% endblock %}
 
-<div class='center events'>
+{% block left_column %}
+
+<div class='events'>
   {% if events %}
   {% for e in events %}
   <div>

@@ -320,6 +320,7 @@ def djAutocomplete(prefix):
 def albumAutocomplete(prefix):
   prefix = prefix.lower()
   albums = Album.all().filter("lower_title >=", prefix).filter("lower_title <", prefix + u"\ufffd").fetch(30)
+  return albums
 
 def getLastNPlays(num):
   last_plays = memcache.get("last_plays")

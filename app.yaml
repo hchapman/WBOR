@@ -1,5 +1,5 @@
 application: wbor-hr
-version: 1-6-djpocalypse1
+version: 1-6-bootstrap
 runtime: python27
 api_version: 1
 threadsafe: true
@@ -36,3 +36,20 @@ handlers:
 libraries:
 - name: django
   version: latest
+
+skip_files:
+- ^(.*/)?app\.yaml
+- ^(.*/)?app\.yml
+- ^(.*/)?index\.yaml
+- ^(.*/)?index\.yml
+- ^(.*/)?#.*#
+- ^(.*/)?.*~
+- ^(.*/)?.*\.py[co]
+- ^(.*/)?.*/RCS/.*
+- ^(.*/)?\..*
+- ^(.*/)?.*\.bak$
+- ^(.*/)?static/less/.*
+- ^(.*/)?static/docs/.*
+- ^(.*/)?README\.md
+- ^(.*/)?Makefile
+- ^(.*/)?LICENSE

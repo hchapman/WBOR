@@ -3,44 +3,19 @@
 {% block title %}Contact WBOR{% endblock %}
 
 {% block main_content %}
-
-<div class='center contact'>
-  <h4>Contact WBOR</h4>
+<div class="row">
+<div class='span12 contact'>
+  <h1>{{ contacts.title }}</h1>
+  <hr>
+</div>
+</div>
+<div class="row">
+<div class="span12 contact">
+  {{ contacts.text|safe }}
   
-  <h5>Request Line: (207) 725-3250</h5>
-  <p>WBOR loves to hear from you, whether you are a listener, a performer, or a label representative. We strongly encourage you to contact us (or the applicable manager) with any questions or comments you may have. If you are a musician or a label representative and you would like to send in music, please address it to the applicable music director of your genre.</p>
-  
-  <strong>WBOR</strong>
-  <br />Music Directors
-  <br />Smith Union
-  <br />Bowdoin College
-  <br />Brunswick, ME 04011
-  
-  <p><strong>General:</strong> <a href="mailto:wbor@bowdoin.edu">info@wbor.org</a></p>
-  <p><strong>Station Managers:</strong> <a href="mailto:wpugh@bowdoin.edu">Will Pugh</a> [Phone: (336) 963-3746, Office Hours: Friday 1-2 pm]</br>
-
-  <p><strong>Program Director:</strong> <a href="mailto:rlopkin@bowdoin.edu">Rachel Lopkin</a> [Office Hours: Thursday 9-10 pm]</p>
-  <p><strong>Music Directors:</strong> <a href="mailto:zlescaze@bowdoin.edu">Zoe Lescaze</a>, <a href="mailto:crutan@wbor.org">Christine Rutan</a> [Office Hours: Wednesday 4-5 pm], <a href="mailto:tpatton@bowdoin.edu">Tyler Patton</a> [Office Hours: Thursday 4-5 pm], <a href="mailto:jmensik@bowdoin.edu">Jack Mensik</a>, <a href="mailto:rachel@wbor.org">Rachel Courtault</a> [Office Hours: Tuesday 12-1 pm]</p>
-  <p><strong>Jazz Director</strong>: <a href="mailto:adelcalv@bowdoin.edu">Andy Del Calvo</a> [Office Hours: Fridays 9-10 am]</p>
-  <p><strong>Hip-Hop Director</strong>: <a href="mailto:hiphop@wbor.org">Rachel Sege</a> [Office Hours: Tuesday 4-5 pm]</p>
-  <p><strong>Electronic/RPM Director</strong>: <a href="mailto:rpm@wbor.org">Rodrigo Bijou</a> [Office Hours: Thursday 3-4 pm]</p>
-  <p><strong>World Director</strong>: <a href="mailto:sahmed@bowdoin.edu">Shazeda Ahmed</a> [Office Hours: Thursday 10 - 11 am]</p>
-  <p><strong>Metal Director</strong>: <a href='mailto:logx76@live.com'>Amy Boucher</a></p>
-  <p><strong>Folk Director</strong>: <a href="mailto:nlove@bowdoin.edu">Nicole Love (Clove)</a> [Office Hours: Tuesday 1-2 pm]</p>
-  <p><strong>Blues Director</strong>: <a href = "mailto:mhalmo@brunswick.k12.me.us">Mike Halmo</a>
-
-  <p><strong>Publicity Directors:</strong> <a href="mailto:ssabaste@bowdoin.edu">Sam Sabasteanski</a> [Office Hours: Monday 10-11 am], <a href="mailto:nlove@bowdoin.edu">Nicole Love (Clove)</a> [Office Hours: Tuesday 1-2 pm], <a href="mailto:rbijou@bowdoin.edu">Rodrigo Bijou</a> [Office Hours: Thursday 3-4 pm]</p>
-
-  <p><strong>Concert Booking:</strong> <a href="mailto:draskin@bowdoin.edu">David Raskin</a> [Office Hours: Monday 2:30 - 3:30 pm]</p>
-  <p><strong>Website/Tech Manager:</strong> <a href="mailto:cmsmith@bowdoin.edu">Connor Smith</a> [Office Hours: Tuesday 3-4 pm]</p>
-
-  <p><strong>Summer/Break Manager:</strong> <a href="mailto:lmorse@gwi.net">Bill Morse</a> (207 442-3193)</p>
-
-  <p><h5>We now have office hours!</h5></p>
-
-  <p>*<small><a name='abroad'></a>This person is abroad this semester.</small></p>
-
-  
+  <hr >
+  <a ref='/blog/{{ contacts.post_date|date:"Y-m-d" }}/{{ contacts.slug }}/edit'>Edit</a>  
+</div>
 </div>
 
 {% endblock %}
