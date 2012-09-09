@@ -74,19 +74,24 @@ def cacheGet(keys, model_class, cachekey_template,
       if one_key:
         return obj
       objs.append(obj)
+      db_fetch_keys.append((i, key))
+    elif not one_key:
+      objs.append(None)
   
     if one_key:
       return model_class.get(key)
 
     # Store the key to batch fetch, and the position to place it
-    if use_datastore:
-      db_fetch_keys.append((i, key))
 
-  # Improve this if possible. Use a batch fetch on non-memcache keys.
-  db_fetch_zip = zip(db_fetch_keys) #[0]: idx, [1]: key
-  for i, obj in zip(db_fetch_zip[0], 
-                    model_class.get(db_fetch_zip[1])):
-    objs[i] = mcset(obj, cachekey_template %key)
+  #if len(db_fetch_zip) == 1
+
+  if use_datastore:
+    # Improve this if possible. Use a batch fetch on non-memcache keys.
+    db_fetch_zip = zip(db_fetch_keys) #[0]: idx, [1]: key
+
+    for i, obj in zip(db_fetch_zip[0], 
+                      model_class.get(db_fetch_zip[1])):
+      objs[i] = mcset(obj, cachekey_template %key)
 
   return filter(None, objs)
 
@@ -535,7 +540,7 @@ def getPermissionKey(label):
   if cached is not None:
     return cached
   
-  key = Permission.all(keys_only=True).filter("title =", label).get(),
+  key = models.Permission.all(keys_only=True).filter("title =", label).get(),
   return mcset(key, PERMISSION_LABEL %label)
 
 def getPermissions():
@@ -566,7 +571,7 @@ def hasPermission(dj, label):
 
   # For now we have a fixed set of possible permissions
   if label in models.Permission.PERMISSIONS:
-    return dj_key in getPermission(label)
+    return dj_key in getPermission(label=label)
 
   return False
 
