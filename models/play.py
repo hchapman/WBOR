@@ -24,11 +24,47 @@ import logging
 import itertools
 import random
 
+class LastCacheModel(CachedModel):
+  '''A model for which there is a global cache of "Last instances",
+  e.g. a cache of all recently charted songs (see the Play class)'''
+
+  LAST = None #Important that children overwrite this to avoid clashes
+  LAST_ORDER = "-play_date" #Get last X based on this ordering
+
+  @classmethod
+  def get_last(cls, num=-1, keys_only=False):
+    if num != -1 and num < 1:
+      return None
+
+    if program is not None:
+      return program.get_last_plays(num=num)
+
+    cached = cls.get_cached_query(cls.LAST, num)
+
+    if not cached or cached.need_fetch(num):
+      cached.set(cls.get_keys(num=num, order=cls.LAST_ORDER), num)
+
+    cached.save()
+
+    if not cached:
+      return []
+
+    if keys_only:
+      return cached[:num]
+    else:
+      return sorted(cls.get(cached[:num]),
+                    key=lambda play: play.play_date)
+
+  @classmethod
+  def get_last_keys(cls, num=1,
+                    program=None, before=None, after=None):
+    cls.get_last(num=num, program=program, before=before, after=after)
+
 class Play(CachedModel):
   '''A Play is an (entirely) immutable datastore object which represents
   a charted song
   '''
-  LAST = "last_plays_b%s_a%s" # Tuple of last_plays_list, db_count
+  LAST = "last_plays" # Tuple of last_plays_list, db_count
   SHOW_LAST = "last_plays_show%s" #possibly keep with show instead
   ENTRY = "play_key%s"
 
@@ -154,37 +190,22 @@ class Play(CachedModel):
   def p_artist(self):
     return self.p_artist
 
-  @classmethod
-  def get_last(cls, num=-1,
-               program=None, before=None, after=None,
-               keys_only=False):
-    if num != -1 and num < 1:
-      return None
 
-    if program is not None:
-      return program.get_last_plays(num=num, before=before, after=after)
-
-    cached = cls.get_cached_query(cls.LAST, before, after)
-
-    if not cached or cached.need_fetch(num):
-      cached.set(
-        cls.get_keys(num=num, before=before, after=after))
-
-    cached.save()
-
-    if not cached:
-      return []
-
-    if keys_only:
-      return cached[:num]
-    else:
-      return sorted(cls.get(cached[:num]),
-                    key=lambda play: play.play_date)
 
   @classmethod
-  def get_last_keys(cls, num=1,
-                    program=None, before=None, after=None):
-    cls.get_last(num=num, program=program, before=before, after=after)
+  def get_top(cls, start, end, song_num=0, album_num=0, keys_only=False):
+    already_cached = True
+    if song_num > 0:
+      cached_songs = cls.get_cached_query(cls.TOP_SONGS)
+      need_fetch &= bool(cached_songs)
+    if album_num > 0:
+      cached_albums = cls.get_cached_query(cls.TOP_ALBUMS)
+      need_fetch &= bool(cached_songs)
+
+    if not already_cached:
+      plays = cls.get_last(num=1000, after=start, before=end, new=True)
+
+
 
 class Psa(db.Model):
   desc = db.StringProperty()

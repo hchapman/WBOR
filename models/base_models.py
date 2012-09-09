@@ -82,53 +82,61 @@ def as_key(obj):
 def as_keys(key_list):
   return filter(None, [as_key(key) for key in key_list])
 
-class QueryCache(list):
+class CacheItem(object):
+  def __init__(self, cachekey):
+    self._key = cachekey
+
+  @classmethod
+  def fetch(self, cachekey):
+    pass
+  def save(self, data):
+    CachedModel.cache_set(data, self._key)
+
+class CountTableCache(CacheItem):
+  ''' Represents a table of keys/values in cache '''
+  def __init__(self, cachekey, table=dict()):
+    super(CountTableCache, self).__init__(cachekey)
+
+class QueryCache(CacheItem):
   ''' An object representing a list of keys in the datastore
   pertaining to a query called commonly and worthy of caching.
 
   _dblen represents the most recent guesstimate of the (minimum)
   number of keys that an actual query would return'''
-  def __init__(self, cachekey, keylist=[], keylen=None):
-    self._key = cachekey
-    super(QueryCache, self).__init__(keylist if keylist is not None else [])
-    self._dblen = keylen
+  def __init__(self, cachekey, keylist=[], maxl=False, keylen=0):
+    super(QueryCache, self).__init__(cachekey)
+    self.set(keylist, maxl, keylen)
 
   @classmethod
   def fetch(cls, cachekey):
-    return QueryCache(cachekey, *CachedModel.cache_get(cachekey))
+    return cls(cachekey, *CachedModel.cache_get(cachekey))
   def save(self):
-    CachedModel.cache_set((self._data, self._dblen), self._key)
+    super(QueryCache, self).save((self._data, self._maxl))
 
   def insert(self, idx, key):
     self._data.insert(idx, key)
-    self._add_len(1)
 
   def append(self, key):
     self._data.append(key)
-    self._add_len(1)
 
   def prepend(self, key):
     self.insert(0, key)
 
-  def set(self, keylist, keylen=None):
+  def set(self, keylist, maxl=False, keylen=0):
     ''' Set the data for this QueryCache with real results from
     a datastore query'''
     self._data = keylist
-    self._dblen = (keylen if keylen is not None
-                   else len(keylist))
+    self._maxl = maxl or (len(keylist) < keylen and keylen >= 0)
 
   def need_fetch(self, num):
     ''' Determines if we need a new fetch from the datastore
     We need a new fetch if:
       a. We have fewer keys than the desired number AND
-      b. Our database size estimate tells us that we either
-      lack info on the datastore OR that the DB has more entries
-      to actually be fetched with a real (non-cached) query.'''
-    return (num > len(self) and (self._dblen is None or self._dblen > num))
+      b. We don't have maximal cache'''
+    return (num > len(self) and not self._maxl)
 
-  def _add_len(self, amt):
-    self._dblen = (None if self._dblen is None
-                   else self._dblen+amt)
+  def __getitem__(self, key):
+    return self._data[key]
 
 class CachedModel(db.Model):
   ''' A CachedModel is a database model which tries its best to keep
