@@ -407,7 +407,7 @@ def getProgramKeys(dj=None, order=None):
   query = models.Program.all(keys_only=True)
 
   if dj is not None:
-    if isinstance(key, models.Dj):
+    if isinstance(dj, models.Dj):
       dj = dj.key()
     if dj is not None:
       query.filter("dj_list =", dj)
