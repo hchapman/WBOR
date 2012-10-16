@@ -42,7 +42,6 @@ def quantummethod(f):
       self.f = f
 
     def __get__(self, instance, klass):
-      print "poop"
       if instance is None:
         # Class method was requested
         return self.make_unbound(klass)
@@ -121,6 +120,9 @@ class QueryCache(CacheItem):
 
   def prepend(self, key):
     self.insert(0, key)
+
+  def __len__(self):
+    return len(self._data)
 
   def set(self, keylist, maxl=False, keylen=0):
     ''' Set the data for this QueryCache with real results from
@@ -280,7 +282,7 @@ class CachedModel(db.Model):
 
   @classmethod
   def get_cached_query(cls, index, *args, **kwargs):
-    return QueryCache(index % args)
+    return QueryCache.fetch(index % args)
 
   def put(self):
     '''

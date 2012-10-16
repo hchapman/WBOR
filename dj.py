@@ -15,7 +15,6 @@
 
 import os
 import urllib
-import cache
 import datetime
 import time
 import logging
@@ -41,6 +40,7 @@ import models_old as models
 from models.base_models import (NoSuchEntry,)
 from models.dj import (Dj, Permission, InvalidLogin, NoSuchUsername)
 from models.tracks import Album, Song
+from models.play import Play
 
 from configuration import webapp2conf
 
@@ -308,16 +308,22 @@ class ChartSong(UserHandler):
   @login_required
   def get(self):
     if not self.session_has_program():
-      self.session.add_flash("You can't chart songs until you have an associated program in the system.  Please contact a member of management immediately.")
+      self.session.add_flash(
+        "You can't chart songs until you have an associated program in the "
+        "system.  Please contact a member of management immediately.")
       self.redirect("/dj/")
       return
+
     station_id = False
     try:
+      #TODO: Don't use flash message to determine this
       if self.flash.msg == "Station ID recorded.":
         station_id = True
     except AttributeError:
       pass
+
     posts = models.getLastPosts(2)
+
     memcache_key = "playlist_html_%s"%self.session.get('program').get('key')
     playlist_html = memcache.get(memcache_key)
     if not playlist_html:
@@ -329,6 +335,7 @@ class ChartSong(UserHandler):
          }
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
+
     last_psa = cache.getLastPsa()
     new_albums = None
     #new_song_div_html = memcache.get("new_song_div_html")
@@ -366,8 +373,8 @@ class ChartSong(UserHandler):
       # Charting a song, not a PSA or ID
       track_artist = self.request.get("artist").encode("latin1", 'replace')
       trackname = self.request.get("trackname").encode("latin1", 'replace')
-      isNew = self.request.get("isNew")
-      if isNew:
+      isNew = int(self.request.get("isNew"))
+      if isNew > 0:
         # if it's "new", the album should be in the datastore already with
         # a valid key.
         album = Album.get(self.request.get("album_key"))

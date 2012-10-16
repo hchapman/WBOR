@@ -16,6 +16,11 @@ indexes:
   - name: add_date
     direction: desc
 
+- kind: BlogPost
+  properties:
+  - name: slug
+  - name: post_date
+
 - kind: Play
   properties:
   - name: isNew

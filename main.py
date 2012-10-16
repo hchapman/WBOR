@@ -11,6 +11,7 @@ import logging
 
 from models.dj import Permission, Dj
 from models.tracks import Album, Song
+from models.play import Play
 from models.base_models import NoSuchEntry
 
 import amazon
@@ -218,7 +219,8 @@ class BlogDisplay(BaseHandler):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
     post = models.getPostBySlug(post_date, post_slug)
     if not post:
-      self.session.add_flash("The post you requested could not be found.  Please try again.")
+      self.session.add_flash(
+        "The post you requested could not be found.  Please try again.")
       self.redirect('/')
       return
     template_values = {
@@ -252,14 +254,14 @@ class ViewCoverHandler(blobstore_handlers.BlobstoreDownloadHandler):
 
 class UpdateInfo(webapp2.RequestHandler):
   def get(self):
-    recent_songs = cache.getLastPlays(num=3)
-    logging.debug(recent_songs)
+    recent_songs = Play.get_last(num=3)
+    logging.info(recent_songs)
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
       song, program = (Song.get(last_play.song_key),
                        cache.getProgram(last_play.program_key))
-      song_string = song.title
-      artist_string = song.artist
+      song_string = song.p_title
+      artist_string = song.p_artist
       program_title, program_desc, program_slug = (program.title,
                                                    program.desc,
                                                    program.slug)
@@ -382,7 +384,7 @@ class PlaylistPage(BaseHandler):
                                        before=(selected_date +
                                                datetime.timedelta(hours=24)))
       else:
-        lastplay = models.getLastPlays(program=selected_program, num=1)
+        lastplay = Play.get_last(program=selected_program, num=1)
         if lastplay:
           lastplay = lastplay[0]
           last_date = lastplay.play_date
@@ -393,14 +395,14 @@ class PlaylistPage(BaseHandler):
           plays = []
     else:
       if not selected_date:
-        lastplay = cache.getLastPlay()
+        lastplay = Play.get_last()
         if lastplay:
-          selected_date = lastplay.play_date
+          selected_date = lastplay.p_play_date
 
       if selected_date:
         plays = models.getPlaysForDate(selected_date)
       else:
-        plays = cache.getLastPlays(60)
+        plays = Play.get_last(num=60)
 
     template_values = {
       'playlists_selected': True,
@@ -442,7 +444,7 @@ class PlaylistExport(BaseHandler):
                                        before=(selected_date +
                                                datetime.timedelta(hours=24)))
       else:
-        lastplay = models.getLastPlays(program=selected_program, num=1)
+        lastplay = Play.get_last(program=selected_program, num=1)
         if lastplay:
           lastplay = lastplay[0]
           last_date = lastplay.play_date
@@ -453,7 +455,7 @@ class PlaylistExport(BaseHandler):
           plays = []
     else:
       if selected_date is None:
-        lastplay = cache.getLastPlay()
+        lastplay = Play.get_last()
         if lastplay:
           selected_date = lastplay.play_date
 
@@ -462,7 +464,7 @@ class PlaylistExport(BaseHandler):
         print selected_date.isoformat(" ")
         plays = models.getRetardedNumberOfPlaysForDate(selected_date)
       else:
-        plays = cache.getLastPlays(60)
+        plays = Play.get_last(num=60)
 
     csv_sep = "\t"
     out_data = [("Date", "Time", "Title", "Artist")]
@@ -536,18 +538,6 @@ class ConvertArtistNames(BaseHandler):
       self.response.out.write("converted %d artist names." % total)
     except DeadlineExceededError:
       self.response.out.write("converted %d artist names, incomplete." % total)
-
-
-class ConvertPlays(BaseHandler):
-  def get(self):
-    pc = models.Play.all().fetch(2000)
-    total = 0
-    for p in pc:
-      if not p.artist:
-        total += 1
-        p.artist = p.song.artist
-        p.put()
-    self.response.out.write("converted %d plays." % total)
 
 class ProgramPage(BaseHandler):
   def get(self, slug):
@@ -642,7 +632,6 @@ app = webapp2.WSGIApplication([
     ('/contact/?', ContactPage),
     ('/events/?', EventPage),
     ('/searchnames/?', ConvertArtistNames),
-    ('/convertplays/?', ConvertPlays),
     ('/albums/([^/]*)/?', ViewCoverHandler),
     ('/callvoice/?', CallVoice),
     ], debug=True, config=webapp2conf)

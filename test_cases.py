@@ -5,7 +5,6 @@ from google.appengine.ext import webapp
 from google.appengine.ext import db
 
 from models.dj import *
-from models.permission import *
 
 #from handlers import BaseHandler
 from configuration import webapp2conf
@@ -62,10 +61,10 @@ def run_dj_cache_tests():
         dj1.p_email = "tesscase@"
         dj1.p_fullname = "Tessa Case"
         dj1.put()
-    except NoSuchUsernameError as e:
+    except NoSuchUsername as e:
         print dj1.key(), e
 
-   # dj3 = cache.putDj(email="chase", fullname="Chase Case", 
+   # dj3 = cache.putDj(email="chase", fullname="Chase Case",
                       #password="secret", edit_dj=dj3)
     #dj3 = cache.putDj(password="supersecret2", edit_dj=dj3)
 
@@ -79,16 +78,16 @@ def run_dj_cache_tests():
     print dj1.key().__hash__()
 
     print "--------------------"
-    
+
     try:
         login_dj = Dj.login("tcase", "esact")
         print login_dj.to_xml()
-    except NoSuchUsernameError:
+    except NoSuchUsername:
         print "Login to tcase failed. No such username."
     try:
         login_dj = Dj.login("ttcase", "esact")
         print login_dj.to_xml()
-    except NoSuchUsernameError:
+    except NoSuchUsername:
         print "Login to ttcase failed. No such username."
 
     # Try logging in
