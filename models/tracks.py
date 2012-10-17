@@ -282,7 +282,7 @@ class Song(CachedModel):
 
   @classmethod
   def get(cls, keys=None,
-          title=None,
+          title=None, order=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
       logging.error(keys)
@@ -295,8 +295,7 @@ class Song(CachedModel):
     return None
 
   @classmethod
-  def get_key(cls,
-             order=None, num=-1):
+  def get_key(cls, title=None, order=None, num=-1):
     query = cls.all(keys_only=True)
 
     if order is not None:
@@ -319,8 +318,195 @@ class Song(CachedModel):
   def p_album(self):
     return self.album
 
-class ArtistName(db.Model):
+class ArtistName(CachedModel):
+  ## Functions for getting and setting Artists,
+  ## Specifically, caching artist name autocompletion
+  COMPLETE = "artist_pref%s"
+  ENTRY = "artist_key%s"
+
+  # Minimum number of entries in the cache with which we would even consider
+  # not rechecking the datastore. Figit with this number to balance reads and
+  # autocomplete functionality. Possibly consider algorithmically determining
+  # a score for artist names and prefixes?
+  MIN_AC_CACHE = 10
+  MIN_AC_RESULTS = 5
+
+  # GAE Datastore property list
   artist_name = db.StringProperty()
   lowercase_name = db.StringProperty()
   search_name = db.StringProperty()
-  search_names = db.StringListProperty()
+  search_names = db.StringListProperty() # Deprecated. Use search_name
+
+  @classmethod
+  def new(cls, artist_name, key_name=None, **kwds):
+    artist = cls.get(artist_name=artist_name)
+    if artist:
+      return artist
+
+    artist = cls(
+      key_name=key_name,
+      artist_name=artist_name,
+      lowercase_name=artist_name.lower(),
+      search_name=cls.get_search_name(artist_name),
+      **kwds)
+    return artist
+
+  @classmethod
+  def try_put(cls, artist_name, key_name=None, **kwds):
+    artist = cls.get(artist_name=artist_name)
+    if artist:
+      return artist
+
+    artist = cls(
+      key_name=key_name,
+      artist_name=artist_name,
+      lowercase_name=artist_name.lower(),
+      search_name=cls.get_search_name(artist_name),
+      **kwds)
+    artist.put()
+    return artist
+
+  @classmethod
+  def get(cls, keys=None, artist_name=None,
+          num=-1, use_datastore=True, one_key=False):
+    if keys is not None:
+      return super(ArtistName, cls).get(
+        keys=keys,
+        use_datastore=use_datastore,
+        one_key=one_key)
+
+    keys = cls.get_key(artist_name=artist_name, num=num)
+    if keys is not None:
+      super(ArtistName, cls).get(keys=keys, use_datastore=use_datastore)
+    return None
+
+  @classmethod
+  def get_key(cls, artist_name, num=-1):
+    query = cls.all(keys_only=True)
+    query.filter("lowercase_name =", artist_name.lower())
+
+    if num == -1:
+      return query.get()
+    return query.fetch(num)
+
+  @staticmethod
+  def get_search_name(artist_name):
+    SEARCH_IGNORE_PREFIXES = (
+      "the ",
+      "a ",
+      "an ",)
+
+    name = artist_name.lower()
+
+    for prefix in SEARCH_IGNORE_PREFIXES:
+      if name.startswith(prefix):
+        name = name[len(prefix):]
+
+    return name
+
+  @classmethod
+  def has_prefix(cls, artist_key, prefix):
+    prefixes = prefix.split()
+
+    artist = cls.get(artist_key)
+    if artist.search_name is None:
+      if not artist.search_names:
+        artist.search_name = cls.get_search_name(artist.artist_name)
+      else:
+        artist.search_name = " ".join(artist.search_names)
+      artist.put()
+
+    for name_part in artist.search_name.split():
+      check_prefixes = prefixes
+      for prefix in check_prefixes:
+        if name_part.startswith(prefix):
+          prefixes.remove(prefix)
+          if len(prefixes) == 0:
+            return True
+          break
+
+    return False
+
+  # As it is now, autocomplete is a little wonky. One thing worth
+  # noting is that we search cache a bit more effectively than the
+  # datastore: for example, if you've got a cached prefix "b" and
+  # bear in heaven was there, then you're able to just search "b i
+  # h" and cut out other stragglers like "Best Band Ever". Right
+  # now, we can't search datastore this efficiently, so this is kind
+  # of hit or miss.
+  @classmethod
+  def autocomplete(cls, prefix):
+    prefix = prefix.lower().strip()
+    # First, see if we have anything already cached for us in memstore.
+    # We start with the most specific prefix, and widen our search
+    cache_prefix = prefix
+    cached_results = None
+    perfect_hit = True
+    while cached_results is None:
+      if len(cache_prefix) > 0:
+        cached_results = cls.cache_get(cls.COMPLETE %cache_prefix)
+        if cached_results is None:
+          cache_prefix = cache_prefix[:-1]
+          perfect_hit = False
+      else:
+        cached_results = {"recache_count": -1,
+                          "max_results": False,
+                          "artists": None,}
+
+    # If we have a sufficient number of cached results OR we
+    #    have all possible results, search in 'em.
+    logging.debug(cache_prefix)
+    logging.debug(cached_results)
+    logging.debug(perfect_hit)
+    if (cached_results["recache_count"] >= 0 and
+        (cached_results["max_results"] or
+         len(cached_results["artists"]) >= cls.MIN_AC_CACHE)):
+      logging.debug("Trying to use cached results")
+
+      cache_artists = sorted(cached_results["artists"],
+                             key=lambda x: cls.get(x).search_name)
+
+      # If the cache is perfect (exact match!), just return it
+      if perfect_hit:
+        # There is no need to update the cache in this case.
+        logging.error(cache_artists)
+        return cls.get(cache_artists)
+
+      # Otherwise we're going to have to search in the cache.
+      results = filter(lambda a: cls.has_prefix(a, prefix),
+                       cache_artists)
+      if cached_results["max_results"]:
+        # We're as perfect as we can be, so cache the results
+        cached_results["recache_count"] += 1
+        cached_results["artists"] = results
+        cls.cache_set(cached_results, cls.COMPLETE, prefix)
+        return cls.get(results)
+      elif len(results) > cls.MIN_AC_RESULTS:
+        if len(results) > cls.MIN_AC_CACHE:
+          cached_results["recache_count"] += 1
+          cached_results["artists"] = results
+          cls.cache_set(cached_results, cls.COMPLETE, prefix)
+          return cls.get(results)
+        return cls.get(results)
+
+    artists_full = (cls.all(keys_only=True)
+                    .filter("lowercase_name >=", prefix)
+                    .filter("lowercase_name <", prefix + u"\ufffd").fetch(10))
+    artists_sn = (cls.all(keys_only=True)
+                  .filter("search_name >=", prefix)
+                  .filter("search_name <", prefix + u"\ufffd").fetch(10))
+    max_results = len(artists_full) < 10 and len(artists_sn) < 10
+    artist_dict = {}
+    all_artists = cls.get(artists_full + artists_sn)
+    for a in all_artists:
+      artist_dict[a.artist_name] = a
+    artists = []
+    for a in artist_dict:
+      artists.append(artist_dict[a])
+    artists = sorted(artists, key=lambda x: x.search_name)
+
+    results_dict = {"recache_count": 0,
+                    "max_results": max_results,
+                    "artists": [artist.key() for artist in artists]}
+    cls.cache_set(results_dict, cls.COMPLETE, prefix)
+    return artists

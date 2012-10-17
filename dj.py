@@ -39,8 +39,9 @@ import models_old as models
 
 from models.base_models import (NoSuchEntry,)
 from models.dj import (Dj, Permission, InvalidLogin, NoSuchUsername)
-from models.tracks import Album, Song
+from models.tracks import Album, Song, ArtistName
 from models.play import Play, Psa, StationID
+from models.program import Program
 
 from configuration import webapp2conf
 
@@ -431,13 +432,10 @@ class ChartSong(UserHandler):
           program=self.program_key,
           after=(datetime.datetime.now() - datetime.timedelta(days=1)))})
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
-      if not cache.getArtistKey(track_artist):
-        # this is for autocomplete purposes. if the artist hasn't been charted
-        # before, save the artist name in the datastore.
-        cache.tryPutArtist(track_artist)
+      ArtistName.try_put(track_artist)
 
       # updates the top 10 artists for the program
-      self.updateArtists(cache.getProgram(keys=self.program_key), track_artist)
+      self.updateArtists(Program.get(keys=self.program_key), track_artist)
       try:
         # last.fm integration
         lastfm_username = "wbor"

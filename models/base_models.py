@@ -108,7 +108,10 @@ class QueryCache(CacheItem):
 
   @classmethod
   def fetch(cls, cachekey):
-    return cls(cachekey, *CachedModel.cache_get(cachekey))
+    result = CachedModel.cache_get(cachekey)
+    if result is None:
+      return cls(cachekey)
+    return cls(cachekey, *result)
   def save(self):
     super(QueryCache, self).save((self._data, self._maxl))
 
@@ -269,6 +272,9 @@ class CachedModel(db.Model):
     logging.error(db_fetch_keys)
     db_fetch_zip = zip(*db_fetch_keys) #[0]: idx, [1]: key
     logging.error(db_fetch_zip)
+    if len(db_fetch_zip) == 0:
+      return []
+
     for i, obj in zip(db_fetch_zip[0],
                       super(CachedModel, cls).get(db_fetch_zip[1])):
       objs[i] = obj.add_to_cache()

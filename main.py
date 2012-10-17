@@ -10,7 +10,7 @@ import json
 import logging
 
 from models.dj import Permission, Dj
-from models.tracks import Album, Song
+from models.tracks import Album, Song, ArtistName
 from models.play import Play
 from models.base_models import NoSuchEntry
 
@@ -79,7 +79,7 @@ class DjComplete(BaseHandler):
 class ArtistComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
-    artists = cache.artistAutocomplete(q)
+    artists = ArtistName.autocomplete(q)
     self.response.out.write(json.dumps({
           'query': q,
           'suggestions': [ar.artist_name for ar in artists],
@@ -262,9 +262,14 @@ class UpdateInfo(webapp2.RequestHandler):
                        cache.getProgram(last_play.program_key))
       song_string = song.p_title
       artist_string = song.p_artist
-      program_title, program_desc, program_slug = (program.title,
-                                                   program.desc,
-                                                   program.slug)
+      if program is not None:
+        program_title, program_desc, program_slug = (program.title,
+                                                     program.desc,
+                                                     program.slug)
+      else:
+        program_title, program_desc, program_slug = ("no show",
+                                                     "No description",
+                                                     "")
     else:
       song, program = None, None
       song_string = "nothing"
