@@ -154,7 +154,7 @@ class Login(UserHandler):
       return
 
     self.user = dj
-    programList = cache.getPrograms(dj=dj)
+    programList = Program.get_by_dj(dj=dj, num=10)
     if not programList:
       self.flash = ("You have successfully logged in,"
                     "but you have no associated programs."

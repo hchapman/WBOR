@@ -55,7 +55,6 @@ class LastCachedModel(CachedModel):
       cached.set(cls.get_keys(num=num, order=order_str), num)
 
     cached.save()
-    cached.need_fetch(num)
 
     if not cached:
       return []

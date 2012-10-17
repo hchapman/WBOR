@@ -13,6 +13,7 @@ from models.dj import Permission, Dj
 from models.tracks import Album, Song, ArtistName
 from models.play import Play
 from models.base_models import NoSuchEntry
+from models.program import Program
 
 import amazon
 import models_old as models
@@ -259,7 +260,7 @@ class UpdateInfo(webapp2.RequestHandler):
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
       song, program = (Song.get(last_play.song_key),
-                       cache.getProgram(last_play.program_key))
+                       Program.get(last_play.program_key))
       song_string = song.p_title
       artist_string = song.p_artist
       if program is not None:
