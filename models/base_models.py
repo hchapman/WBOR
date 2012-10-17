@@ -149,6 +149,8 @@ class CachedModel(db.Model):
   are used.
   '''
 
+  UNCACHED_READ = "@@@noncached_count"
+
   LOG_SET_DEBUG = "Memcache set (%s, %s) required"
   LOG_SET_FAIL = "Memcache set(%s, %s) failed"
   LOG_DEL_ERROR = "Memcache delete(%s) failed with error code %s"
@@ -245,23 +247,29 @@ class CachedModel(db.Model):
 
     logging.error(keys)
 
-    for i, key in enumerate(keys):
-      if key is None:
-        return None,
-      if isinstance(key, cls):
-        return key
-      obj = cls.cache_get(cls.ENTRY %key)
+    for key in keys:
+      if key is not None:
+        if isinstance(key, cls):
+          obj = key
+        else:
+          obj = cls.cache_get(cls.ENTRY %key)
 
-      if not one_key and obj is not None:
-        objs.append(obj)
+        if not one_key and obj is not None:
+          objs.append(obj)
 
-      if one_key:
-        logging.error("poop %s"% key)
-        return super(CachedModel, cls).get(key)
+        elif one_key:
+          if obj is not None:
+            return obj
+          reads = cls.cache_get(cls.UNCACHED_READ)
+          reads = reads if reads is not None else 0
+          cls.cache_set(reads+1, cls.UNCACHED_READ)
+          logging.error("Had to make %s datastore reads in total so far"%reads)
+          return super(CachedModel, cls).get(key)
 
-      # Store the key to batch fetch, and the position to place it
-      if use_datastore:
-        db_fetch_keys.append((i, key))
+        # Store the key to batch fetch, and the position to place it
+        elif use_datastore:
+          objs.append(None)
+          db_fetch_keys.append((len(objs), key))
 
     if not use_datastore:
       return keys
@@ -273,11 +281,16 @@ class CachedModel(db.Model):
     db_fetch_zip = zip(*db_fetch_keys) #[0]: idx, [1]: key
     logging.error(db_fetch_zip)
     if len(db_fetch_zip) == 0:
-      return []
+      return objs
 
+    reads = cls.cache_get(cls.UNCACHED_READ)
+    reads = reads if reads is not None else 0
     for i, obj in zip(db_fetch_zip[0],
                       super(CachedModel, cls).get(db_fetch_zip[1])):
+      reads += 1
       objs[i] = obj.add_to_cache()
+    cls.cache_set(reads, cls.UNCACHED_READ)
+    logging.error("Had to make %s datastore reads in total so far"%reads)
 
     return filter(None, objs)
 
