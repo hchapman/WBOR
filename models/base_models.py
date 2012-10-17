@@ -235,8 +235,6 @@ class CachedModel(db.Model):
     if isinstance(keys, cls):
       return keys
 
-    logging.error("poop")
-
     if is_key(keys) or one_key:
       keys = (as_key(keys),)
       one_key = True
@@ -264,12 +262,15 @@ class CachedModel(db.Model):
           reads = reads if reads is not None else 0
           cls.cache_set(reads+1, cls.UNCACHED_READ)
           logging.error("Had to make %s datastore reads in total so far"%reads)
-          return super(CachedModel, cls).get(key)
+          obj = super(CachedModel, cls).get(key)
+          if obj is not None:
+            return obj.add_to_cache()
+          return None
 
         # Store the key to batch fetch, and the position to place it
         elif use_datastore:
-          objs.append(None)
           db_fetch_keys.append((len(objs), key))
+          objs.append(None)
 
     if not use_datastore:
       return keys
@@ -283,11 +284,13 @@ class CachedModel(db.Model):
     if len(db_fetch_zip) == 0:
       return objs
 
+    logging.error(objs)
     reads = cls.cache_get(cls.UNCACHED_READ)
     reads = reads if reads is not None else 0
     for i, obj in zip(db_fetch_zip[0],
                       super(CachedModel, cls).get(db_fetch_zip[1])):
       reads += 1
+      logging.error(i)
       objs[i] = obj.add_to_cache()
     cls.cache_set(reads, cls.UNCACHED_READ)
     logging.error("Had to make %s datastore reads in total so far"%reads)
