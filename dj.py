@@ -649,14 +649,14 @@ class ManageDJs(UserHandler):
         self.redirect("/dj/djs")
         return
 
-      dj = cache.getDjByEmail(email)
+      dj = Dj.get_by_email(email)
       if dj is not None:
         self.session.add_flash(
           "A DJ with email address %s already exists: %s, username %s" %
           (dj.email, dj.fullname, dj.username))
         self.redirect("/dj/djs")
         return
-      dj = cache.getDjByUsername(username)
+      dj = Dj.get_by_username(username)
       if dj is not None:
         self.session.add_flash(
           "A DJ with username %s already exists: %s, email address %s" %
@@ -665,10 +665,10 @@ class ManageDJs(UserHandler):
         return
 
       # If both username and email address are new, then we can add them
-      dj = cache.putDj(fullname=fullname,
-                       email=email,
-                       username=username,
-                       password=password)
+      dj = Dj.new(fullname=fullname,
+                  email=email,
+                  username=username,
+                  password=password).put()
 
       self.session.add_flash(dj.fullname + " successfully added as a DJ.")
       self.redirect("/dj/djs/")
@@ -680,10 +680,14 @@ class ManageDJs(UserHandler):
 class EditDJ(UserHandler):
   @authorization_required("Manage DJs")
   def get(self, dj_key):
-    dj = cache.getDj(dj_key)
-    dj_list = cache.getAllDjs()
+    dj = Dj.get(dj_key)
+    # TODO: CRITICAL: CRITICAL: Don't show every goddamn DJ
+    dj_list = [] # Seriously screw this crap
+    #dj_list = cache.getAllDjs()
     if not dj:
-      self.session.add_flash("The DJ specified (" + dj_key + ") does not exist.  Please try again.")
+      self.session.add_flash(
+          "The DJ specified (" + dj_key +
+          ") does not exist.  Please try again.")
       self.redirect("/dj/djs/")
     else:
       template_values = {
@@ -693,14 +697,16 @@ class EditDJ(UserHandler):
         'flash': self.flash,
         'posts': models.getLastPosts(3),
       }
-      self.response.out.write(template.render(get_path("dj_manage_djs.html"), template_values))
+      self.response.out.write(
+          template.render(get_path("dj_manage_djs.html"), template_values))
 
   @authorization_required("Manage DJs")
   def post(self, dj_key):
-    dj = cache.getDj(dj_key)
+    dj = Dj.get(dj_key)
     if (dj is None) or (self.request.get("submit") != "Edit DJ" and
                         self.request.get("submit") != "Delete DJ"):
-      self.session.add_flash("There was an error processing your request.  Please try again.")
+      self.session.add_flash(
+          "There was an error processing your request.  Please try again.")
 
     elif self.request.get("submit") == "Edit DJ":
       fullname = self.request.get("fullname")
@@ -715,15 +721,14 @@ class EditDJ(UserHandler):
           return
 
       # Edit the dj
-      dj = cache.putDj(fullname=fullname,
-                       email=email,
-                       username=username,
-                       password=password,
-                       edit_dj=dj)
+      dj = Dj.put(fullname=fullname,
+                  email=email,
+                  username=username,
+                  password=password,)
 
       self.session.add_flash(fullname + " has been successfully edited.")
     elif self.request.get("submit") == "Delete DJ":
-      cache.deleteDj(dj)
+      dj.delete()
       self.session.add_flash(fullname + " has been successfully deleted.")
     self.redirect("/dj/djs/")
 
@@ -734,25 +739,30 @@ class EditDJ(UserHandler):
 class ManagePrograms(UserHandler):
   @authorization_required("Manage Programs")
   def get(self):
-    program_list = cache.getPrograms(order="title")
+    # TODO: CRITICAL: CRITICAL: Screw this! Do better
+    program_list = [] #cache.getPrograms(order="title")
 
     template_values = {
-      'current_programs': tuple({"prog" : program,
-                                 "dj_list" : cache.getDj(program.dj_list)}
-                                 for program in program_list if program.current),
-      'legacy_programs': tuple({"prog" : program,
-                                "dj_list" : cache.getDj(program.dj_list)}
-                               for program in program_list if not program.current),
+      'current_programs': tuple(
+          {"prog" : program,
+           "dj_list" : cache.getDj(program.dj_list)}
+          for program in program_list if program.current),
+      'legacy_programs': tuple(
+          {"prog" : program,
+           "dj_list" : cache.getDj(program.dj_list)}
+          for program in program_list if not program.current),
       'session': self.session,
       'flash': self.flash,
       'posts': models.getLastPosts(3),
     }
-    self.response.out.write(template.render(get_path("dj_manage_programs.html"), template_values))
+    self.response.out.write(
+        template.render(get_path("dj_manage_programs.html"), template_values))
 
   @authorization_required("Manage Programs")
   def post(self):
     if (self.request.get("submit") != "Add Program"):
-      self.session.add_flash("There was an error processing your request. Please try again.")
+      self.session.add_flash(
+          "There was an error processing your request. Please try again.")
     else:
       slug = self.request.get("slug")
       program = models.getProgramBySlug(slug)
@@ -763,19 +773,20 @@ class ManagePrograms(UserHandler):
         return
 
       # Set up the program entry, and then put it in the DB
-      program = models.Program(title=self.request.get("title"),
-                               slug=self.request.get("slug"),
-                               desc=self.request.get("desc"),
-                               dj_list=[],
-                               page_html=self.request.get("page_html"),
-                               current=bool(self.request.get("current")))
+      program = Program.new(title=self.request.get("title"),
+                            slug=self.request.get("slug"),
+                            desc=self.request.get("desc"),
+                            dj_list=[],
+                            page_html=self.request.get("page_html"),
+                            current=bool(self.request.get("current")))
       program.put()
 
-      self.session.add_flash("%s was successfully created associated a program. "
-                        "Click <a href='/dj/programs/%s'>here</a> "
-                        "to edit it (you probably want to do "
-                        "this as there are no DJs on it currently)."%
-                        (program.title, str(program.key())))
+      self.session.add_flash(
+          "%s was successfully created associated a program. "
+          "Click <a href='/dj/programs/%s'>here</a> "
+          "to edit it (you probably want to do "
+          "this as there are no DJs on it currently)."%
+          (program.title, str(program.key())))
 
     self.redirect('/dj/programs/')
 
@@ -917,7 +928,8 @@ class NewBlogPost(UserHandler):
       'flash': self.flash,
       'posts': posts,
     }
-    self.response.out.write(template.render(get_path("dj_createpost.html"), template_values))
+    self.response.out.write(
+        template.render(get_path("dj_createpost.html"), template_values))
 
   @authorization_required("Manage Blog")
   def post(self):
@@ -926,10 +938,15 @@ class NewBlogPost(UserHandler):
     text = self.request.get("text")
     post_date = datetime.datetime.now();
     slug = self.request.get("slug")
-    post = models.BlogPost(title=title, text=text, post_date=post_date, slug=slug)
+    post = models.BlogPost(
+        title=title,
+        text=text,
+        post_date=post_date,
+        slug=slug)
     posts = models.getLastPosts(2)
     if models.getPostBySlug(post_date, slug):
-      errors = "Error: this post has a duplicate slug to another post from the same day.  This probably shouldn't happen often."
+      errors = ("Error: this post has a duplicate slug to another post from "
+                "the same day.  This probably shouldn't happen often.")
     template_values = {
       'session': self.session,
       'flash': self.flash,
@@ -938,7 +955,8 @@ class NewBlogPost(UserHandler):
       'posts': posts,
     }
     if errors:
-      self.response.out.write(template.render(get_path("dj_createpost.html"), template_values))
+      self.response.out.write(
+          template.render(get_path("dj_createpost.html"), template_values))
     else:
       post.put()
       self.session.add_flash("Post \"%s\" successfully added." % title)
@@ -952,7 +970,9 @@ class EditBlogPost(UserHandler):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
     post = models.getPostBySlug(post_date, slug)
     if not post:
-      self.session.add_flash("The post you're looking for does not exist.  But you can look at actual posts below :)")
+      self.session.add_flash(
+          "The post you're looking for does not exist.  "
+          "But you can look at actual posts below :)")
       self.redirect("/")
       return
     posts = models.getLastPosts(2)
@@ -1037,7 +1057,8 @@ class NewEvent(UserHandler):
       'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)],
       'posts': posts,
     }
-    self.response.out.write(template.render(get_path("dj_create_event.html"), template_values))
+    self.response.out.write(
+        template.render(get_path("dj_create_event.html"), template_values))
 
   @authorization_required("Manage Events")
   def post(self):
@@ -1051,7 +1072,9 @@ class NewEvent(UserHandler):
     try:
       event_date = datetime.datetime.strptime(date_string, "%m/%d/%Y %H:%M")
     except ValueError:
-      self.session.add_flash("Unable to work with date \"%s\". Enter a valid date in the form mm/dd/yyyy, and an hour/minute as well." % date_string)
+      self.session.add_flash(
+          "Unable to work with date \"%s\". Enter a valid date in the form "
+          "mm/dd/yyyy, and an hour/minute as well." % date_string)
       self.redirect("/dj/event/")
       return
     event = models.Event(event_date=event_date, title=title, url=url, desc=desc)
@@ -1065,7 +1088,8 @@ class EditEvent(UserHandler):
   def get(self, event_key):
     event = models.Event.get(event_key)
     if not event:
-      self.session.add_flash("Unable to find the requested event.  Please try again.")
+      self.session.add_flash(
+          "Unable to find the requested event.  Please try again.")
       self.redirect("/dj/")
       return
     day = event.event_date.strftime("%m/%d/%Y")
@@ -1084,13 +1108,15 @@ class EditEvent(UserHandler):
       'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)],
       'posts': posts,
     }
-    self.response.out.write(template.render(get_path("dj_create_event.html"), template_values))
+    self.response.out.write(
+        template.render(get_path("dj_create_event.html"), template_values))
 
   @authorization_required("Manage Events")
   def post(self, event_key):
     event = models.Event.get(self.request.get("event_key"))
     if not event:
-      self.session.add_flash("Unable to find the requested event.  Please try again.")
+      self.session.add_flash(
+          "Unable to find the requested event.  Please try again.")
       self.redirect("/dj/")
       return
     if self.request.get("submit") == "Delete Event":
@@ -1108,7 +1134,9 @@ class EditEvent(UserHandler):
     try:
       event_date = datetime.datetime.strptime(date_string, "%m/%d/%Y %H:%M")
     except ValueError:
-      self.session.add_flash("Unable to work with date. Enter a date in the form mm/dd/yyyy, and an hour/minute as well.")
+      self.session.add_flash(
+          "Unable to work with date. Enter a date in the form mm/dd/yyyy, and "
+          "an hour/minute as well.")
       self.redirect("/dj/event/")
       return
     event.event_date = event_date
@@ -1134,7 +1162,8 @@ class ManagePermissions(UserHandler):
       'flash': self.flash,
       'posts': models.getLastPosts(2),
     }
-    self.response.out.write(template.render(get_path("dj_permissions.html"), template_values))
+    self.response.out.write(
+        template.render(get_path("dj_permissions.html"), template_values))
 
   @authorization_required("Manage Permissions")
   def post(self):
@@ -1164,10 +1193,12 @@ class ManagePermissions(UserHandler):
                   (dj.fullname, permission.title))
     if action == "remove":
       if dj.key() not in permission.dj_list:
-        errors = dj.fullname + " was not in the " + permission.title + " permission list."
+        errors = (dj.fullname + " was not in the " +
+                  permission.title + " permission list.")
       else:
         permission.dj_list.remove(dj.key())
-        status = "Successfully removed " + dj.fullname + " from " + permission.title + " permission list."
+        status = ("Successfully removed " + dj.fullname + " from " +
+                  permission.title + " permission list.")
     if errors:
       self.response.out.write(json.dumps({
         'err': errors,
@@ -1185,7 +1216,8 @@ class ManagePermissions(UserHandler):
 # post(): One of four actions:
 #     - add: AJAXically adds a new album to the datastore.
 #     - makeOld: AJAXically removes "new" status from an album
-#     - makeNew: AJAXically adds "new" status back to an album if made old by mistake
+#     - makeNew: AJAXically adds "new" status back to an album if made
+# old by mistake
 #     - manual: AJAX - adds an album which has been typed in by hand.
 
 class ManageAlbums(UserHandler):
@@ -1196,8 +1228,8 @@ class ManageAlbums(UserHandler):
  #   if not new_album_html:
     new_album_list = Album.get_new()
     new_album_html = template.render(
-      get_path("dj_manage_new_albums_list.html"), {'new_album_list': new_album_list}
-      )
+        get_path("dj_manage_new_albums_list.html"),
+        {'new_album_list': new_album_list})
     memcache.set("manage_new_albums_html", new_album_html)
     template_values = {
       'new_album_list': new_album_list,
@@ -1205,7 +1237,8 @@ class ManageAlbums(UserHandler):
       'session': self.session,
       'flash': self.flash,
     }
-    self.response.out.write(template.render(get_path("dj_manage_albums.html"), template_values))
+    self.response.out.write(
+        template.render(get_path("dj_manage_albums.html"), template_values))
 
   @authorization_required("Manage Albums")
   def post(self):
@@ -1234,7 +1267,8 @@ class ManageAlbums(UserHandler):
         i = i[0]
       except IndexError:
         self.response.out.write(json.dumps({
-          'err': "An error occurred.  Please try again, or if this keeps happening, select a different album."
+          'err': ("An error occurred.  Please try again, or if this keeps "
+                  "happening, select a different album.")
         }))
         return
       # this overly complicated code sets up the json data associated with
@@ -1269,7 +1303,8 @@ class ManageAlbums(UserHandler):
         album.set_new()
         album.put()
       except:
-        self.response.out.write(json.dumps({'err': "Album not found. Please try again."}))
+        self.response.out.write(
+            json.dumps({'err': "Album not found. Please try again."}))
         return
 
       self.response.out.write(json.dumps({'msg': "Made new."}))
@@ -1310,9 +1345,10 @@ class ManageAlbums(UserHandler):
                         "Try a different version with a reasonable size."),
                 'result': 1,}))
         else:
-          self.session.add_flash("The image you provided was too large. "
-                                 "There is a 1MB limit on cover artwork. "
-                                 "Try a different version with a reasonable size.")
+          self.session.add_flash(
+              "The image you provided was too large. "
+              "There is a 1MB limit on cover artwork. "
+              "Try a different version with a reasonable size.")
           self.redirect("/dj/albums/")
         return
       except urlfetch.InvalidURLError:
