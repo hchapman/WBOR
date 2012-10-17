@@ -69,7 +69,8 @@ class LastCachedModel(CachedModel):
         return cls.get(cached[-1])
 
       return sorted(cls.get(cached[:num]),
-                    key=lambda elt: getattr(elt, cls.LAST_ORDERBY))
+                    key=lambda elt: getattr(elt, cls.LAST_ORDERBY),
+                    reverse=(cls.LAST_ORDER < 0))
 
   @classmethod
   def get_last_keys(cls, num=-1, before=None, after=None):
