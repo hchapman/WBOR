@@ -40,7 +40,7 @@ import models_old as models
 from models.base_models import (NoSuchEntry,)
 from models.dj import (Dj, Permission, InvalidLogin, NoSuchUsername)
 from models.tracks import Album, Song
-from models.play import Play
+from models.play import Play, Psa, StationID
 
 from configuration import webapp2conf
 
@@ -110,7 +110,8 @@ class MainPage(UserHandler):
                              Permission.get_by_title(perm).has_dj(djkey)) for
                             (key, perm) in permissions.iteritems())
     template_values.update(permissions_dict)
-    self.response.out.write(template.render(get_path("dj_main.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("dj_main.html"), template_values))
 
 
 # Logs the user out
@@ -209,11 +210,16 @@ class RequestPassword(UserHandler):
         return
       elif len(programList) == 1:
         self.set_session_program(programList[0])
-        self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!<br><br>\n\nLogged in with program " + programList[0].title + ".")
+        self.session.add_flash(
+          "You have been temporarily logged in. Please change your password so "
+          "that you may log in in the future!<br><br>\n\nLogged in with "
+          "program " + programList[0].title + ".")
         self.redirect("/dj/myself")
         return
       else:
-        self.session.add_flash("You have been temporarily logged in. Please change your password so that you may log in in the future!")
+        self.session.add_flash(
+          "You have been temporarily logged in. Please change your password so "
+          "that you may log in in the future!")
         self.redirect("/dj/myself")
         return
     else:
@@ -343,7 +349,7 @@ class ChartSong(UserHandler):
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
 
-    last_psa = cache.getLastPsa()
+    last_psa = Psa() # cache.getLastPsa()
     new_albums = None
     #new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []

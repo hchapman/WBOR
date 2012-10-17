@@ -23,6 +23,9 @@ class Program(CachedModel):
   top_playcounts = db.ListProperty(int)
   current = db.BooleanProperty(default=False)
 
+  def get_last_plays(self, *args, **kwargs):
+    return []
+
   def to_json(self):
     return {
       'key': str_or_none(self.key()),

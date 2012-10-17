@@ -159,6 +159,15 @@ class CachedModel(db.Model):
                                       key_name=key_name, **kwargs)
 
   @classmethod
+  def as_object(cls, obj):
+    if isinstance(obj, cls):
+      return obj
+    elif is_key(obj):
+      return cls.get(obj)
+    else:
+      return None
+
+  @classmethod
   def cache_set(cls, value, cache_key, *args):
     '''
     Classmethod to access memcache.set

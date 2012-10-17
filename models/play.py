@@ -217,7 +217,7 @@ class Play(LastCachedModel):
                                        before=before, after=after)
 
     # TODO: Pass other parameters to program's method
-    return program.get_last_plays(num=num)
+    return Program.as_object(program).get_last_plays(num=num)
 
   @classmethod
   def get_last_keys(cls, num=-1, program=None, before=None, after=None):

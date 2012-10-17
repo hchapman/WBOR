@@ -1,0 +1,11 @@
+This is the App Engine version of WBOR.
+
+Contributions and forks clearly welcome. Do try to stick to
+eighty-column lines and under_score_names for methods (basically
+Python code mannerisms described in that one PEP).
+
+We presently use two spaces rather than tabs because, well, that'd
+require a whole bunch more formatting work so... for now, spaces.
+
+I think the preferred string formatting method is 
+"My string has %s"%string_quality rather than string arithmetic.
