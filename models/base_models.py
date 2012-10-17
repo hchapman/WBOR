@@ -299,6 +299,14 @@ class CachedModel(db.Model):
     self.purge_from_cache()
     super(CachedModel, self).delete()
 
+  @classmethod
+  def delete_key(cls, key):
+    elt = cls.get(keys=key, use_datastore=False)
+    if elt is None:
+      db.delete(key)
+    else:
+      elt.delete()
+
 class ApiModel(CachedModel):
   def to_json():
     pass

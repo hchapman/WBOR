@@ -198,6 +198,13 @@ class Play(LastCachedModel):
   def put(self):
     super(Play, self).put()
 
+  @classmethod
+  def delete_key(cls, key, program=None):
+    if program is not None:
+      pass # Inform parent program that we're deleting this play'
+
+    super(Play, cls).delete_key(key=key)
+
   # We override the get_last method to use, e.g., the parent program
   # in our queries
   @classmethod

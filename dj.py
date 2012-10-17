@@ -73,7 +73,9 @@ def authorization_required(label):
         if Permission.get_by_title(label).has_dj(key):
           func(self, *args, **kw)
         else:
-          self.session.add_flash("You're not authorized to view this page. If you think this is an error, please send an email to a member of WBOR management.")
+          self.session.add_flash(
+            "You're not authorized to view this page. If you think this is an "
+            "error, please send an email to a member of WBOR management.")
           self.redirect("/dj/")
       else:
         self.session.add_flash("You must log in to view this page.")
@@ -267,7 +269,9 @@ this email.
 Thank you!
 The WBOR.org Team
 """%reset_url)
-    self.session.add_flash("Request successfully sent! Check your mail, and be sure to doublecheck the spam folder in case.")
+    self.session.add_flash(
+      "Request successfully sent! Check your mail, and be sure to doublecheck "
+      "the spam folder in case.")
     self.redirect("/")
 
 # Lets the user select which program they've logged in as
@@ -276,7 +280,8 @@ class SelectProgram(UserHandler):
   def get(self):
     programlist = cache.getPrograms(dj=self.dj_key)
     if len(programlist) <= 1:
-      self.session.add_flash("You don't have more than one radio program to choose between.")
+      self.session.add_flash(
+        "You don't have more than one radio program to choose between.")
       self.redirect("/dj/")
       return
     template_values = {
@@ -293,11 +298,13 @@ class SelectProgram(UserHandler):
     program_key = self.request.get("programkey")
     program = cache.getProgram(key=program_key)
     if not program:
-      self.session.add_flash("An error occurred retrieving your program.  Please try again.")
+      self.session.add_flash(
+        "An error occurred retrieving your program.  Please try again.")
       self.redirect("/dj/")
       return
     self.set_session_program(program)
-    self.session.add_flash("The current program has been set to " + program.title + ".")
+    self.session.add_flash(
+      "The current program has been set to %s."%program.title)
     self.redirect("/dj/")
 
 
@@ -328,10 +335,10 @@ class ChartSong(UserHandler):
     playlist_html = memcache.get(memcache_key)
     if not playlist_html:
       playlist_html = template.render("dj_chartsong_playlist_div.html",
-        {'playlist': cache.getLastPlays(num=50,
-                                        program=self.program_key,
-                                        after=(datetime.datetime.now() -
-                                               datetime.timedelta(days=1))),
+        {'playlist': Play.get_last(num=50,
+                                   program=self.program_key,
+                                   after=(datetime.datetime.now() -
+                                          datetime.timedelta(days=1))),
          }
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
@@ -365,7 +372,8 @@ class ChartSong(UserHandler):
       'posts': posts,
       'station_id': station_id,
     }
-    self.response.out.write(template.render(get_path("dj_chartsong.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("dj_chartsong.html"), template_values))
 
   @login_required
   def post(self):
@@ -379,39 +387,43 @@ class ChartSong(UserHandler):
         # a valid key.
         album = Album.get(self.request.get("album_key"))
         if not album:
-          self.session.add_flash("Missing album information for new song, please try again.")
+          self.session.add_flash(
+            "Missing album information for new song, please try again.")
           self.redirect("/dj/chartsong/")
           return
-        # likewise, the song should be in the datastore already with a valid key.
+        # likewise, the song should be in the datastore already with a
+        # valid key.
         song = Song.get(self.request.get("song_key"))
         if not song:
-          self.session.add_flash("An error occurred trying to fetch the song, please try again.")
+          self.session.add_flash(
+            "An error occurred trying to fetch the song, please try again.")
           self.redirect("/dj/chartsong/")
           return
         logging.error(song)
         trackname = song.p_title
         track_artist = song.p_artist
-        cache.addNewPlay(song=song, program=self.program_key,
-                          play_date=datetime.datetime.now(), isNew=True,
-                          artist=album.artist)
+        Play.new(song=song, program=self.program_key,
+                 play_date=datetime.datetime.now(), isNew=True,
+                 artist=album.artist).put()
       else:
         # a song needs to have an artist and a track name
         if not track_artist or not trackname:
-          self.session.add_flash("Missing track information, please fill out both fields.")
+          self.session.add_flash(
+            "Missing track information, please fill out both fields.")
           self.redirect("/dj/chartsong/")
           return
-        song = cache.putSong(title=trackname, artist=track_artist)
+        song = Song.new(title=trackname, artist=track_artist)
         song.put()
 
-        cache.addNewPlay(song=song, program=self.program_key,
-                          play_date=datetime.datetime.now(), isNew=False,
-                          artist=track_artist)
+        Play.new(song=song, program=self.program_key,
+                 play_date=datetime.datetime.now(), isNew=False,
+                 artist=track_artist).put()
       memcache_key = "playlist_html_%s"%self.session.get('program').get('key')
-      playlist_html = template.render("dj_chartsong_playlist_div.html",
-      {'playlist': cache.getLastPlays(program=self.program_key,
-                                      after=(datetime.datetime.now() -
-                                             datetime.timedelta(days=1)))}
-      )
+      playlist_html = template.render(
+        "dj_chartsong_playlist_div.html",
+        {'playlist': Play.get_last(
+          program=self.program_key,
+          after=(datetime.datetime.now() - datetime.timedelta(days=1)))})
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
       if not cache.getArtistKey(track_artist):
         # this is for autocomplete purposes. if the artist hasn't been charted
@@ -433,13 +445,16 @@ class ChartSong(UserHandler):
         scrobbler = network.get_scrobbler("tst", "1.0")
         scrobbler.scrobble(track_artist, trackname, int(time.time()),
           pylast.SCROBBLE_SOURCE_USER, pylast.SCROBBLE_MODE_PLAYED, 60)
-        self.session.add_flash("%s has been charted and scrobbled to Last.FM, and should show up below."%trackname)
+        self.session.add_flash(
+          "%s has been charted and scrobbled to Last.FM,"
+          " and should show up below."%trackname)
       except:
         # just catch all errors with the last.fm; it's not that important that
         # everything get scrobbled exactly; plus this is like the #1 source
         # of errors in charting songs.
-        self.session.add_flash("%s has been charted, but was not scrobbled to Last.FM"%
-                               trackname)
+        self.session.add_flash(
+          "%s has been charted, but was not scrobbled to Last.FM"%
+          trackname)
       self.redirect("/dj/chartsong/")
       return
       # End of song charting.
@@ -483,7 +498,7 @@ class ChartSong(UserHandler):
     program.top_playcounts = [int(p[0]) for p in playcounts]
     program.put()
   def getPlayCountByArtist(self, program, artist):
-    return len(models.Play.all(keys_only=True).
+    return len(Play.all(keys_only=True).
                filter("program =", program).
                filter("artist =", artist).
                fetch(1000))
@@ -944,7 +959,8 @@ class EditBlogPost(UserHandler):
       'editing': True,
       'posts': posts,
     }
-    self.response.out.write(template.render(get_path("dj_createpost.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("dj_createpost.html"), template_values))
 
   @authorization_required("Manage Blog")
   def post(self, date_string, slug):
@@ -955,8 +971,11 @@ class EditBlogPost(UserHandler):
     post_key = self.request.get("post_key")
     post = models.BlogPost.get(post_key)
     if not post:
-      self.session.add_flash("The post you're looking for does not exist.  Something strange has occurred.")
-      # this shouldn't happen unless people are fiddling around with POST values by hand I think
+      self.session.add_flash(
+        "The post you're looking for does not exist.  "
+        "Something strange has occurred.")
+      # this shouldn't happen unless people are fiddling around with
+      # POST values by hand I think
       self.redirect("/")
       return
     if self.request.get("submit") == "Delete Post":
@@ -969,7 +988,8 @@ class EditBlogPost(UserHandler):
     post.slug = slug
     if duplicate:
       if str(duplicate.key()) != post_key:
-        errors = "This post has a duplicate slug to another post from the same day.  Please rename the slug."
+        errors = ("This post has a duplicate slug to another post "
+                  "from the same day.  Please rename the slug.")
         post.slug = old_slug
     post.title = title
     post.text = text
@@ -983,7 +1003,8 @@ class EditBlogPost(UserHandler):
       'posts': posts,
     }
     if errors:
-      self.response.out.write(template.render(get_path("dj_createpost.html"), template_values))
+      self.response.out.write(
+        template.render(get_path("dj_createpost.html"), template_values))
     else:
       post.put()
       self.session.add_flash("Successfully altered post %s" % post.title)
@@ -994,7 +1015,7 @@ class RemovePlay(UserHandler):
   @login_required
   def post(self):
     self.response.headers['Content-Type'] = 'text/json'
-    cache.deletePlay(self.request.get("play_key"), self.program_key)
+    Play.delete_key(self.request.get("play_key"), program=self.program_key)
     memcache.delete("playlist_html_%s"%self.program_key)
     self.response.out.write(json.dumps({
           'status': "Successfully deleted play."
