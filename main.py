@@ -45,12 +45,11 @@ class MainPage(BaseHandler):
     ## Album list disabled until it is further optimized.
     #album_list = []
     album_list = Album.get_new(num=36)
-    start = datetime.datetime.now() - datetime.timedelta(weeks=1)
-    end = datetime.datetime.now()
+    start = datetime.date.today() - datetime.timedelta(days=6)
+    end = datetime.date.today() + datetime.timedelta(days=1)
     song_num = 10
     album_num = 10
-    top_songs, top_albums = [], []#(Play.get_top_songs(start, end, song_num),
-                            # Play.get_top_albums(start, end, album_num))
+    top_songs, top_albums = Play.get_top(start, end, song_num, album_num)
     posts = models.getLastPosts(3)
     events = models.getEventsAfter(datetime.datetime.now() -
                                    datetime.timedelta(days=1), 3)
@@ -186,6 +185,11 @@ class Setup(BaseHandler):
         text="More filler text, alas.",
         slug="second-post", post_date=datetime.datetime.now())
       post2.put()
+      contactspage = models.BlogPost(
+        title="Contacts Page",
+        text="This is a dummy stub for the contacts page. Lorem ipsum whatnot",
+        slug="contacts-page", post_date=datetime.datetime.now())
+      contactspage.put()
     artists = [
       "Bear In Heaven",
       "Beck",
@@ -363,7 +367,7 @@ class SchedulePage(BaseHandler):
 
 class PlaylistPage(BaseHandler):
   def get(self):
-    shows = models.getPrograms()
+    shows = Program.get(num=1000) # TODO: NOPE
     slug = self.request.get("show")
     datestring = self.request.get("programdate")
     selected_date = None
@@ -378,7 +382,7 @@ class PlaylistPage(BaseHandler):
         return
 
     if slug:
-      selected_program = models.getProgramBySlug(slug)
+      selected_program = Program.get(slug=slug)
       if not selected_program:
         self.session.add_flash("There is no program for slug %s." % slug)
         self.redirect("/")
@@ -491,11 +495,11 @@ class FunPage(BaseHandler):
 class ChartsPage(UserHandler):
   @check_login
   def get(self):
-    start = datetime.datetime.now() - datetime.timedelta(weeks=1)
-    end = datetime.datetime.now()
+    start = datetime.date.today() - datetime.timedelta(days=6)
+    end = datetime.date.today() + datetime.timedelta(days=1)
     song_num = 60
     album_num = 60
-    songs, albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
+    songs, albums = Play.get_top(start, end, song_num, album_num)
     template_values = {
       'charts_selected': True,
       'session': self.session,
@@ -505,7 +509,8 @@ class ChartsPage(UserHandler):
       'end': end,
       'login': self.dj_login,
       }
-    self.response.out.write(template.render(getPath("charts.html"), template_values))
+    self.response.out.write(
+      template.render(getPath("charts.html"), template_values))
 
 class HistoryPage(BaseHandler):
   def get(self):
@@ -513,7 +518,8 @@ class HistoryPage(BaseHandler):
       'history_selected': True,
       'session': self.session,
     }
-    self.response.out.write(template.render(getPath("history.html"), template_values))
+    self.response.out.write(
+      template.render(getPath("history.html"), template_values))
 
 class ContactPage(BaseHandler):
   def get(self):
@@ -529,21 +535,8 @@ class ContactPage(BaseHandler):
       'session': self.session,
       'contacts': contacts
     }
-    self.response.out.write(template.render(getPath("contact.html"), template_values))
-
-class ConvertArtistNames(BaseHandler):
-  def get(self):
-    an = models.ArtistName.all().fetch(2000)
-    total = 0
-    try:
-      for a in an:
-        if not a.search_names:
-          total += 1
-          a.search_names = models.artistSearchName(a.lowercase_name).split()
-          a.put()
-      self.response.out.write("converted %d artist names." % total)
-    except DeadlineExceededError:
-      self.response.out.write("converted %d artist names, incomplete." % total)
+    self.response.out.write(
+      template.render(getPath("contact.html"), template_values))
 
 class ProgramPage(BaseHandler):
   def get(self, slug):
@@ -557,12 +550,13 @@ class ProgramPage(BaseHandler):
       'session': self.session,
       'flash': self.flash,
       'program': program,
-      'djs' :  (tuple(models.Dj.get(dj)
+      'djs' :  (tuple(Dj.get(dj)
                       for dj in program.dj_list) if program.dj_list
                 else None),
       'posts': posts,
       }
-    self.response.out.write(template.render(getPath("show.html"), template_values))
+    self.response.out.write(
+      template.render(getPath("show.html"), template_values))
 
 ## There should never be a need to use the following handler in the future.
 # However, it remains for educational purposes.
@@ -637,7 +631,6 @@ app = webapp2.WSGIApplication([
     ('/history/?', HistoryPage),
     ('/contact/?', ContactPage),
     ('/events/?', EventPage),
-    ('/searchnames/?', ConvertArtistNames),
     ('/albums/([^/]*)/?', ViewCoverHandler),
     ('/callvoice/?', CallVoice),
     ], debug=True, config=webapp2conf)

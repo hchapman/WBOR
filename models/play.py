@@ -52,9 +52,8 @@ class LastCachedModel(CachedModel):
     order_str = order_str%cls.LAST_ORDERBY
 
     if cached is None or cached.need_fetch(num):
-      cached.set(cls.get_keys(num=num, order=order_str), num)
-
-    cached.save()
+      cached.set(cls.get_key(num=num, order=order_str), num)
+      cached.save()
 
     if not cached:
       return []
@@ -115,6 +114,9 @@ class Play(LastCachedModel):
   SHOW_LAST = "last_plays_show%s" #possibly keep with show instead
   ENTRY = "play_key%s"
 
+  TOP_SONGS = "@top_songs"
+  TOP_ALBUMS = "@top_albums"
+
   # GAE Datastore properties
   song = db.ReferenceProperty(Song)
   program = db.ReferenceProperty(Program)
@@ -171,23 +173,30 @@ class Play(LastCachedModel):
     return self
 
   @classmethod
-  def get(cls, keys=None,
+  def get(cls, keys=None, before=None, after=None, is_new=None, order=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
       return super(Play, cls).get(keys=keys,
                                   use_datastore=use_datastore,
                                   one_key=one_key)
 
-    keys = cls.get_key(title=title, order=order, num=num)
+    keys = cls.get_key(before=before, after=after,
+                       is_new=is_new, order=order, num=num)
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
 
   @classmethod
-  def get_keys(cls, before=None, after=None,
+  def get_key(cls, before=None, after=None, is_new=None,
              order=None, num=-1):
     query = cls.all(keys_only=True)
 
+    if is_new is not None:
+      query.filter("isNew =", is_new)
+    if after is not None:
+      query.filter("play_date >=", after)
+    if before is not None:
+      query.filter("play_date <=", before)
     if order is not None:
       query.order(order)
 
@@ -230,10 +239,10 @@ class Play(LastCachedModel):
   ## Properties
   @property
   def p_song(self):
-    return self.song
+    return Song.get(self.song_key)
   @property
   def p_program(self):
-    return self.program
+    return Program.get(self.program_key)
   @property
   def p_play_date(self):
     return self.play_date
@@ -246,20 +255,52 @@ class Play(LastCachedModel):
 
   ## Custom queries pertaining to plays
 
-  # Get top-played songs and albums.
+  # Get top songs and albums
+  # returns a tuple(songs, albums)
   @classmethod
-  def get_top(cls, start, end, song_num=0, album_num=0, keys_only=False):
-    already_cached = True
-    if song_num > 0:
-      cached_songs = cls.get_cached_query(cls.TOP_SONGS)
-      need_fetch &= bool(cached_songs)
-    if album_num > 0:
-      cached_albums = cls.get_cached_query(cls.TOP_ALBUMS)
-      need_fetch &= bool(cached_songs)
+  def get_top(cls, after=None, before=None,
+              song_num=10, album_num=10, keys_only=False):
+    # TODO: Add caching
+    # need_fetch = True
+    # already_cached = True
+    # if song_num > 0:
+    #   cached_songs = cls.get_cached_query(cls.TOP_SONGS)
+    #   need_fetch &= bool(cached_songs)
+    #   if album_num > 0:
+    #     cached_albums = cls.get_cached_query(cls.TOP_ALBUMS)
+    #     need_fetch &= bool(cached_songs)
+    if before is None:
+      before = datetime.date.today() + datetime.timedelta(days=1)
+    if after is None:
+      after = datetime.date.today() - datetime.timedelta(days=6)
 
-    if not already_cached:
-      plays = cls.get_last(num=1000, after=start, before=end, new=True)
+    new_plays = cls.get(before=before, after=after, is_new=True, num=1000)
+    songs = {}
+    albums = {}
 
+    for play in new_plays:
+      song_key = play.song_key
+      if song_key in songs:
+        songs[song_key] += 1
+      else:
+        songs[song_key] = 1
+      album_key = play.p_song.album_key
+      if album_key in albums:
+        albums[album_key] += 1
+      else:
+        albums[album_key] = 1
+
+    songs = songs.items()
+    if not keys_only:
+      songs = [(Song.get(song), count) for song,count in songs]
+    albums = albums.items()
+    if not keys_only:
+      albums = [(Album.get(album), count) for album,count in albums]
+
+    songs = sorted(songs, key=lambda x: x[1], reverse=True)[:song_num]
+    albums = sorted(albums, key=lambda x: x[1], reverse=True)[:album_num]
+
+    return (songs, albums)
 
 
 class Psa(db.Model):

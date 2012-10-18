@@ -118,6 +118,7 @@ class Album(CachedModel):
           title=None,
           artist=None,
           asin=None,
+          order=None,
           num=-1,
           is_new=None,
           use_datastore=True, one_key=False):

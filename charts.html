@@ -27,9 +27,12 @@
       </thead>
       <tbody>{% for s in songs %}
         <tr>
-	  <td>{{ forloop.counter }}{% for entry in s %}{% if login or not forloop.first %}
-          <td>{{ entry }}</td>
-        {% endif %}{% endfor %}</tr>
+	  <td>{{ forloop.counter }}</td>
+          {% if login or not forloop.first %}<td>{{ s.1 }}</td>{% endif %}
+          <td>{{ s.0.p_title }}</td>
+          <td>{{ s.0.p_artist }}</td>
+          <td>{{ s.0.p_album.p_title}}</td>
+        </tr>
       {% endfor %}</tbody>
     </table>
     {% else %}
@@ -55,9 +58,11 @@
     <tbody>
       {% for a in albums %}
       <tr>
-      <td>{{ forloop.counter }}{% for entry in a %}{% if login or not forloop.first %}
-        <td>{{ entry }}</td>
-      {% endif %}{% endfor %}</tr>
+        <td>{{ forloop.counter }}</td>
+        {% if login or not forloop.first %}<td>{{ a.1 }}</td>{% endif %}
+        <td>{{ a.0.p_title }}</td>
+        <td>{{ a.0.p_artist }}</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>

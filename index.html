@@ -74,7 +74,11 @@
             <th>Album Title</th></tr></thead>
             <tbody>
         {% for song in top_songs %}
-        <tr><td>{{forloop.counter}}.</td><td>{{ song.1 }}</td><td>{{ song.2 }}<td><i>{{ song.3 }}</i></td></tr>
+        <tr>
+          <td>{{forloop.counter}}.</td>
+          <td>{{ song.0.p_title }}</td>
+          <td>{{ song.0.p_artist }}</td>
+          <td><i>{{ song.0.p_album.p_title }}</i></td></tr>
         {% endfor %}
         </tbody>
 	</table>{% else %}<div class='charttable'>
@@ -88,7 +92,10 @@
             <th>Album Title</th></tr></thead>
             <tbody>
           {% for album in top_albums %}
-          <tr><td>{{forloop.counter}}.</td><td><i>{{ album.1 }}</i></td><td>{{ album.2 }}</td></tr>
+          <tr>
+            <td>{{forloop.counter}}.</td>
+            <td><i>{{ album.0.p_artist }}</i></td>
+            <td>{{ album.0.p_title }}</td></tr>
           {% endfor %}
           </tbody>
 	  </table>{% else %}<div class='charttable'>
