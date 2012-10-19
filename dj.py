@@ -406,7 +406,7 @@ class ChartSong(UserHandler):
             "An error occurred trying to fetch the song, please try again.")
           self.redirect("/dj/chartsong/")
           return
-        logging.error(song)
+        logging.debug(song)
         trackname = song.p_title
         track_artist = song.p_artist
         Play.new(song=song, program=self.program_key,
@@ -519,7 +519,7 @@ class ViewCharts(UserHandler):
     default_albums = 50
     start = datetime.datetime.now() - datetime.timedelta(weeks=1)
     end = datetime.datetime.now()
-    songs, albums = models.getTopSongsAndAlbums(start, end, default_songs, default_albums)
+    songs, albums = Play.get_top(start, end, default_songs, default_albums)
     template_values = {
       'session': self.session,
       'flash': self.flash,
@@ -545,7 +545,7 @@ class ViewCharts(UserHandler):
       default_songs = int(self.request.get("song_num"))
     if self.request.get("album_num"):
       default_albums = int(self.request.get("album_num"))
-    songs, albums = models.getTopSongsAndAlbums(start, end, default_songs, default_albums)
+    songs, albums = Play.get_top(start, end, default_songs, default_albums)
     template_values = {
       'session': self.session,
       'flash': self.flash,

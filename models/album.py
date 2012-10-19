@@ -162,9 +162,9 @@ class Album(CachedModel):
 
     # If we've toggled the newness of the album, update cache.
     try:
-      logging.error(self.wasNew)
+      logging.debug(self.wasNew)
       if self.wasNew != self.isNew:
-        logging.error("We're about to update newcache")
+        logging.debug("We're about to update newcache")
         new_albums = self.get_new_keys()
         if self.isNew:
           if not new_albums:
@@ -285,7 +285,7 @@ class Song(CachedModel):
           title=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
-      logging.error(keys)
+      logging.debug(keys)
       return super(Song, cls).get(keys, use_datastore=use_datastore,
                                         one_key=one_key)
 

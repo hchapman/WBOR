@@ -212,7 +212,7 @@ def deletePlay(play_key, program=None):
       try:
         entry.remove(db.Key(encoded=play_key))
         mcset(entry, key)
-        logging.info(len(entry))
+        logging.debug(len(entry))
       except:
         logging.error("%s not found in %s"%(db.Key(play_key), entry))
 

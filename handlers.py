@@ -17,7 +17,7 @@ class BaseHandler(webapp2.RequestHandler):
     try:
       webapp2.RequestHandler.dispatch(self)
     finally:
-      logging.info(self.session)
+      logging.debug(self.session)
       self.session_store.save_sessions(self.response)
 
   @webapp2.cached_property

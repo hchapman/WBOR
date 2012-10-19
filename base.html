@@ -359,7 +359,7 @@ function nowPlaying() {
             {% for msg in flash %}
             <div class='alert fade in'>
               <a class="close" data-dismiss="alert" href="#">&times;</a>
-              {{ msg.0|safe }}
+              {{ msg|safe }}
             </div>
             {% endfor %}
           </div>

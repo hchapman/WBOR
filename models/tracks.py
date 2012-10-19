@@ -163,9 +163,9 @@ class Album(CachedModel):
 
     # If we've toggled the newness of the album, update cache.
     try:
-      logging.error(self.wasNew)
+      logging.debug(self.wasNew)
       if self.wasNew != self.isNew:
-        logging.error("We're about to update newcache")
+        logging.debug("We're about to update newcache")
         new_albums = self.get_new_keys()
         if self.isNew:
           if not new_albums:
@@ -286,7 +286,7 @@ class Song(CachedModel):
           title=None, order=None,
           num=-1, use_datastore=True, one_key=False):
     if keys is not None:
-      logging.error(keys)
+      logging.debug(keys)
       return super(Song, cls).get(keys, use_datastore=use_datastore,
                                         one_key=one_key)
 
@@ -470,7 +470,7 @@ class ArtistName(CachedModel):
       # If the cache is perfect (exact match!), just return it
       if perfect_hit:
         # There is no need to update the cache in this case.
-        logging.error(cache_artists)
+        logging.debug(cache_artists)
         return cls.get(cache_artists)
 
       # Otherwise we're going to have to search in the cache.

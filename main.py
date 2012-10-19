@@ -260,7 +260,6 @@ class ViewCoverHandler(blobstore_handlers.BlobstoreDownloadHandler):
 class UpdateInfo(webapp2.RequestHandler):
   def get(self):
     recent_songs = Play.get_last(num=3)
-    logging.info(recent_songs)
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
       song, program = (Song.get(last_play.song_key),

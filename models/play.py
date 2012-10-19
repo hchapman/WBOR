@@ -51,7 +51,7 @@ class LastCachedModel(CachedModel):
     order_str = "%s" if cls.LAST_ORDER>0 else "-%s"
     order_str = order_str%cls.LAST_ORDERBY
 
-    if cached is None or cached.need_fetch(num):
+    if cached.need_fetch(num):
       cached.set(cls.get_key(num=num, order=order_str), num)
       cached.save()
 
@@ -114,8 +114,8 @@ class Play(LastCachedModel):
   SHOW_LAST = "last_plays_show%s" #possibly keep with show instead
   ENTRY = "play_key%s"
 
-  TOP_SONGS = "@top_songs"
-  TOP_ALBUMS = "@top_albums"
+  TOP_SONGS = "@top_songs_before%s_after%s"
+  TOP_ALBUMS = "@top_albums_before%s_after%s"
 
   # GAE Datastore properties
   song = db.ReferenceProperty(Song)
@@ -260,45 +260,58 @@ class Play(LastCachedModel):
   @classmethod
   def get_top(cls, after=None, before=None,
               song_num=10, album_num=10, keys_only=False):
-    # TODO: Add caching
-    # need_fetch = True
-    # already_cached = True
-    # if song_num > 0:
-    #   cached_songs = cls.get_cached_query(cls.TOP_SONGS)
-    #   need_fetch &= bool(cached_songs)
-    #   if album_num > 0:
-    #     cached_albums = cls.get_cached_query(cls.TOP_ALBUMS)
-    #     need_fetch &= bool(cached_songs)
+    # Sanitize our range dates. Dates instead of times make caching
+    # more convenient, and I don't even think we can ask for times
+    # anyway
     if before is None:
       before = datetime.date.today() + datetime.timedelta(days=1)
-    if after is None:
-      after = datetime.date.today() - datetime.timedelta(days=6)
-
-    new_plays = cls.get(before=before, after=after, is_new=True, num=1000)
-    songs = {}
-    albums = {}
-
-    for play in new_plays:
-      song_key = play.song_key
-      if song_key in songs:
-        songs[song_key] += 1
+    else:
+      before = before.date() + datetime.timedelta(days=1)
+      if after is None:
+        after = datetime.date.today() - datetime.timedelta(days=6)
       else:
-        songs[song_key] = 1
-      album_key = play.p_song.album_key
-      if album_key in albums:
-        albums[album_key] += 1
-      else:
-        albums[album_key] = 1
+        after = after.date() 
 
-    songs = songs.items()
+    cached_songs = cls.get_cached_query(cls.TOP_SONGS, before, after)
+    cached_albums = cls.get_cached_query(cls.TOP_ALBUMS, before, after)
+
+    # If our caches exist and are sufficient
+    if not (cached_songs is None or
+            cached_songs.need_fetch(song_num) or
+            cached_albums is None or
+            cached_albums.need_fetch(album_num)):
+      songs = cached_songs.data
+      albums = cached_albums.data
+ 
+    else:
+      new_plays = cls.get(before=before, after=after, is_new=True, num=1000)
+      songs = {}
+      albums = {}
+
+      for play in new_plays:
+        song_key = play.song_key
+        if song_key in songs:
+          songs[song_key] += 1
+        else:
+          songs[song_key] = 1
+        album_key = play.p_song.album_key
+        if album_key in albums:
+          albums[album_key] += 1
+        else:
+          albums[album_key] = 1
+
+      songs = songs.items()
+      albums = albums.items()
+    
     if not keys_only:
       songs = [(Song.get(song), count) for song,count in songs]
-    albums = albums.items()
     if not keys_only:
       albums = [(Album.get(album), count) for album,count in albums]
 
     songs = sorted(songs, key=lambda x: x[1], reverse=True)[:song_num]
     albums = sorted(albums, key=lambda x: x[1], reverse=True)[:album_num]
+
+    cached_songs
 
     return (songs, albums)
 
