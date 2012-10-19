@@ -154,8 +154,8 @@ class Login(UserHandler):
       return
 
     self.user = dj
-    programList = Program.get_by_dj(dj=dj, num=10)
-    if not programList:
+    program_list = Program.get_by_dj(dj=dj, num=10)
+    if not program_list:
       self.flash = ("You have successfully logged in,"
                     "but you have no associated programs."
                     "You will not be able to do much until"
@@ -164,10 +164,10 @@ class Login(UserHandler):
                     "Connor</a> immediately.")
       self.redirect('/dj/')
       return
-    elif len(programList) == 1:
-      self.program = programList[0]
+    elif len(program_list) == 1:
+      self.program = program_list[0]
       self.flash = ("Successfully logged in with program %s."%
-                    programList[0].title)
+                    program_list[0].title)
       self.redirect("/dj/")
       return
     else:
@@ -185,7 +185,7 @@ class RequestPassword(UserHandler):
       username = self.request.get("username")
 
       try:
-        reset_dj = Dj.recoveryLogin(username, reset_key)
+        reset_dj = Dj.recovery_login(username, reset_key)
       except NoSuchUsername:
         self.session.add_flash("There is no user by that name")
         self.redirect("/dj/reset/")
@@ -198,23 +198,25 @@ class RequestPassword(UserHandler):
         return
 
       self.set_session_user(reset_dj)
-      programList = cache.getPrograms(dj=reset_dj)
+      program_list = Program.get_by_dj(dj=reset_dj)
 
-      if not programList:
-        self.flash = ("You have been temporarily logged in. Please change your"
-                      "password so that you may log in in the future!<br><br>"
-                      "\n\nYou will not be able to do much until you have a"
-                      "program.  If you see this message, please email"
-                      "<a href='mailto:cmsmith@bowdoin.edu'>Connor</a>"
-                      "immediately.")
+      if not program_list:
+        self.session.add_flash("You have been temporarily logged in. Please change your"
+                               "password so that you may log in in the future!")
+        self.session.add_flash(
+          "You will not be able to do much until you have a"
+          "program.  If you see this message, please email"
+          "<a href='mailto:cmsmith@bowdoin.edu'>Connor</a>"
+          "immediately.")
         self.redirect('/dj/myself')
         return
-      elif len(programList) == 1:
-        self.set_session_program(programList[0])
+      elif len(program_list) == 1:
+        self.set_session_program(program_list[0])
         self.session.add_flash(
           "You have been temporarily logged in. Please change your password so "
-          "that you may log in in the future!<br><br>\n\nLogged in with "
-          "program " + programList[0].title + ".")
+          "that you may log in in the future!")
+        self.session.add_flash(
+          "Logged in with program %s"%program_list[0].title)
         self.redirect("/dj/myself")
         return
       else:
@@ -247,18 +249,21 @@ class RequestPassword(UserHandler):
     reset_dj = None
 
     try:
-      reset_dj = Dj.getByUsernameCheckEmail(username, email)
+      reset_dj = Dj.get_by_username(username)
     except NoSuchUsername as e:
       self.session.add_flash(str(e))
       self.redirect("/dj/reset")
       return
+    if not reset_dj.email_matches(email):
+      self.session.add_flash(
+        "The email you have entered does not match our records. Check, and try, again.")
 
     # Generate a key to be sent to the user and add the
     # new password request to the database
     reset_key = ''.join(random.choice(string.ascii_letters +
                                       string.digits) for x in range(20))
     reset_url="%s/dj/reset/?username=%s&reset_key=%s"%(
-      self.request.host_url,username,reset_dj.resetPassword())
+      self.request.host_url, username, reset_dj.reset_password())
     mail.send_mail(
       sender="WBOR <password-reset@wbor-hr.appspotmail.com>",
       to=email.strip(),
@@ -285,14 +290,14 @@ The WBOR.org Team
 class SelectProgram(UserHandler):
   @login_required
   def get(self):
-    programlist = cache.getPrograms(dj=self.dj_key)
-    if len(programlist) <= 1:
+    program_list = Program.get_by_dj(dj=self.dj_key)
+    if len(program_list) <= 1:
       self.session.add_flash(
         "You don't have more than one radio program to choose between.")
       self.redirect("/dj/")
       return
     template_values = {
-      'programlist': programlist,
+      'program_list': program_list,
       'session': self.session,
       'flash': self.flashes,
       'posts': models.getLastPosts(1)
@@ -303,7 +308,7 @@ class SelectProgram(UserHandler):
   @login_required
   def post(self):
     program_key = self.request.get("programkey")
-    program = cache.getProgram(key=program_key)
+    program = Program.get(key=program_key)
     if not program:
       self.session.add_flash(
         "An error occurred retrieving your program.  Please try again.")
@@ -336,13 +341,12 @@ class ChartSong(UserHandler):
       playlist_html = template.render("dj_chartsong_playlist_div.html",
         {'playlist': Play.get_last(num=50,
                                    program=self.program_key,
-                                   after=(datetime.datetime.now() -
-                                          datetime.timedelta(days=1))),
+                                   after=(datetime.date.today())),
          }
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
 
-    last_psa = Psa() # cache.getLastPsa()
+    last_psa = Psa.get_last() # cache.getLastPsa()
     new_albums = None
     #new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []
@@ -355,11 +359,9 @@ class ChartSong(UserHandler):
       new_song_div_html = template.render(
         get_path("dj_chartsong_newsongdiv.html"),
         {'new_albums': new_albums,
-         'album_songs': album_songs,}
-        )
-      memcache.set("new_song_div_html",
-                   new_song_div_html
-                   )
+         'album_songs': album_songs,})
+      memcache.set("new_song_div_html", new_song_div_html)
+
     template_values = {
       'last_psa': last_psa,
       'playlist_html': playlist_html,
@@ -464,7 +466,7 @@ class ChartSong(UserHandler):
     elif self.request.get("submit") == "PSA":
       # If the DJ has recorded a PSA play
       psa_desc = self.request.get("psa_desc")
-      cache.addNewPsa(desc=psa_desc, program=self.program_key)
+      Psa.new(desc=psa_desc, program=self.program_key).put()
       self.session.add_flash("PSA recorded.")
       self.redirect("/dj/chartsong/")
       return

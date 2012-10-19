@@ -32,7 +32,7 @@ from google.appengine.ext.webapp import blobstore_handlers
 
 from passwd_crypto import hash_password
 from handlers import BaseHandler, UserHandler
-from dj import check_login
+from dj import check_login, login_required
 
 from configuration import webapp2conf
 import configuration as conf
@@ -423,6 +423,7 @@ class PlaylistPage(BaseHandler):
                                             template_values))
 
 class PlaylistExport(BaseHandler):
+  @login_required
   def get(self):
     import csv
     shows = models.getPrograms()

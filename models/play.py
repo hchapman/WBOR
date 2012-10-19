@@ -318,7 +318,100 @@ class Play(LastCachedModel):
     return (songs, albums)
 
 
-class Psa(db.Model):
+class Psa(LastCachedModel):
+  LAST = "@@last_psas" # Tuple of last_plays_list, db_count
+  LAST_ORDER = -1 # Sort from most recent backwards
+  LAST_ORDERBY = "play_date" # How plays should be ordered in last cache
+  SHOW_LAST = "last_psas_show%s" #possibly keep with show instead
+  ENTRY = "psa_key%s"
+
+  @classmethod
+  def new(cls, desc, program, play_date=None,
+          parent=None, key_name=None, **kwds):
+    if parent is None:
+      parent = program
+
+    if play_date is None:
+      play_date = datetime.datetime.now()
+
+    psa = cls(parent=parent, key_name=key_name,
+               desc=desc, program=program, play_date=play_date, **kwds)
+
+    psa.is_fresh = True
+
+    return psa
+
+  def add_to_cache(self):
+    super(Psa, self).add_to_cache()
+    try:
+      if self.is_fresh:
+        self.add_own_last_cache()
+    except AttributeError:
+      pass
+    return self
+
+  @classmethod
+  def get(cls, keys=None, before=None, after=None, order=None,
+          num=-1, use_datastore=True, one_key=False):
+    if keys is not None:
+      return super(Psa, cls).get(keys=keys,
+                                 use_datastore=use_datastore,
+                                 one_key=one_key)
+
+    keys = cls.get_key(before=before, after=after,
+                       order=order, num=num)
+    if keys is not None:
+      return cls.get(keys=keys, use_datastore=use_datastore)
+    return None
+
+  @classmethod
+  def get_key(cls, before=None, after=None, 
+             order=None, num=-1):
+    query = cls.all(keys_only=True)
+
+    if after is not None:
+      query.filter("play_date >=", after)
+    if before is not None:
+      query.filter("play_date <=", before)
+    if order is not None:
+      query.order(order)
+
+    if num == -1:
+      return query.get()
+    return query.fetch(num)
+
+  def put(self):
+    super(Psa, self).put()
+
+  @classmethod
+  def delete_key(cls, key, program=None):
+    if program is not None:
+      pass # Inform parent program that we're deleting this play'
+
+    super(Psa, cls).delete_key(key=key)
+
+  # We override the get_last method to use, e.g., the parent program
+  # in our queries
+  @classmethod
+  def get_last(cls, num=-1, keys_only=False,
+               program=None, before=None, after=None):
+    # We may want to get the last psas of a specific program
+    # Otherwise, use the already defined super method.
+    if program is None:
+      return super(Psa, cls).get_last(num=num, keys_only=keys_only,
+                                       before=before, after=after)
+
+    # TODO: Pass other parameters to program's method
+    program = Program.as_object(program)
+    if program is not None:
+      return program.get_last_psas(num=num)
+    return None if num == -1 else []
+
+  @classmethod
+  def get_last_keys(cls, num=-1, program=None, before=None, after=None):
+    return cls.get_last(num=num, keys_only=True,
+                        program=program, before=before, after=after)
+  
   desc = db.StringProperty()
   program = db.ReferenceProperty(Program)
   play_date = db.DateTimeProperty()
