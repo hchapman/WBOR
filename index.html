@@ -45,7 +45,7 @@
     <h5>{{ e.title }}</h5>
     {% endif %}
     <h6>{{ e.event_date|date:"F j, Y g:i a"}}</h6>
-    <p>{{ e.desc }}</p>
+    <p>{{ e.desc|safe }}</p>
     {% if logged_in %}
     <a href='/dj/event/{{ e.key }}'>Edit</a>
     {% endif %}
