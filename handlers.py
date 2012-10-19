@@ -30,6 +30,10 @@ class BaseHandler(webapp2.RequestHandler):
     if flashes:
       return flashes[0]
 
+  @property
+  def flashes(self):
+    return self.session.get_flashes()
+
   @flash.setter
   def flash(self, value):
     self.session.add_flash(value)

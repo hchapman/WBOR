@@ -82,11 +82,13 @@
   <h4>{{ start|date }} through {{ end|date }}</h4>
   
   <p>Select a different week below.</p>
-  <form method='post' action='/dj/charts/'>
-    <label>Start date: <input type='text' class='datepicker' name='start_date' id='start_date'></label>
+  <form method='post' action='/charts/'>
+    <label>Start date: 
+      <input type='text' class='datepicker' name='start_date' id='start_date'></label>
     <br />
-	<label>End date: <input type='text' class='datepicker' name='start_date' id='start_date'></label>
-	<br />
+    <label>End date: 
+      <input type='text' class='datepicker' name='end_date' id='end_date'></label>
+    <br />
     <input type='submit' name='submit' value="Submit">
   </form>
 </div>

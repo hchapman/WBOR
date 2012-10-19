@@ -37,7 +37,7 @@ from dj import check_login
 from configuration import webapp2conf
 import configuration as conf
 
-def getPath(filename):
+def get_path(filename):
   return os.path.join(os.path.dirname(__file__), filename)
 
 class MainPage(BaseHandler):
@@ -55,7 +55,7 @@ class MainPage(BaseHandler):
                                    datetime.timedelta(days=1), 3)
     template_values = {
       'news_selected': True,
-      'flash': self.flash,
+      'flash': self.flashes,
       'session': self.session,
       'album_list': album_list,
       'top_songs': top_songs,
@@ -63,7 +63,7 @@ class MainPage(BaseHandler):
       'posts': posts,
       'events': events,
       }
-    self.response.out.write(template.render(getPath("index.html"),
+    self.response.out.write(template.render(get_path("index.html"),
                                             template_values))
 
 class DjComplete(BaseHandler):
@@ -105,7 +105,7 @@ class AlbumTable(BaseHandler):
         'session': self.session,
         'album_list': albums,
         }
-      album_table_html = template.render(getPath("newalbums.html"), template_values)
+      album_table_html = template.render(get_path("newalbums.html"), template_values)
       memcache.set("album_table_html", album_table_html)
     self.response.out.write(album_table_html)
 
@@ -137,7 +137,7 @@ class AlbumInfo(BaseHandler):
           'tracks': [t.firstChild.nodeValue
                      for t in i.getElementsByTagName("Track")],
           } for i in items]}
-    updatehtml = template.render(getPath("addalbumupdate.html"), json_data)
+    updatehtml = template.render(get_path("addalbumupdate.html"), json_data)
     json_data['updatehtml'] = updatehtml
     self.response.headers['Content-Type'] = 'text/json'
     self.response.out.write(json.dumps(json_data))
@@ -293,7 +293,7 @@ class UpdateInfo(webapp2.RequestHandler):
             [a for a in program.top_artists[:3]]) if
                          program is not None else None),
           'recent_songs_html': template.render(
-            getPath("recent_songs.html"), {'plays': recent_songs}),
+            get_path("recent_songs.html"), {'plays': recent_songs}),
           }))
 
 class CallVoice(webapp2.RequestHandler):
@@ -332,12 +332,12 @@ class SongList(BaseHandler):
                     "not be found.  Please try again.")
             }))
       return
-    songlist_html = template.render(getPath("ajax_songlist.html"), {
+    songlist_html = template.render(get_path("ajax_songlist.html"), {
         'songList': Song.get(album.p_tracklist),
         })
     memcache.set("songlist_html_" + album_key, songlist_html)
     self.response.out.write(json.dumps({
-          'songListHtml': template.render(getPath("ajax_songlist.html"), {
+          'songListHtml': template.render(get_path("ajax_songlist.html"), {
               'songList': Song.get(album.p_tracklist),
               }),
           'generated': 'generated',
@@ -352,7 +352,7 @@ class EventPage(BaseHandler):
       'session': self.session,
       'events': events,
       }
-    self.response.out.write(template.render(getPath("events.html"),
+    self.response.out.write(template.render(get_path("events.html"),
                                             template_values))
 
 class SchedulePage(BaseHandler):
@@ -361,7 +361,7 @@ class SchedulePage(BaseHandler):
       'schedule_selected': True,
       'session': self.session,
     }
-    self.response.out.write(template.render(getPath("schedule.html"),
+    self.response.out.write(template.render(get_path("schedule.html"),
                                             template_values))
 
 class PlaylistPage(BaseHandler):
@@ -419,7 +419,7 @@ class PlaylistPage(BaseHandler):
       'plays': plays,
       'shows': shows,
       }
-    self.response.out.write(template.render(getPath("playlist.html"),
+    self.response.out.write(template.render(get_path("playlist.html"),
                                             template_values))
 
 class PlaylistExport(BaseHandler):
@@ -488,7 +488,7 @@ class FunPage(BaseHandler):
     template_values = {
       'session': self.session,
     }
-    self.response.out.write(template.render(getPath("fun.html"),
+    self.response.out.write(template.render(get_path("fun.html"),
                                             template_values))
 
 class ChartsPage(UserHandler):
@@ -496,12 +496,13 @@ class ChartsPage(UserHandler):
   def get(self):
     start = datetime.date.today() - datetime.timedelta(days=6)
     end = datetime.date.today() + datetime.timedelta(days=1)
-    song_num = 60
-    album_num = 60
+    song_num = 30
+    album_num = 30
     songs, albums = Play.get_top(start, end, song_num, album_num)
     template_values = {
       'charts_selected': True,
       'session': self.session,
+      'flash': self.flashes,
       'songs': songs,
       'albums': albums,
       'start': start,
@@ -509,7 +510,53 @@ class ChartsPage(UserHandler):
       'login': self.dj_login,
       }
     self.response.out.write(
-      template.render(getPath("charts.html"), template_values))
+      template.render(get_path("charts.html"), template_values))
+
+  @check_login
+  def post(self):
+    song_num = 30
+    album_num = 30
+    
+    # Parse dates
+    start_date_req = self.request.get("start_date")
+    if start_date_req:
+      try:
+        start = datetime.datetime.strptime(start_date_req, "%m/%d/%Y").date()
+      except ValueError:
+        self.session.add_flash(
+          "Unable to parse start date. Defaulting to a week ago, today.")
+        start = datetime.date.today() - datetime.timedelta(days=6)
+    else:
+      start = datetime.date.today() - datetime.timedelta(days=6)
+
+    end_date_req = self.request.get("end_date")
+    if end_date_req:
+      try:
+        end = datetime.datetime.strptime(end_date_req, "%m/%d/%Y").date()
+      except ValueError:
+        self.session.add_flash(
+          "Couldn't parse end date. Defaulting to a week of charts.")
+        end = start + datetime.timedelta(weeks=1)
+    else:
+      end = start + datetime.timedelta(weeks=1)
+
+    if self.request.get("song_num"):
+      song_num = int(self.request.get("song_num"))
+    if self.request.get("album_num"):
+      album_num = int(self.request.get("album_num"))
+    songs, albums = Play.get_top(start, end, song_num, album_num)
+    template_values = {
+      'charts_selected': True,
+      'session': self.session,
+      'flash': self.flashes,
+      'songs': songs,
+      'albums': albums,
+      'start': start,
+      'end': end,
+      'login': self.dj_login,
+    }
+    self.response.out.write(
+      template.render(get_path("charts.html"), template_values))
 
 class HistoryPage(BaseHandler):
   def get(self):
@@ -518,7 +565,7 @@ class HistoryPage(BaseHandler):
       'session': self.session,
     }
     self.response.out.write(
-      template.render(getPath("history.html"), template_values))
+      template.render(get_path("history.html"), template_values))
 
 class ContactPage(BaseHandler):
   def get(self):
@@ -535,7 +582,7 @@ class ContactPage(BaseHandler):
       'contacts': contacts
     }
     self.response.out.write(
-      template.render(getPath("contact.html"), template_values))
+      template.render(get_path("contact.html"), template_values))
 
 class ProgramPage(BaseHandler):
   def get(self, slug):
@@ -547,7 +594,7 @@ class ProgramPage(BaseHandler):
       return
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'program': program,
       'djs' :  (tuple(Dj.get(dj)
                       for dj in program.dj_list) if program.dj_list
@@ -555,7 +602,7 @@ class ProgramPage(BaseHandler):
       'posts': posts,
       }
     self.response.out.write(
-      template.render(getPath("show.html"), template_values))
+      template.render(get_path("show.html"), template_values))
 
 ## There should never be a need to use the following handler in the future.
 # However, it remains for educational purposes.

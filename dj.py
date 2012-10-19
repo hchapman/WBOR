@@ -229,7 +229,7 @@ class RequestPassword(UserHandler):
         return
       template_values = {
         'session': self.session,
-        'flash': self.flash,
+        'flash': self.flashes,
         }
       self.response.out.write(
         template.render(get_path("dj_reset_password.html"),
@@ -294,7 +294,7 @@ class SelectProgram(UserHandler):
     template_values = {
       'programlist': programlist,
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'posts': models.getLastPosts(1)
     }
     self.response.out.write(template.render(get_path("dj_selectprogram.html"),
@@ -327,14 +327,6 @@ class ChartSong(UserHandler):
         "system.  Please contact a member of management immediately.")
       self.redirect("/dj/")
       return
-
-    station_id = False
-    try:
-      #TODO: Don't use flash message to determine this
-      if self.flash.msg == "Station ID recorded.":
-        station_id = True
-    except AttributeError:
-      pass
 
     posts = models.getLastPosts(2)
 
@@ -372,12 +364,11 @@ class ChartSong(UserHandler):
       'last_psa': last_psa,
       'playlist_html': playlist_html,
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'new_albums': new_albums,
       'album_songs': album_songs,
       'new_song_div_html': new_song_div_html,
       'posts': posts,
-      'station_id': station_id,
     }
     self.response.out.write(
       template.render(get_path("dj_chartsong.html"), template_values))
@@ -507,55 +498,6 @@ class ChartSong(UserHandler):
                filter("artist =", artist).
                fetch(1000))
 
-
-
-# Displays the top-played songs for a given period.
-# get(): Print log for the last week, display form for choosing endpoint.
-# post(): Print log of week-long period.
-class ViewCharts(UserHandler):
-  @login_required
-  def get(self):
-    default_songs = 20
-    default_albums = 50
-    start = datetime.datetime.now() - datetime.timedelta(weeks=1)
-    end = datetime.datetime.now()
-    songs, albums = Play.get_top(start, end, default_songs, default_albums)
-    template_values = {
-      'session': self.session,
-      'flash': self.flash,
-      'songs': songs,
-      'albums': albums,
-      'start': start,
-      'end': end,
-    }
-    self.response.out.write(template.render(get_path("dj_charts.html"), template_values))
-
-  @login_required
-  def post(self):
-    default_songs = 20
-    default_albums = 50
-    try:
-      start = datetime.datetime.strptime(self.request.get("start_date"), "%m/%d/%Y")
-    except ValueError:
-      self.session.add_flash("Unable to select date. Enter a date in the form mm/dd/yyyy.")
-      self.redirect("/dj/charts/")
-      return
-    end = start + datetime.timedelta(weeks=1)
-    if self.request.get("song_num"):
-      default_songs = int(self.request.get("song_num"))
-    if self.request.get("album_num"):
-      default_albums = int(self.request.get("album_num"))
-    songs, albums = Play.get_top(start, end, default_songs, default_albums)
-    template_values = {
-      'session': self.session,
-      'flash': self.flash,
-      'songs': songs,
-      'albums': albums,
-      'start': start,
-      'end': end,
-    }
-    self.response.out.write(template.render(get_path("dj_charts.html"), template_values))
-
 # Displays log of PSA and Station ID records for a given two-week period.
 # /dj/logs/?
 # get(): Print log for the last two weeks, display form for choosing endpoint.
@@ -569,7 +511,7 @@ class ViewLogs(UserHandler):
     ids = models.getIDsInRange(start=start, end=end)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'psas': psas,
       'ids': ids,
       'start': start,
@@ -590,7 +532,7 @@ class ViewLogs(UserHandler):
     ids = models.getIDsInRange(start=start, end=end)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'psas': psas,
       'ids': ids,
       'start': start,
@@ -611,7 +553,7 @@ class ManageDJs(UserHandler):
     template_values = {
       'dj_list': dj_list,
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'posts': models.getLastPosts(3),
     }
     self.response.out.write(template.render(get_path("dj_manage_djs.html"),
@@ -694,7 +636,7 @@ class EditDJ(UserHandler):
         'dj_list': dj_list,
         'dj': dj,
         'session': self.session,
-        'flash': self.flash,
+        'flash': self.flashes,
         'posts': models.getLastPosts(3),
       }
       self.response.out.write(
@@ -752,7 +694,7 @@ class ManagePrograms(UserHandler):
            "dj_list" : cache.getDj(program.dj_list)}
           for program in program_list if not program.current),
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'posts': models.getLastPosts(3),
     }
     self.response.out.write(
@@ -804,7 +746,7 @@ class EditProgram(UserHandler):
         'all_dj_list': [{'dj': dj, 'in_program': dj.key() in program.dj_list} for dj in models.Dj.all()],
         'program': program,
         'session': self.session,
-        'flash': self.flash,
+        'flash': self.flashes,
         'posts': models.getLastPosts(3),
       }
       self.response.out.write(template.render(get_path("dj_manage_programs.html"), template_values))
@@ -835,7 +777,7 @@ class MySelf(UserHandler):
     dj = models.Dj.get(self.dj_key)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'dj': dj,
       'posts': models.getLastPosts(1),
     }
@@ -887,7 +829,7 @@ class MyShow(UserHandler):
     program = cache.getProgram(self.program_key)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'program': program,
       'posts': models.getLastPosts(2),
     }
@@ -925,7 +867,7 @@ class NewBlogPost(UserHandler):
     posts = models.getLastPosts(2)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'posts': posts,
     }
     self.response.out.write(
@@ -949,7 +891,7 @@ class NewBlogPost(UserHandler):
                 "the same day.  This probably shouldn't happen often.")
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'errors': errors,
       'post': post,
       'posts': posts,
@@ -978,7 +920,7 @@ class EditBlogPost(UserHandler):
     posts = models.getLastPosts(2)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'post': post,
       'editing': True,
       'posts': posts,
@@ -1020,7 +962,7 @@ class EditBlogPost(UserHandler):
     posts = models.getLastPosts(2)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'errors': errors,
       'post': post,
       'editing': True,
@@ -1051,7 +993,7 @@ class NewEvent(UserHandler):
     posts = models.getLastPosts(2)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'editing': False,
       'hours': [str(i).rjust(2, "0") for i in range(24)],
       'minutes': [str(i).rjust(2, "0") for i in range(0, 60, 15)],
@@ -1098,7 +1040,7 @@ class EditEvent(UserHandler):
     posts = models.getLastPosts(2)
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'editing': True,
       'event': event,
       'day': day,
@@ -1159,7 +1101,7 @@ class ManagePermissions(UserHandler):
         'dj_list': [cache.getDj(d) for d in p.dj_list],
         } for p in permissions],
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'posts': models.getLastPosts(2),
     }
     self.response.out.write(
@@ -1235,7 +1177,7 @@ class ManageAlbums(UserHandler):
       'new_album_list': new_album_list,
       'new_album_html': new_album_html,
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
     }
     self.response.out.write(
         template.render(get_path("dj_manage_albums.html"), template_values))
@@ -1440,7 +1382,6 @@ app = webapp2.WSGIApplication([
     ('/dj/logs/?', ViewLogs),
     ('/dj/permissions/?', ManagePermissions),
     ('/dj/myshow/?', MyShow),
-    ('/dj/charts/?', ViewCharts),
     ('/blog/([^/]*)/([^/]*)/edit/?', EditBlogPost),
     ('/dj/newpost/?', NewBlogPost),
     ('/dj/event/?', NewEvent),
