@@ -266,11 +266,13 @@ class Play(LastCachedModel):
     if before is None:
       before = datetime.date.today() + datetime.timedelta(days=1)
     else:
-      before = before.date() + datetime.timedelta(days=1)
+      if isinstance(before, datetime.datetime):
+        before = before.date()
+      before += datetime.timedelta(days=1)
       if after is None:
         after = datetime.date.today() - datetime.timedelta(days=6)
-      else:
-        after = after.date() 
+      elif isinstance(after, datetime.datetime):
+          after = after.date() 
 
     cached_songs = cls.get_cached_query(cls.TOP_SONGS, before, after)
     cached_albums = cls.get_cached_query(cls.TOP_ALBUMS, before, after)
