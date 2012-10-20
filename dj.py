@@ -38,7 +38,7 @@ from slughifi import slughifi
 import models_old as models
 
 from models.base_models import (NoSuchEntry,)
-from models.dj import (Dj, Permission, InvalidLogin, NoSuchUsername)
+from models.dj import (Dj, Permission, InvalidLogin, NoSuchUsername, NoSuchEmail)
 from models.tracks import Album, Song, ArtistName
 from models.play import Play, Psa, StationID
 from models.program import Program
@@ -550,7 +550,7 @@ class ViewLogs(UserHandler):
 class ManageDJs(UserHandler):
   @authorization_required("Manage DJs")
   def get(self):
-    dj_list = Dj.getAll() # This is TERRIBLE PRACTICE
+    dj_list = [] #Dj.getAll() # This is TERRIBLE PRACTICE
 
     template_values = {
       'dj_list': dj_list,
@@ -593,14 +593,23 @@ class ManageDJs(UserHandler):
         self.redirect("/dj/djs")
         return
 
-      dj = Dj.get_by_email(email)
+      try:
+        dj = Dj.get_by_email(email)
+      except NoSuchEmail:
+        dj = None
+
       if dj is not None:
         self.session.add_flash(
           "A DJ with email address %s already exists: %s, username %s" %
           (dj.email, dj.fullname, dj.username))
         self.redirect("/dj/djs")
         return
-      dj = Dj.get_by_username(username)
+
+      try:
+        dj = Dj.get_by_username(username)
+      except NoSuchUsername:
+        dj = None
+        
       if dj is not None:
         self.session.add_flash(
           "A DJ with username %s already exists: %s, email address %s" %
@@ -612,7 +621,8 @@ class ManageDJs(UserHandler):
       dj = Dj.new(fullname=fullname,
                   email=email,
                   username=username,
-                  password=password).put()
+                  password=password)
+      dj.put()
 
       self.session.add_flash(dj.fullname + " successfully added as a DJ.")
       self.redirect("/dj/djs/")
@@ -1095,12 +1105,12 @@ class EditEvent(UserHandler):
 class ManagePermissions(UserHandler):
   @authorization_required("Manage Permissions")
   def get(self):
-    permissions = Permission.getAll()
+    permissions = Permission.get_all()
     template_values = {
       'permissions': [{
         'key': p.key(),
         'title': p.title,
-        'dj_list': [cache.getDj(d) for d in p.dj_list],
+        'dj_list': [Dj.get(d) for d in p.dj_list],
         } for p in permissions],
       'session': self.session,
       'flash': self.flashes,
@@ -1113,12 +1123,12 @@ class ManagePermissions(UserHandler):
   def post(self):
     self.response.headers['Content-Type'] = 'text/json'
     dj_key = self.request.get("dj_key")
-    dj = cache.getDj(dj_key)
+    dj = Dj.get(dj_key)
     errors = "";
     if not dj:
       errors = "Unable to find DJ. "
     permission_key = self.request.get("permission_key")
-    permission = Permission.get(key=permission_key)
+    permission = Permission.get(keys=permission_key)
     if not permission:
       errors = "Unable to find permission."
     if errors:
@@ -1132,7 +1142,7 @@ class ManagePermissions(UserHandler):
         errors = ("%s is already in the %s permission list."%
                   (dj.p_fullname, permission.p_title))
       else:
-        permission.addDj(dj)
+        permission.add_dj(dj)
         status = ("Successfully added %s to %s permission list."%
                   (dj.fullname, permission.title))
     if action == "remove":
@@ -1140,7 +1150,7 @@ class ManagePermissions(UserHandler):
         errors = (dj.fullname + " was not in the " +
                   permission.title + " permission list.")
       else:
-        permission.dj_list.remove(dj.key())
+        permission.remove_dj(dj.key())
         status = ("Successfully removed " + dj.fullname + " from " +
                   permission.title + " permission list.")
     if errors:

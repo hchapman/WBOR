@@ -12,12 +12,13 @@ from google.appengine.ext import db
 # Local module imports
 from passwd_crypto import hash_password, check_password
 from base_models import (CachedModel, QueryError, ModelError, NoSuchEntry)
-from base_models import quantummethod, as_key
+from base_models import quantummethod, as_key, as_keys, is_key
 
 # Global python imports
 import datetime
 import random
 import string
+import logging
 
 def fix_bare_email(email):
   if email[-1] == "@":
@@ -38,7 +39,15 @@ class InvalidLogin(ModelError):
   pass
 
 class Dj(CachedModel):
+  COMPLETE = "dj_pref%s"
   ENTRY = "dj_key%s"
+
+  # Minimum number of entries in the cache with which we would even consider
+  # not rechecking the datastore. Figit with this number to balance reads and
+  # autocomplete functionality. Possibly consider algorithmically determining
+  # a score for artist names and prefixes?
+  MIN_AC_CACHE = 10
+  MIN_AC_RESULTS = 5
 
   USERNAME = "dj_username%s"
   EMAIL = "dj_email%s"
@@ -296,6 +305,126 @@ class Dj(CachedModel):
       dj.put()
       return dj
 
+  @classmethod
+  def has_prefix(cls, dj_key, prefix):
+    prefixes = prefix.split()
+
+    dj = cls.get(dj_key)
+
+    for name_part in dj.lowername.split():
+      check_prefixes = prefixes
+      for prefix in check_prefixes:
+        if name_part.startswith(prefix):
+          prefixes.remove(prefix)
+          if len(prefixes) == 0:
+            return True
+          break
+
+    check_prefixes = prefixes
+    for prefix in check_prefixes:
+      if dj.email.startswith(prefix):
+        prefixes.remove(prefix)
+        if len(prefixes) == 0:
+          return True
+        break
+
+    check_prefixes = prefixes
+    for prefix in check_prefixes:
+      if dj.username.startswith(prefix):
+        prefixes.remove(prefix)
+        if len(prefixes) == 0:
+          return True
+        break
+
+    return False
+
+  # As it is now, autocomplete is a little wonky. One thing worth
+  # noting is that we search cache a bit more effectively than the
+  # datastore: for example, if you've got a cached prefix "b" and
+  # bear in heaven was there, then you're able to just search "b i
+  # h" and cut out other stragglers like "Best Band Ever". Right
+  # now, we can't search datastore this efficiently, so this is kind
+  # of hit or miss.
+  @classmethod
+  def autocomplete(cls, prefix):
+    prefix = prefix.lower().strip()
+    # First, see if we have anything already cached for us in memstore.
+    # We start with the most specific prefix, and widen our search
+    cache_prefix = prefix
+    cached_results = None
+    perfect_hit = True
+    while cached_results is None:
+      if len(cache_prefix) > 0:
+        cached_results = cls.cache_get(cls.COMPLETE %cache_prefix)
+        if cached_results is None:
+          cache_prefix = cache_prefix[:-1]
+          perfect_hit = False
+      else:
+        cached_results = {"recache_count": -1,
+                          "max_results": False,
+                          "djs": None,}
+
+    # If we have a sufficient number of cached results OR we
+    #    have all possible results, search in 'em.
+    logging.debug(cache_prefix)
+    logging.debug(cached_results)
+    logging.debug(perfect_hit)
+    if (cached_results["recache_count"] >= 0 and
+        (cached_results["max_results"] or
+         len(cached_results["djs"]) >= cls.MIN_AC_CACHE)):
+      logging.debug("Trying to use cached results")
+
+      cache_djs = sorted(cached_results["djs"],
+                             key=lambda x: cls.get(x).lowername)
+
+      # If the cache is perfect (exact match!), just return it
+      if perfect_hit:
+        # There is no need to update the cache in this case.
+        logging.debug(cache_djs)
+        return cls.get(cache_djs)
+
+      # Otherwise we're going to have to search in the cache.
+      results = filter(lambda a: cls.has_prefix(a, prefix),
+                       cache_djs)
+      if cached_results["max_results"]:
+        # We're as perfect as we can be, so cache the results
+        cached_results["recache_count"] += 1
+        cached_results["djs"] = results
+        cls.cache_set(cached_results, cls.COMPLETE, prefix)
+        return cls.get(results)
+      elif len(results) > cls.MIN_AC_RESULTS:
+        if len(results) > cls.MIN_AC_CACHE:
+          cached_results["recache_count"] += 1
+          cached_results["djs"] = results
+          cls.cache_set(cached_results, cls.COMPLETE, prefix)
+          return cls.get(results)
+        return cls.get(results)
+
+    djs_by_full = (cls.all(keys_only=True)
+                    .filter("lowername >=", prefix)
+                    .filter("lowername <", prefix + u"\ufffd").fetch(10))
+    djs_by_email = (cls.all(keys_only=True)
+                  .filter("email >=", prefix)
+                  .filter("email <", prefix + u"\ufffd").fetch(10))
+    djs_by_username = (cls.all(keys_only=True)
+                       .filter("username >=", prefix)
+                       .filter("username <", prefix + u"\ufffd").fetch(10))
+
+    max_results = (len(djs_by_full) < 10 and
+                   len(djs_by_email) < 10 and
+                   len(djs_by_username) < 10)
+
+    djs = Dj.get(list(set(djs_by_full + djs_by_email + djs_by_username)))
+    djs = sorted(djs, key=lambda x: x.lowername)
+
+    results_dict = {"recache_count": 0,
+                    "max_results": max_results,
+                    "djs": [dj.key() for dj in djs]}
+
+    cls.cache_set(results_dict, cls.COMPLETE, prefix)
+    return djs
+
+
 
 class Permission(CachedModel):
   ENTRY = "permission_key%s"
@@ -417,14 +546,14 @@ class Permission(CachedModel):
       djs = (djs,)
 
     self.dj_list = list(set(self.dj_list).
-                        union(as_keys(dj_list)))
+                        union(as_keys(djs)))
 
   def remove_dj(self, djs):
     if is_key(djs) or isinstance(djs, Dj):
       djs = (djs,)
 
     self.dj_list = list(set(self.dj_list).
-                        difference(as_keys(dj_list)))
+                        difference(as_keys(djs)))
 
   def has_dj(self, dj):
     return dj is not None and as_key(dj) in self.dj_list
@@ -461,3 +590,4 @@ class Permission(CachedModel):
   @classmethod
   def get_key_by_title(cls, title):
     return cls.get_by_title(title=title, keys_only=True)
+

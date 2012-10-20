@@ -5,3 +5,7 @@ disgusting and I'm sure there are plenty of arguments on the internet against
 this, even specifically within GAE. If shouldn't be too hard to change everything
 to encapsulation instead (where each leaf child just has a variable dealing with
 the model it interacts with instead of being said model).
+
+I'd like to start using projection queries when possible and I think
+that would neccessitate the use of encapsulation rather than
+extension, and I'm okay with that.

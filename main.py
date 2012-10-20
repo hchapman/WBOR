@@ -69,10 +69,10 @@ class MainPage(BaseHandler):
 class DjComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
-    djs = models.djAutocomplete(q)
+    djs = Dj.autocomplete(q)
     self.response.out.write(json.dumps({
           'query': q,
-          'suggestions': [dj.fullname for dj in djs],
+          'suggestions': ["%s - %s"%(dj.fullname, dj.email) for dj in djs],
           'data': [str(dj.key()) for dj in djs],
           }))
 
