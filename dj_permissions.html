@@ -27,25 +27,26 @@
 </script>
 {% endblock %}
 
-{% block left_column %}
-  {% for p in permissions %}
-    <div class='permission'>
-        <h4>{{ p.title }}</h4>
-          <ul id='{{ p.key }}'>
-            {% for dj in p.dj_list %}
-            <li id='{{ p.key }}_{{ dj.key }}'>{{ dj.fullname }} <a class='delete' href='#'>[x]</a></li>
-            {% endfor %}
-          </ul>
-          <label>Add DJ: <input key='{{ p.key }}' type='text' class='add_perm dj-autocomplete' /></label>
-    </div>
-  {% endfor %}
+{% block top_row %}
+  <div class="span12">
+    <h1>Manage Permissions</h1>
+    <hr>
+  </div>
 {% endblock %}
 
+{% block left_column %}
 
-{% block right_column %}
-    <div>
-        <a href='/dj/'>Return to main index</a>
+    {% for p in permissions %}
+    <div class='permission'>
+      <h3>{{ p.title }}</h3>
+      <ul id='{{ p.key }}'>
+        {% for dj in p.dj_list %}
+        <li id='{{ p.key }}_{{ dj.key }}'>{{ dj.fullname }} <a class='delete' href='#'>[x]</a></li>
+        {% endfor %}
+      </ul>
+      <label>Add DJ: <input key='{{ p.key }}' type='text'
+                            class='add_perm dj-autocomplete span5' /></label>
     </div>
-    {% include "last_n_posts.html" %}
+    {% endfor %}
 
 {% endblock %}

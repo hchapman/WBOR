@@ -100,6 +100,18 @@ $(document).ready(function() {
             });
         });
     }
+    if ($(".dj-autocomplete-program").length > 0) {
+        $(".dj-autocomplete-program").each(function(index) {
+            $(this).autocomplete({
+                serviceUrl: '/ajax/djcomplete',
+                minChars: 1,
+                width: $(".dj-autocomplete-program").width(),
+                maxHeight: 400,
+                onSelect: function(value, data) {
+                },
+            });
+        });
+    }
     if ($("#albumlist li a").length > 0) {
         $("#albumlist li a").lightBox({
             imageLoading: '/static/images/lightbox-ico-loading.gif',

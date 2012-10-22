@@ -1,5 +1,32 @@
 {% extends "base.html" %}
 
+{% block extra_scripts %}
+<script type='text/javascript'>
+    $(function() {
+        $("a.delete").click(function(e) {
+          var dj_key = $(this).parent().attr("id");
+          dj_key = dj_key.split("_")[1];
+          var permission_key = $(this).parent().parent().attr("id");
+          $.post("/dj/permissions",
+          {
+            'dj_key': dj_key,
+            'permission_key': permission_key,
+            'action': 'remove',
+          },
+          function(data) {
+            if (data.err) {
+              alert(data.err);
+            } else {
+              $("#" + permission_key + "_" + dj_key).remove();
+            }
+          }, "json");
+          return false;
+        });
+    });
+    
+</script>
+{% endblock %}
+
 {% block main_content %}
 <div class="row">
   <div class="span12">
@@ -28,14 +55,7 @@
       </label>
       <br>
 
-      <label>Show DJs
-      </label>
-      <div class="well form-search">
-      <div class="input-append">
-        <input class="span4" size="16" type="text" placeholder="Search DJs"
-               ><button class="btn" type="button">Go!</button>
-      </div>
-      </div>
+
       
       <label for='desc'>Description
         <textarea class='tinymce' name='desc' id='desc'>
@@ -51,51 +71,55 @@
         </textarea>
       </label>
       <br>
+            <label>Show DJs
+          <input class="artist-autocomplete" type="text"
+                 name="djautosearch" id="djsearch" autocomplete="on">
+      </label>
       <input type='submit' name='submit' value="{% if program %}Edit{% else %}Add{% endif %} Program">
       {% if program %}
       <input id='delete-button' type='submit' name='submit' value='Delete Program' />
       {% endif %}
-  {% if all_dj_list %}
-  <div id='current-djs'>
-    <h4>Select DJs in program</h4>
+      {% if all_dj_list %}
+      <div id='current-djs'>
+        <h4>Select DJs in program</h4>
+        <ul>
+          {% for pair in all_dj_list %}
+          <li><label>
+              {% if pair.in_program %}
+              <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' checked='checked' />
+              {% else %}
+              <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' />
+              {% endif %}
+              {{ pair.dj.fullname }} ({{ pair.dj.email }})</label>
+            {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="span5">
+    <h2>Find a Program</h2>
+    {% if current_programs %}
     <ul>
-      {% for pair in all_dj_list %}
-      <li><label>
-          {% if pair.in_program %}
-          <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' checked='checked' />
-          {% else %}
-          <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' />
-          {% endif %}
-          {{ pair.dj.fullname }} ({{ pair.dj.email }})</label>
+      {% for p in current_programs %}
+      <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
+        {% if p.dj_list %}<ul style="margin-bottom:0;">
+	  {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
+        </ul>{% endif %}
         {% endfor %}
     </ul>
+    {% endif %}{% if legacy_programs %}
+    <h2>Old Programs</h2>
+    <ul>
+      {% for p in legacy_programs %}
+      <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
+        {% if p.dj_list %}<ul style="margin-bottom:0;">
+	  {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
+        </ul>{% endif %}
+        {% endfor %}
+    </ul>
+    {% endif %}
   </div>
-  {% endif %}
-  </form>
-</div>
-
-<div class="span5">
-  <h2>Find a Program</h2>
-  {% if current_programs %}
-  <ul>
-    {% for p in current_programs %}
-    <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
-      {% if p.dj_list %}<ul style="margin-bottom:0;">
-	{% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
-      </ul>{% endif %}
-      {% endfor %}
-  </ul>
-  {% endif %}{% if legacy_programs %}
-  <h2>Old Programs</h2>
-  <ul>
-    {% for p in legacy_programs %}
-    <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
-      {% if p.dj_list %}<ul style="margin-bottom:0;">
-	{% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
-      </ul>{% endif %}
-      {% endfor %}
-  </ul>
-  {% endif %}
-</div>
 </div>
 {% endblock %}
