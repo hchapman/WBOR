@@ -205,7 +205,7 @@ class Play(LastCachedModel):
     return query.fetch(num)
 
   def put(self):
-    super(Play, self).put()
+    return super(Play, self).put()
 
   @classmethod
   def delete_key(cls, key, program=None):
@@ -272,7 +272,7 @@ class Play(LastCachedModel):
       if after is None:
         after = datetime.date.today() - datetime.timedelta(days=6)
       elif isinstance(after, datetime.datetime):
-          after = after.date() 
+          after = after.date()
 
     cached_songs = cls.get_cached_query(cls.TOP_SONGS, before, after)
     cached_albums = cls.get_cached_query(cls.TOP_ALBUMS, before, after)
@@ -284,7 +284,7 @@ class Play(LastCachedModel):
             cached_albums.need_fetch(album_num)):
       songs = cached_songs.data
       albums = cached_albums.data
- 
+
     else:
       new_plays = cls.get(before=before, after=after, is_new=True, num=1000)
       songs = {}
@@ -304,7 +304,7 @@ class Play(LastCachedModel):
 
       songs = songs.items()
       albums = albums.items()
-    
+
     if not keys_only:
       songs = [(Song.get(song), count) for song,count in songs]
     if not keys_only:
@@ -365,7 +365,7 @@ class Psa(LastCachedModel):
     return None
 
   @classmethod
-  def get_key(cls, before=None, after=None, 
+  def get_key(cls, before=None, after=None,
              order=None, num=-1):
     query = cls.all(keys_only=True)
 
@@ -411,7 +411,7 @@ class Psa(LastCachedModel):
   def get_last_keys(cls, num=-1, program=None, before=None, after=None):
     return cls.get_last(num=num, keys_only=True,
                         program=program, before=before, after=after)
-  
+
   desc = db.StringProperty()
   program = db.ReferenceProperty(Program)
   play_date = db.DateTimeProperty()

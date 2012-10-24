@@ -609,7 +609,7 @@ class ManageDJs(UserHandler):
         dj = Dj.get_by_username(username)
       except NoSuchUsername:
         dj = None
-        
+
       if dj is not None:
         self.session.add_flash(
           "A DJ with username %s already exists: %s, email address %s" %
@@ -697,17 +697,8 @@ class ManagePrograms(UserHandler):
     program_list = [] #cache.getPrograms(order="title")
 
     template_values = {
-      'current_programs': tuple(
-          {"prog" : program,
-           "dj_list" : cache.getDj(program.dj_list)}
-          for program in program_list if program.current),
-      'legacy_programs': tuple(
-          {"prog" : program,
-           "dj_list" : cache.getDj(program.dj_list)}
-          for program in program_list if not program.current),
       'session': self.session,
       'flash': self.flashes,
-      'posts': models.getLastPosts(3),
     }
     self.response.out.write(
         template.render(get_path("dj_manage_programs.html"), template_values))
@@ -719,7 +710,7 @@ class ManagePrograms(UserHandler):
           "There was an error processing your request. Please try again.")
     else:
       slug = self.request.get("slug")
-      program = models.getProgramBySlug(slug)
+      program = Program.get(slug=slug)
       if program:
         self.session.add_flash(("Program \"%s\" already exists with slug %s."%
                           (program.title, slug)))
@@ -730,7 +721,7 @@ class ManagePrograms(UserHandler):
       program = Program.new(title=self.request.get("title"),
                             slug=self.request.get("slug"),
                             desc=self.request.get("desc"),
-                            dj_list=[],
+                            dj_list=self.request.get_all("djkey"),
                             page_html=self.request.get("page_html"),
                             current=bool(self.request.get("current")))
       program.put()
@@ -749,32 +740,36 @@ class ManagePrograms(UserHandler):
 class EditProgram(UserHandler):
   @authorization_required("Manage Programs")
   def get(self, program_key):
-    program = models.Program.get(program_key)
+    program = Program.get(program_key)
     if not program:
-      self.session.add_flash("Unable to find program (" + program_key + ").  Please try again.")
+      self.session.add_flash(
+        "Unable to find program (" + program_key + ").  Please try again.")
       self.redirect("/dj/programs/")
     else:
       template_values = {
-        'all_dj_list': [{'dj': dj, 'in_program': dj.key() in program.dj_list} for dj in models.Dj.all()],
+        'program_djs': [Dj.get(dj) for dj in program.dj_list],
         'program': program,
         'session': self.session,
         'flash': self.flashes,
-        'posts': models.getLastPosts(3),
       }
-      self.response.out.write(template.render(get_path("dj_manage_programs.html"), template_values))
+      self.response.out.write(
+        template.render(get_path("dj_manage_programs.html"), template_values))
 
   @authorization_required("Manage Programs")
   def post(self, program_key):
-    program = cache.getProgram(program_key)
-    if (not program) or (self.request.get("submit") != "Edit Program" and self.request.get("submit") != "Delete Program"):
-      self.session.add_flash("There was an error processing your request. Please try again.")
+    program = Program.get(program_key)
+    if (not program or
+        (self.request.get("submit") != "Edit Program" and
+         self.request.get("submit") != "Delete Program")):
+      self.session.add_flash(
+        "There was an error processing your request. Please try again.")
     elif self.request.get("submit") == "Edit Program":
-      program.title = self.request.get("title")
-      program.slug = self.request.get("slug")
-      program.desc = self.request.get("desc")
-      program.page_html = self.request.get("page_html")
-      program.dj_list = [models.db.Key(k) for k in self.request.get("dj_list", allow_multiple=True)]
-      program.current = bool(self.request.get("current"))
+      program.p_title = self.request.get("title")
+      program.p_slug = self.request.get("slug")
+      program.p_desc = self.request.get("desc")
+      program.p_page_html = self.request.get("page_html")
+      program.p_dj_list = self.request.get_all("djkey")
+      program.p_current = bool(self.request.get("current"))
       program.put()
       self.session.add_flash(program.title + " successfully edited.")
     elif self.request.get("submit") == "Delete Program":

@@ -4,10 +4,27 @@
     <script type='text/javascript'>
     function slugify(text) {
         text = text.toLowerCase();
-        text = text.replace(/[^-a-zA-Z0-9,&\s]+/ig, '');
-        text = text.replace(/-/gi, "_");
+        text = text.replace(/[^-a-zA-Z0-9\s]+/ig, '');
+        text = text.replace(/-/gi, "-");
         text = text.replace(/\s/gi, "-");
         return text;
+    }
+
+    var djbutton = $("<tr></tr>");
+    djbutton.append($("<td><a>&times;</a></td>"))
+    djbutton.append($("<td id=\"djname\"></td>"));
+    djbutton.append($("<td id=\"djemail\">Email</td>"));
+    djbutton.append($("<input type=\"hidden\" id=\"djkey\""+
+                      " name=\"djkey\" value=\"\"/>"));
+
+    function addDjToProgram(key, name, email) {
+        var newbutton = djbutton.clone();
+        newbutton.find("#djname").text(name);
+        newbutton.find("#djemail").text(email);
+        newbutton.find("#djkey").val(key);
+        $("#show-dj-list").find("tbody").append(newbutton);
+        $("#dj-table").removeClass("hidden-djs");
+        $("#no-dj-alert").addClass("hidden-djs");
     }
 
     $(function() {
@@ -30,13 +47,17 @@
           }, "json");
           return false;
         });
-        var djbutton = $("<tr></tr>");
-        djbutton.append($("<td><a>&times;</a></td>"))
-        djbutton.append($("<td id=\"djname\"></td>"));
-        djbutton.append($("<td>Email</td>"));
-        djbutton.append($("<input type=\"hidden\" id=\"djkey\""+
-                          " name=\"djkey\" value=\"\"/>"))
 
+        $("#title").focusout(function() {
+            $("#title").each(function(index) {
+                if($("#slug").val().length > 0) {
+                    return;
+                }
+                var tempslug = slugify($(this).val());
+                $("#slug").val(tempslug);
+                $("#slugified-slug").text(tempslug);
+            });
+        });
         $("#slug").focusout(function() {
             $("#slug").each(function(index) {
                 $("#slugified-slug").text(slugify($(this).val()));
@@ -50,10 +71,7 @@
                 width: $(".dj-autocomplete-program").width(),
                 maxHeight: 400,
                 onSelect: function(value, data) {
-                    var newbutton = djbutton.clone();
-                    newbutton.find("#djname").text(value);
-                    newbutton.find("#djkey").val(data);
-                    $("#show-dj-list").find("tbody").append(newbutton);
+                    addDjToProgram(data, value, "some email");
                 },
             });
         });
@@ -83,12 +101,15 @@
       </label>
         <div class="control-group">
         <input id='slug' type='text' name='slug'
-               value='{{ program.slug|escape }}' />
-        <span class="help-inline" id="slugified-slug">Hey!</span></div>
+               value='{{ program.slug }}' />
+        <span class="help-inline">Will format as: 
+          <span id="slugified-slug">{{ program.slug }}</span>
+        </span>
+        </div>
 
       <label for='current' class='checkbox'>
         <input id='current' type='checkbox' name='current' value='1'
-               {% if program.current %}checked='checked'{% endif %}
+               {% if not program or program.current %}checked='checked'{% endif %}
                /> This show is on the air this season
       </label>
 
@@ -108,12 +129,28 @@
       <br>
 
       <h3>Program DJs</h3>
+      <div id="dj-table"
+           class="{% if not program or not program.dj_list %}hidden-djs{% endif %}">
       <label>DJs presently in program
       </label>
-        <table id="show-dj-list" class="table table-bordered table=striped">
+        <table id="show-dj-list" class="table table-bordered
+                                        table-striped">
           <thead><tr><th>Remove?</th><th>Name</th><th>Email</th></tr></thead>
-          <tbody></tbody>
+          <tbody>{% for dj in program_djs %}
+            <tr><td><a>×</a></td>
+              <td id="djname">{{ dj.p_fullname }}</td>
+              <td id="djemail">{{ dj.p_email }}</td>
+              <input type="hidden" id="djkey" name="djkey" 
+                     value="{{ dj.key }}"></tr> 
+            {% endfor %}</tbody>
         </table>
+      </div>
+      <div id="no-dj-alert"
+           class="{% if program and program.dj_list %}hidden-djs{% endif %} alert">
+        There are presently no DJs in this program! Ancient
+        proverb says; <em>a program without DJs is like a bird without
+        a beak</em>. You should probably add some.
+      </div>
 
       <label for="djsearch">Add a DJ
       </label>
@@ -122,29 +159,14 @@
                placeholder="Start typing to search DJs">
 
         <div class="form-actions">
-      <input type='submit' class="btn btn-primary" name='submit' value="{% if program %}Edit{% else %}Add{% endif %} Program">
+      <input type='submit' class="btn btn-primary"
+             name='submit' value="{% if program %}Edit{% else %}Add{% endif %} Program">
       {% if program %}
       <input id='delete-button' type='submit' name='submit'
-             value='Delete Program' />
+             class="btn btn-danger" value='Delete Program' />
 
       {% endif %}
         </div>
-      {% if all_dj_list %}
-      <div id='current-djs'>
-        <h4>Select DJs in program</h4>
-        <ul>
-          {% for pair in all_dj_list %}
-          <li><label>
-              {% if pair.in_program %}
-              <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' checked='checked' />
-              {% else %}
-              <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' />
-              {% endif %}
-              {{ pair.dj.fullname }} ({{ pair.dj.email }})</label>
-            {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
     </form>
   </div>
 

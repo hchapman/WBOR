@@ -156,6 +156,8 @@ class Dj(CachedModel):
     if password is not None:
       self.p_password = password
 
+    # TODO: inject dj into autocompletion
+
     return super(Dj, self).put()
 
   def reset_password(self, put=True):
@@ -590,4 +592,3 @@ class Permission(CachedModel):
   @classmethod
   def get_key_by_title(cls, title):
     return cls.get_by_title(title=title, keys_only=True)
-

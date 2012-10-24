@@ -7,11 +7,13 @@ from google.appengine.ext import db
 from passwd_crypto import hash_password, check_password
 from base_models import (CachedModel, QueryError, ModelError, NoSuchEntry)
 from base_models import quantummethod, as_key
+from base_models import slugify
 
 # Global python imports
 import datetime
 import random
 import string
+import logging
 
 class Program(CachedModel):
   ## Functions for getting and setting Programs
@@ -19,6 +21,23 @@ class Program(CachedModel):
   EXPIRE = 360  # Program cache lasts for one hour maximum
 
   BY_DJ_ENTRY = "programs_by_dj%s"
+
+  @classmethod
+  def new(cls, title, slug, desc, dj_list, page_html, current=True):
+    if not title:
+      raise Exception("Insufficient data to create show")
+
+    program = cls(title=title,
+                  slug=slugify(slug if slug else title),
+                  desc=desc,
+                  dj_list=[as_key(dj) for dj in dj_list if dj],
+                  page_html=page_html,
+                  current=bool(current))
+
+    return program
+
+  def put(self):
+    return super(Program, self).put()
 
   @classmethod
   def get(cls, keys=None, slug=None, dj=None, order=None, num=-1,
@@ -91,6 +110,50 @@ class Program(CachedModel):
   top_artists = db.StringListProperty()
   top_playcounts = db.ListProperty(int)
   current = db.BooleanProperty(default=False)
+
+  @property
+  def p_title(self):
+    return self.title
+  @p_title.setter
+  def p_title(self, title):
+    if not title:
+      raise ModelError("A show's title cannot be blank")
+    self.title = title.strip()
+
+  @property
+  def p_slug(self):
+    return self.slug
+  @p_slug.setter
+  def p_slug(self, slug):
+    self.slug = slugify(slug if slug else title)
+
+  @property
+  def p_desc(self):
+    return self.desc
+  @p_desc.setter
+  def p_desc(self, desc):
+    self.desc = desc.strip() if desc else ""
+
+  @property
+  def p_page_html(self):
+    return self.page_html
+  @p_page_html.setter
+  def p_page_html(self, page_html):
+    self.page_html = page_html.strip() if page_html else ""
+
+  @property
+  def p_current(self):
+    return self.current
+  @p_current.setter
+  def p_current(self, current):
+    self.current = bool(current)
+
+  @property
+  def p_dj_list(self):
+    return self.dj_list
+  @p_dj_list.setter
+  def p_dj_list(self, dj_list):
+    self.dj_list = [as_key(dj) for dj in dj_list if dj]
 
   def get_last_plays(self, *args, **kwargs):
     return []
