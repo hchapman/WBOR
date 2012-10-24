@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 
 {% block extra_scripts %}
-<script type='text/javascript'>
+    <script type='text/javascript'>
+    function slugify(text) {
+        text = text.toLowerCase();
+        text = text.replace(/[^-a-zA-Z0-9,&\s]+/ig, '');
+        text = text.replace(/-/gi, "_");
+        text = text.replace(/\s/gi, "-");
+        return text;
+    }
+
     $(function() {
         $("a.delete").click(function(e) {
           var dj_key = $(this).parent().attr("id");
@@ -22,8 +30,36 @@
           }, "json");
           return false;
         });
+        var djbutton = $("<tr></tr>");
+        djbutton.append($("<td><a>&times;</a></td>"))
+        djbutton.append($("<td id=\"djname\"></td>"));
+        djbutton.append($("<td>Email</td>"));
+        djbutton.append($("<input type=\"hidden\" id=\"djkey\""+
+                          " name=\"djkey\" value=\"\"/>"))
+
+        $("#slug").focusout(function() {
+            $("#slug").each(function(index) {
+                $("#slugified-slug").text(slugify($(this).val()));
+            });
+        });
+        if ($(".dj-autocomplete-program").length > 0) {
+        $(".dj-autocomplete-program").each(function(index) {
+            $(this).autocomplete({
+                serviceUrl: '/ajax/djcomplete',
+                minChars: 1,
+                width: $(".dj-autocomplete-program").width(),
+                maxHeight: 400,
+                onSelect: function(value, data) {
+                    var newbutton = djbutton.clone();
+                    newbutton.find("#djname").text(value);
+                    newbutton.find("#djkey").val(data);
+                    $("#show-dj-list").find("tbody").append(newbutton);
+                },
+            });
+        });
+    }
     });
-    
+
 </script>
 {% endblock %}
 
@@ -38,47 +74,61 @@
   <div class="span7">
     <h2>{% if program %}Edit{% else %}Add{% endif %} Program</h2>
     <form action='/dj/programs/{% if program %}{{ program.key }}/{% endif %}' method='post'>
+    <h3>Program information</h3>
       <label for='title'>Title
+      </label>
         <input id='title' type='text' name='title' value='{{ program.title|escape }}'/>
-      </label>
-      <br>
-      
+
       <label for='slug'>Slug
-        <input id='slug' type='text' name='slug' value='{{ program.slug|escape }}' />
       </label>
-      <br>
+        <div class="control-group">
+        <input id='slug' type='text' name='slug'
+               value='{{ program.slug|escape }}' />
+        <span class="help-inline" id="slugified-slug">Hey!</span></div>
 
       <label for='current' class='checkbox'>
-	<input id='current' type='checkbox' name='current' value='1' 
-	       {% if program.current %}checked='checked'{% endif %}
-	       /> This show is on the air this season
+        <input id='current' type='checkbox' name='current' value='1'
+               {% if program.current %}checked='checked'{% endif %}
+               /> This show is on the air this season
       </label>
-      <br>
 
-
-      
       <label for='desc'>Description
+      </label>
         <textarea class='tinymce' name='desc' id='desc'>
           {{ program.desc|escape }}
         </textarea>
-      </label>
       <br>
-      
+
       <label for='page_html'>Page HTML
+      </label>
         <textarea class='tinymce' name='page_html'
                   id='page_html'>
           {{ program.page_html|escape }}
         </textarea>
-      </label>
       <br>
-            <label>Show DJs
-          <input class="artist-autocomplete" type="text"
-                 name="djautosearch" id="djsearch" autocomplete="on">
+
+      <h3>Program DJs</h3>
+      <label>DJs presently in program
       </label>
-      <input type='submit' name='submit' value="{% if program %}Edit{% else %}Add{% endif %} Program">
+        <table id="show-dj-list" class="table table-bordered table=striped">
+          <thead><tr><th>Remove?</th><th>Name</th><th>Email</th></tr></thead>
+          <tbody></tbody>
+        </table>
+
+      <label for="djsearch">Add a DJ
+      </label>
+        <input class="dj-autocomplete-program span6" type="text"
+               name="djautosearch" id="djsearch" autocomplete="on"
+               placeholder="Start typing to search DJs">
+
+        <div class="form-actions">
+      <input type='submit' class="btn btn-primary" name='submit' value="{% if program %}Edit{% else %}Add{% endif %} Program">
       {% if program %}
-      <input id='delete-button' type='submit' name='submit' value='Delete Program' />
+      <input id='delete-button' type='submit' name='submit'
+             value='Delete Program' />
+
       {% endif %}
+        </div>
       {% if all_dj_list %}
       <div id='current-djs'>
         <h4>Select DJs in program</h4>
@@ -100,12 +150,14 @@
 
   <div class="span5">
     <h2>Find a Program</h2>
+    <h3>Most recently added</h3>
+    <h3>Search programs</h3>
     {% if current_programs %}
     <ul>
       {% for p in current_programs %}
       <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
         {% if p.dj_list %}<ul style="margin-bottom:0;">
-	  {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
+          {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
         </ul>{% endif %}
         {% endfor %}
     </ul>
@@ -115,7 +167,7 @@
       {% for p in legacy_programs %}
       <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
         {% if p.dj_list %}<ul style="margin-bottom:0;">
-	  {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
+          {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
         </ul>{% endif %}
         {% endfor %}
     </ul>
