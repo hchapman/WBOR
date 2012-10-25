@@ -53,7 +53,9 @@ $(document).ready(function() {
                   alert(data);
               });
     });
-
+    var alertbox = $("<div class='alert fade in'></div>");
+    alertbox.append($('<a class="close" data-dismiss="alert" href="#">&times;</a>'));
+    alertbox.append($("<span></span>"))
     nowPlaying();
     if ($("#delete-button")) {
         $("#delete-button").click(function() {
@@ -82,18 +84,20 @@ $(document).ready(function() {
                 onSelect: function(value, data) {
                     $.post("/dj/permissions",
                            {
-                               'dj_key': data,
+                               'dj_key': data["key"],
                                'permission_key': p_key,
                                'action': "add",
                            },
-                           function(data) {
-                               if (data.err) {
-                                   alert(data.err);
+                           function(postdata) {
+                               if (postdata.err) {
+                                   alert(postdata.err);
                                } else {
                                    var li = document.createElement("li");
-                                   li.innerHTML = value;
+                                   li.innerHTML = data["name"];
                                    $("#" + p_key).append(li);
-                                   $("#msgbox").html(data.msg);
+                                   var newalert = alertbox.clone();
+                                   newalert.find("span").html(postdata.msg);
+                                   $("#msgbox").append(newalert);
                                }
                            }, "json");
                 },

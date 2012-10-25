@@ -38,7 +38,8 @@ from slughifi import slughifi
 import models_old as models
 
 from models.base_models import (NoSuchEntry,)
-from models.dj import (Dj, Permission, InvalidLogin, NoSuchUsername, NoSuchEmail)
+from models.dj import (Dj, Permission, InvalidLogin,
+                       NoSuchUsername, NoSuchEmail)
 from models.tracks import Album, Song, ArtistName
 from models.play import Play, Psa, StationID
 from models.program import Program
@@ -427,8 +428,6 @@ class ChartSong(UserHandler):
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
       ArtistName.try_put(track_artist)
 
-      # updates the top 10 artists for the program
-      self.updateArtists(Program.get(keys=self.program_key), track_artist)
       try:
         # last.fm integration
         lastfm_username = "wbor"
@@ -471,35 +470,6 @@ class ChartSong(UserHandler):
       self.redirect("/dj/chartsong/")
       return
 
-  # This is a helper method to update which artists are recorded as
-  # the most-played artists for a given program.
-  # If the artist just played is already within the top 10, then
-  # increment the count by one and re-order.
-  # Otherwise, make an 11-element list of the current top 10 artists played
-  # along with the just-played artist's name and playcount;
-  # sort this list, grab the first 10 elements and save them.
-  def updateArtists(self, program, artist):
-    # a dictionary which looks like (artist_name => playcount)
-    playcounts = {}
-    for a, p in zip(program.top_artists, program.top_playcounts):
-      playcounts[a] = p
-    if artist in playcounts:
-      playcounts[artist] = playcounts[artist] + 1
-    else:
-      playcounts[artist] = self.getPlayCountByArtist(program, artist) + 1
-    playcounts = [(playcounts[a], a) for a in playcounts]
-    playcounts.sort()
-    playcounts.reverse()
-    playcounts = playcounts[:10]
-    program.top_artists = [str(p[1]) for p in playcounts]
-    program.top_playcounts = [int(p[0]) for p in playcounts]
-    program.put()
-  def getPlayCountByArtist(self, program, artist):
-    return len(Play.all(keys_only=True).
-               filter("program =", program).
-               filter("artist =", artist).
-               fetch(1000))
-
 # Displays log of PSA and Station ID records for a given two-week period.
 # /dj/logs/?
 # get(): Print log for the last two weeks, display form for choosing endpoint.
@@ -519,14 +489,17 @@ class ViewLogs(UserHandler):
       'start': start,
       'end': end,
     }
-    self.response.out.write(template.render(get_path("dj_logs.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("dj_logs.html"), template_values))
 
   @login_required
   def post(self):
     try:
-      start = datetime.datetime.strptime(self.request.get("start_date"), "%m/%d/%Y")
+      start = datetime.datetime.strptime(
+        self.request.get("start_date"), "%m/%d/%Y")
     except ValueError:
-      self.session.add_flash("Unable to select date. Enter a date in the form mm/dd/yyyy.")
+      self.session.add_flash(
+        "Unable to select date. Enter a date in the form mm/dd/yyyy.")
       self.redirect("/dj/logs/")
       return
     end = start + datetime.timedelta(weeks=2)
@@ -540,9 +513,8 @@ class ViewLogs(UserHandler):
       'start': start,
       'end': end,
     }
-    self.response.out.write(template.render(get_path("dj_logs.html"), template_values))
-
-
+    self.response.out.write(
+      template.render(get_path("dj_logs.html"), template_values))
 
 # For administration, manages the DJs in the system.
 # get(): Displays list of current DJs for editing/deletion
@@ -693,12 +665,12 @@ class EditDJ(UserHandler):
 class ManagePrograms(UserHandler):
   @authorization_required("Manage Programs")
   def get(self):
-    # TODO: CRITICAL: CRITICAL: Screw this! Do better
-    program_list = [] #cache.getPrograms(order="title")
+    new_programs = Program.get(num=5)
 
     template_values = {
       'session': self.session,
       'flash': self.flashes,
+      'new_programs': new_programs,
     }
     self.response.out.write(
         template.render(get_path("dj_manage_programs.html"), template_values))
@@ -746,11 +718,13 @@ class EditProgram(UserHandler):
         "Unable to find program (" + program_key + ").  Please try again.")
       self.redirect("/dj/programs/")
     else:
+      new_programs = Program.get(num=5)
       template_values = {
         'program_djs': [Dj.get(dj) for dj in program.dj_list],
         'program': program,
         'session': self.session,
         'flash': self.flashes,
+        'new_programs': new_programs
       }
       self.response.out.write(
         template.render(get_path("dj_manage_programs.html"), template_values))

@@ -71,7 +71,7 @@
                 width: $(".dj-autocomplete-program").width(),
                 maxHeight: 400,
                 onSelect: function(value, data) {
-                    addDjToProgram(data, value, "some email");
+                    addDjToProgram(data["key"], data["name"], data["email"]);
                 },
             });
         });
@@ -115,17 +115,14 @@
 
       <label for='desc'>Description
       </label>
-        <textarea class='tinymce' name='desc' id='desc'>
-          {{ program.desc|escape }}
-        </textarea>
+        <textarea name='desc' class="span5" rows=7 
+                  id='desc'>{{ program.desc|escape }}</textarea>
       <br>
 
       <label for='page_html'>Page HTML
       </label>
         <textarea class='tinymce' name='page_html'
-                  id='page_html'>
-          {{ program.page_html|escape }}
-        </textarea>
+                  id='page_html'>{{ program.page_html|escape }}</textarea>
       <br>
 
       <h3>Program DJs</h3>
@@ -173,27 +170,17 @@
   <div class="span5">
     <h2>Find a Program</h2>
     <h3>Most recently added</h3>
+    <ul>
+      {% for p in new_programs %}
+      <li><a href="/dj/programs/{{ p.key }}">{{ p.p_title }}</a></li>
+      {% endfor %}
+    </ul>
     <h3>Search programs</h3>
-    {% if current_programs %}
-    <ul>
-      {% for p in current_programs %}
-      <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
-        {% if p.dj_list %}<ul style="margin-bottom:0;">
-          {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
-        </ul>{% endif %}
-        {% endfor %}
-    </ul>
-    {% endif %}{% if legacy_programs %}
-    <h2>Old Programs</h2>
-    <ul>
-      {% for p in legacy_programs %}
-      <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
-        {% if p.dj_list %}<ul style="margin-bottom:0;">
-          {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
-        </ul>{% endif %}
-        {% endfor %}
-    </ul>
-    {% endif %}
+    <form class="form-search">
+      <input type="text" class="span3 search-query" 
+             placeholder="Search programs"/>
+      <input type="button" class="btn btn-primary" value="Search!" />
+    </form>
   </div>
 </div>
 {% endblock %}

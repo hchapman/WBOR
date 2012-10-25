@@ -205,7 +205,14 @@ class Play(LastCachedModel):
     return query.fetch(num)
 
   def put(self):
-    return super(Play, self).put()
+    key = super(Play, self).put()
+
+    if key and self.is_fresh and self.program:
+      program = self.p_program
+      program.update_top_artists(self.p_artist)
+      program.put()
+
+    return key
 
   @classmethod
   def delete_key(cls, key, program=None):

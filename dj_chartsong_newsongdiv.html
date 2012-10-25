@@ -1,11 +1,11 @@
 <label>Album
-<select name='album_key' id='album_key' style="overflow:hidden; max-width:100%;">
+<select class="span5" name='album_key' id='album_key' style="overflow:hidden; max-width:100%;">
     {% for album in new_albums %}
     <option value='{{ album.key }}' >{{ album.artist }} - {{ album.title }}</option>
     {% endfor %}
 </select></label>
 <label>Song
-<select name='song_key' id='song_key_list' style="overflow:hidden; max-width:100%;">
+<select class="span5" name='song_key' id='song_key_list' style="overflow:hidden; max-width:100%;">
     {% for song in album_songs %}
     <option value='{{ song.key }}'>{{ song.title }}</option>
     {% endfor %}

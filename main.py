@@ -72,9 +72,10 @@ class DjComplete(BaseHandler):
     djs = Dj.autocomplete(q)
     self.response.out.write(json.dumps({
           'query': q,
-          'suggestions': ["%s - %s"%(dj.fullname, dj.email) for dj in djs],
-          'data': [str(dj.key()) for dj in djs],
-          }))
+          'suggestions': ["%s - %s"%(dj.p_fullname, dj.p_email) for dj in djs],
+          'data': [{'key': str(dj.key()),
+                    'name': dj.p_fullname,
+                    'email': dj.p_email} for dj in djs],}))
 
 class ArtistComplete(BaseHandler):
   def get(self):
@@ -105,7 +106,8 @@ class AlbumTable(BaseHandler):
         'session': self.session,
         'album_list': albums,
         }
-      album_table_html = template.render(get_path("newalbums.html"), template_values)
+      album_table_html = template.render(
+        get_path("newalbums.html"), template_values)
       memcache.set("album_table_html", album_table_html)
     self.response.out.write(album_table_html)
 
@@ -262,8 +264,8 @@ class UpdateInfo(webapp2.RequestHandler):
     recent_songs = Play.get_last(num=3)
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
-      song, program = (Song.get(last_play.song_key),
-                       Program.get(last_play.program_key))
+      song, program = (last_play.p_song),
+                       last_play.p_program)
       song_string = song.p_title
       artist_string = song.p_artist
       if program is not None:
@@ -517,7 +519,7 @@ class ChartsPage(UserHandler):
   def post(self):
     song_num = 30
     album_num = 30
-    
+
     # Parse dates
     start_date_req = self.request.get("start_date")
     if start_date_req:

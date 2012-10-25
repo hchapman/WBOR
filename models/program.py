@@ -15,6 +15,8 @@ import random
 import string
 import logging
 
+from itertools import izip
+
 class Program(CachedModel):
   ## Functions for getting and setting Programs
   ENTRY = "program_key%s"
@@ -155,8 +157,39 @@ class Program(CachedModel):
   def p_dj_list(self, dj_list):
     self.dj_list = [as_key(dj) for dj in dj_list if dj]
 
+  @property
+  def p_num_top_plays(self):
+    return self.top_playcounts[0]
+  @property
+  def p_top_artists(self):
+    return izip(self.top_artists, self.top_playcounts)
+
   def get_last_plays(self, *args, **kwargs):
     return []
+
+  # This is a helper method to update which artists are recorded as
+  # the most-played artists for a given program.
+  # If the artist just played is already within the top 10, then
+  # increment the count by one and re-order.
+  # Otherwise, make an 11-element list of the current top 10 artists played
+  # along with the just-played artist's name and playcount;
+  # sort this list, grab the first 10 elements and save them.
+  def update_top_artists(self, artist):
+    # a dictionary which looks like (artist_name => playcount)
+    playcounts = dict.fromkeys(self.top_artists, self.top_playcounts)
+    if artist in playcounts:
+      playcounts[artist] = playcounts[artist] + 1
+    else:
+      playcounts[artist] = self.get_artist_play_count(artist)
+
+    playcounts = list(iteritems(playcounts))
+    playcounts.sort(lambda x: x[1], reverse=True)
+    playcounts = playcounts[:10]
+    self.top_artists = [str(p[1]) for p in playcounts]
+    self.top_playcounts = [int(p[0]) for p in playcounts]
+
+  def get_artist_play_count(self, artist):
+    return len(Play.get(program=self, artist=artist, keys_only=True, num=1000))
 
   def to_json(self):
     return {

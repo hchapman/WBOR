@@ -89,10 +89,10 @@ $(function() {
         <input id="is-new" type="hidden" name='isNew' value="0">
         <div id='old-song-div'><label>Track Name
             <input type='text' name='trackname' id='trackname'
-                   tabindex='1'>
+                   tabindex='1' class="span5">
           </label>
           <label>Artist
-            <input type='text' class='artist-autocomplete'
+            <input type='text' class='span5 artist-autocomplete'
                    name='artist' tabindex='2' id='artist'>
           </label>
         </div>
@@ -102,13 +102,13 @@ $(function() {
           {% else %}
           <label>Album</label>
           <br>
-          <select name='album_key' id='album_key'>
+          <select class="span5" name='album_key' id='album_key'>
             {% for album in new_albums %}
             <option value='{{ album.key }}'>{{ album.artist }} - {{ album.title }}</option>
             {% endfor %}
           </select>
           <label>Song</label>
-          <select name='song_key' id='song_key_list'>
+          <select class="span5" name='song_key' id='song_key_list'>
             {% for song in album_songs %}
             <option value='{{ song.key }}'>{{ song.title }}</option>
             {% endfor %}
