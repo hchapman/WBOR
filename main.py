@@ -11,7 +11,7 @@ import logging
 
 from models.dj import Permission, Dj
 from models.tracks import Album, Song, ArtistName
-#from models.play import Play
+from models.play import Play
 from models.base_models import NoSuchEntry
 from models.program import Program
 
