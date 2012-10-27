@@ -11,7 +11,7 @@ import logging
 
 from models.dj import Permission, Dj
 from models.tracks import Album, Song, ArtistName
-from models.play import Play
+#from models.play import Play
 from models.base_models import NoSuchEntry
 from models.program import Program
 
@@ -264,8 +264,8 @@ class UpdateInfo(webapp2.RequestHandler):
     recent_songs = Play.get_last(num=3)
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
-      song, program = (last_play.p_song),
-                       last_play.p_program)
+      song, program = (last_play.song,
+                       last_play.program)
       song_string = song.p_title
       artist_string = song.p_artist
       if program is not None:
@@ -607,6 +607,16 @@ class ProgramPage(BaseHandler):
     self.response.out.write(
       template.render(get_path("show.html"), template_values))
 
+class TestModels(BaseHandler):
+  def get(self):
+    from models._raw_models import Play
+    self.response.out.write("hey there")
+    key = Play.all().get()
+    self.response.out.write(key)
+    play = Play.get(key)
+    self.response.out.write(play)
+
+
 ## There should never be a need to use the following handler in the future.
 # However, it remains for educational purposes.
 # Be aware that it's somewhat hackishly written
@@ -681,5 +691,6 @@ app = webapp2.WSGIApplication([
     ('/contact/?', ContactPage),
     ('/events/?', EventPage),
     ('/albums/([^/]*)/?', ViewCoverHandler),
-    ('/callvoice/?', CallVoice),
+    ('/callvoice/?', CallVoice), 
+    ('/testmodels/?', TestModels),
     ], debug=True, config=webapp2conf)

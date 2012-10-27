@@ -404,7 +404,7 @@ class ChartSong(UserHandler):
         trackname = song.p_title
         track_artist = song.p_artist
         Play.new(song=song, program=self.program_key,
-                 play_date=datetime.datetime.now(), isNew=True,
+                 play_date=datetime.datetime.now(), is_new=True,
                  artist=album.artist).put()
       else:
         # a song needs to have an artist and a track name

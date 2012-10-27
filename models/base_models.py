@@ -163,6 +163,7 @@ class QueryCache(CacheItem):
     return self._data
 
 class CachedModel(db.Model):
+  _RAW = None
   ''' A CachedModel is a database model which tries its best to keep
   its information synced in the memcache so that fewer database hits
   are used.
@@ -176,14 +177,30 @@ class CachedModel(db.Model):
 
   ENTRY = "cachedmodel_key%s"
 
-  def __init__(self, parent=None, key_name=None, cached=True,
+  @property
+  def key(self):
+    if self._dbentry:
+      return self._dbentry.key()
+    return super(CachedModel, self).key()
+
+  def __init__(self, raw=None, parent=None, key_name=None, cached=True,
                **kwargs):
-    self._cached = True
-    super(CachedModel, self).__init__(parent=parent,
-                                      key_name=key_name, **kwargs)
+    self._cached = cached
+    if self._RAW:
+      if raw is not None:
+        self._dbentry = raw
+      else:
+        self._dbentry = self._RAW(parent=parent, key_name=key_name, **kwargs)
+    else:
+      self._dbentry = None
+      super(CachedModel, self).__init__(parent=parent,
+                                        key_name=key_name, **kwargs)
 
   @classmethod
   def as_object(cls, obj):
+    if cls._RAW:
+      cls = cls._RAW
+
     if isinstance(obj, cls):
       return obj
     elif is_key(obj):
@@ -220,9 +237,9 @@ class CachedModel(db.Model):
     return memcache.get(cache_key %args)
 
   def add_object_cache(self):
-    self.cache_set(self, self.ENTRY %self.key())
+    self.cache_set(self, self.ENTRY %self.key)
   def purge_object_cache(self):
-    self.cache_delete(self.ENTRY %self.key())
+    self.cache_delete(self.ENTRY %self.key)
 
   def add_to_cache(self):
     '''
@@ -253,6 +270,8 @@ class CachedModel(db.Model):
       return None
     if isinstance(keys, cls):
       return keys
+    elif cls._RAW is not None and isinstance(keys, cls._RAW):
+      obj = cls(raw=keys)
 
     if is_key(keys) or one_key:
       keys = (as_key(keys),)
@@ -268,6 +287,8 @@ class CachedModel(db.Model):
       if key is not None:
         if isinstance(key, cls):
           obj = key
+        elif cls._RAW is not None and isinstance(key, cls._RAW):
+          obj = cls(raw=key)
         else:
           obj = cls.cache_get(cls.ENTRY %key)
 
@@ -281,7 +302,10 @@ class CachedModel(db.Model):
           reads = reads if reads is not None else 0
           cls.cache_set(reads+1, cls.UNCACHED_READ)
           logging.info("Had to make %s datastore reads in total so far"%reads)
-          obj = super(CachedModel, cls).get(key)
+          if cls._RAW is None:
+            obj = super(CachedModel, cls).get(key)
+          else:
+            obj = cls(raw=cls._RAW.get(key))
           if obj is not None:
             return obj.add_to_cache()
           return None
@@ -306,8 +330,13 @@ class CachedModel(db.Model):
     logging.debug(objs)
     reads = cls.cache_get(cls.UNCACHED_READ)
     reads = reads if reads is not None else 0
+    if cls._RAW is None:
+      results = super(CachedModel, cls).get(db_fetch_zip[1])
+    else:
+      logging.error(db_fetch_zip[1])
+      results = [cls(raw=raw) for raw in cls._RAW.get(db_fetch_zip[1])]
     for i, obj in zip(db_fetch_zip[0],
-                      super(CachedModel, cls).get(db_fetch_zip[1])):
+                      results):
       reads += 1
       logging.debug(i)
       objs[i] = obj.add_to_cache()

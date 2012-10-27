@@ -11,6 +11,8 @@ from __future__ import with_statement
 # GAE Imports
 from google.appengine.ext import db
 
+from _raw_models import Play as RawPlay
+
 # Local module imports
 from base_models import *
 from tracks import Album, Song
@@ -105,6 +107,7 @@ class LastCachedModel(CachedModel):
 
 
 class Play(LastCachedModel):
+  _RAW = RawPlay
   '''A Play is an (entirely) immutable datastore object which represents
   a charted song
   '''
@@ -117,46 +120,62 @@ class Play(LastCachedModel):
   TOP_SONGS = "@top_songs_before%s_after%s"
   TOP_ALBUMS = "@top_albums_before%s_after%s"
 
-  # GAE Datastore properties
-  song = db.ReferenceProperty(Song)
-  program = db.ReferenceProperty(Program)
-  play_date = db.DateTimeProperty()
-  isNew = db.BooleanProperty() # TODO: Change from CamelCase to under_scores
-  artist = db.StringProperty()
-
   @property
   def program_key(self):
-    return Play.program.get_value_for_datastore(self)
+    return self._RAW.program.get_value_for_datastore(self._dbentry)
   @property
   def song_key(self):
-    return Play.song.get_value_for_datastore(self)
+    return self._RAW.song.get_value_for_datastore(self._dbentry)
+
+  ## Properties
+  @property
+  def song(self):
+    return Song.get(self.song_key)
+  @property
+  def program(self):
+    return Program.get(self.program_key)
+  @property
+  def play_date(self):
+    return self._dbentry.play_date
+  @property
+  def is_new(self):
+    return self._dbentry.isNew
+  @property
+  def artist(self):
+    return self._dbentry.artist
 
   def to_json(self):
     return {
-      'key': str_or_none(self.key()),
+      'key': str_or_none(self.key),
       'song_key': str_or_none(self.song_key),
       'program_key': str_or_none(self.program_key),
       'play_date': time.mktime(self.play_date.utctimetuple()) * 1000
     }
 
+  def __init__(self, raw=None, song=None, program=None, artist=None,
+               is_new=None, play_date=None,
+               parent=None, key_name=None,
+               is_fresh=False, **kwds):
+    if raw is not None:
+      super(Play, self).__init__(raw=raw)
+    else:
+      if parent is None:
+        parent = program
+
+      if play_date is None:
+        play_date = datetime.datetime.now()
+
+      super(Play, self).__init__(parent=parent, key_name=key_name,
+                                 song=song, program=program,
+                                 artist=artist, play_date=play_date,
+                                 isNew=is_new, **kwds)
+
+    self.is_fresh = is_fresh
+
   @classmethod
-  def new(cls, song, program, artist,
-          is_new=None, play_date=None,
-          parent=None, key_name=None, **kwds):
-    if parent is None:
-      parent = program
-
-    if play_date is None:
-      play_date = datetime.datetime.now()
-
-    play = cls(parent=parent, key_name=key_name,
-               song=song, program=program,
-               artist=artist, play_date=play_date,
-               is_new=is_new, **kwds)
-
-    play.is_fresh = True
-
-    return play
+  def new(cls, song, program, artist, is_fresh=True, **kwds):
+    return cls(song=song, program=program, artist=artist,
+               is_fresh=is_fresh)
 
   def add_to_cache(self):
     super(Play, self).add_to_cache()
@@ -189,7 +208,7 @@ class Play(LastCachedModel):
   @classmethod
   def get_key(cls, before=None, after=None, is_new=None,
              order=None, num=-1):
-    query = cls.all(keys_only=True)
+    query = cls._RAW.all(keys_only=True)
 
     if is_new is not None:
       query.filter("isNew =", is_new)
@@ -242,23 +261,6 @@ class Play(LastCachedModel):
   def get_last_keys(cls, num=-1, program=None, before=None, after=None):
     return cls.get_last(num=num, keys_only=True,
                         program=program, before=before, after=after)
-
-  ## Properties
-  @property
-  def p_song(self):
-    return Song.get(self.song_key)
-  @property
-  def p_program(self):
-    return Program.get(self.program_key)
-  @property
-  def p_play_date(self):
-    return self.play_date
-  @property
-  def p_is_new(self):
-    return self.isNew
-  @property
-  def p_artist(self):
-    return self.artist
 
   ## Custom queries pertaining to plays
 
@@ -374,7 +376,7 @@ class Psa(LastCachedModel):
   @classmethod
   def get_key(cls, before=None, after=None,
              order=None, num=-1):
-    query = cls.all(keys_only=True)
+    query = cls._RAW.all(keys_only=True)
 
     if after is not None:
       query.filter("play_date >=", after)

@@ -1,5 +1,5 @@
 application: wbor-hr
-version: 1-6-1-bootstrap
+version: 1-8-modelsmodule-debug
 runtime: python27
 api_version: 1
 threadsafe: true
