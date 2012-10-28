@@ -63,7 +63,7 @@ class Dj(CachedModel):
 
   @quantummethod
   def add_username_cache(obj, key=None, username=None):
-    key = obj.key() if key is None else key
+    key = obj.key if key is None else key
     username = obj.p_username if username is None else username
     return obj.cache_set(key, obj.USERNAME, username)
 
@@ -83,7 +83,7 @@ class Dj(CachedModel):
     cls.cache_delete(cls.EMAIL, email)
 
   def add_own_email_cache(self):
-    self.add_email_cache(self.key(), self.p_email)
+    self.add_email_cache(self.key, self.p_email)
     return self
   def purge_own_email_cache(self):
     self.purge_email_cache(self.p_email)
@@ -194,7 +194,7 @@ class Dj(CachedModel):
     username = username.strip()
     try:
       other = self.get_key_by_username(username)
-      if as_key(other) != as_key(self.key()):
+      if as_key(other) != as_key(self.key):
         raise ModelError("There is already a Dj with this username", other)
     except NoSuchUsername:
       pass
@@ -211,7 +211,7 @@ class Dj(CachedModel):
     email = fix_bare_email(email.strip())
     try:
       other = self.get_key_by_email(email)
-      if other is not None and other != self.key():
+      if other is not None and other != self.key:
         print other
         raise ModelError("There is already a Dj with this email", other)
     except NoSuchEmail:
@@ -421,7 +421,7 @@ class Dj(CachedModel):
 
     results_dict = {"recache_count": 0,
                     "max_results": max_results,
-                    "djs": [dj.key() for dj in djs]}
+                    "djs": [dj.key for dj in djs]}
 
     cls.cache_set(results_dict, cls.COMPLETE, prefix)
     return djs
@@ -466,7 +466,7 @@ class Permission(CachedModel):
     return cls.cache_delete(cls.TITLE, title)
 
   def add_own_title_cache(self):
-    self.add_title_cache(self.key(), self.title)
+    self.add_title_cache(self.key, self.title)
     return self
   def purge_own_title_cache(self):
     self.purge_title_cache(self.title)
@@ -493,10 +493,10 @@ class Permission(CachedModel):
     return key
 
   def add_own_all_cache(self):
-    self.add_all_cache(self.key())
+    self.add_all_cache(self.key)
     return self
   def purge_own_all_cache(self):
-    self.purge_all_cache(self.key())
+    self.purge_all_cache(self.key)
     return self
 
   def add_to_cache(self):

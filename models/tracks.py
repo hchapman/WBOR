@@ -7,17 +7,21 @@
 from __future__ import with_statement
 
 # GAE Imports
-from google.appengine.ext import db
+from google.appengine.ext import ndb
 
 # Local module imports
 from base_models import *
+
+from _raw_models import Album as RawAlbum
+from _raw_models import Song as RawSong
+from _raw_models import ArtistName as RawArtistName
 
 # Global python imports
 import logging
 import itertools
 
 class Album(CachedModel):
-  ENTRY = "album_key%s"
+  _RAW = RawAlbum
 
   NEW = "new_albums" # Keep the newest albums cached.
   MIN_NEW = 50 # We want to keep so many new albums in cache, since it's the
@@ -25,74 +29,79 @@ class Album(CachedModel):
   MAX_NEW = 75 # There should be no reason to have more than this many
                # cached new albums, and beyond this is wasteful.
 
-  # GAE Datastore properties
-  title = db.StringProperty()
-  asin = db.StringProperty()
-  lower_title = db.StringProperty()
-  artist = db.StringProperty()
-  add_date = db.DateTimeProperty()
-  isNew = db.BooleanProperty()
-  songList = db.ListProperty(db.Key)
-  cover_small = blobstore.BlobReferenceProperty()
-  cover_large = blobstore.BlobReferenceProperty()
-
   @property
   def cover_small_key(self):
-    return Album.cover_small.get_value_for_datastore(self)
+    return self._dbentry.cover_small
 
   @property
   def cover_large_key(self):
-    return Album.cover_large.get_value_for_datastore(self)
+    return self._dbentry.cover_large
 
   def to_json(self):
     return {
-      'key': str(self.key()),
+      'key': str(self.key),
       'title': self.title,
       'artist': self.artist,
       #'add_date': self.add_date,
-      'song_list': [str_or_none(song) for song in self.songList],
+      'song_list': [str_or_none(song) for song in self.tracklist],
       'cover_small_key': str_or_none(self.cover_small_key),
       'cover_large_key': str_or_none(self.cover_large_key),
       }
 
+  def __init__(self, raw=None, raw_key=None, title=None, artist=None, tracks=[],
+               add_date=None, asin=None,
+               cover_small=None, cover_large= None, is_new=True,
+               key=None, **kwds):
+    if raw is not None:
+      super(Album, self).__init__(raw=raw)
+      return 
+    elif raw_key is not None:
+      super(Album, self).__init__(raw_key=raw_key)
+      return
+
+    if not title:
+      raise Exception("Cannot have an Album without a title")
+    if add_date is None:
+      add_date = datetime.datetime.now()
+    if key is None:
+      batch = RawAlbum.allocate_ids(1)
+      key = ndb.Key(RawAlbum, batch[0])
+
+    # Instantiate the tracks, put them (Model.put() returns keys)
+    if tracks:
+      tracks = self._put_tracks(tracks, artist, key)
+
+    super(Album, self).__init__(key=key, title=title,
+                                artist=artist,
+                                add_date=add_date,
+                                isNew=is_new,
+                                songList=tracks,
+                                cover_small=cover_small,
+                                cover_large=cover_large,
+                                asin=asin
+                                **kwds)
+
   # Right now, creating an album creates a bunch of new Songs on the spot
   # so you're probably going to want to put the album right after you make it
   # If you don't, you're a bad person and you hate good things
+  # TODO: Make some transactional shortcut to all that mess
   @classmethod
   def new(cls, title, artist, tracks,
           add_date=None, asin=None,
           cover_small=None, cover_large= None, is_new=True,
-          key=None, parent=None, key_name=None, **kwds):
-    if add_date is None:
-      add_date = datetime.datetime.now()
-    if key is None:
-      proto_key = db.Key.from_path("Album", 1)
-      batch = db.allocate_ids(proto_key, 1)
-      key = db.Key.from_path('Album', batch[0])
+          key=None, **kwds):
+    return Album(title=title, artist=artist, tracks=tracks,
+                 add_date=add_date, asin=asin, cover_small=cover_small,
+                 is_new=is_new, key=key, **kwds)
 
-    # Instantiate the tracks, put them (Model.put() returns keys)
-    if tracks:
-      tracks = [Song(title=trackname,
-                     artist=artist,
-                     album=key,).put() for trackname in tracks]
+  @ndb.transactional
+  @staticmethod
+  def _put_tracks(tracks, artist, album_key):
+    tracks = [Song(title=trackname,
+                   artist=artist,
+                   album=key,).put() for trackname in tracks]
+    return tracks
 
-    album = cls(parent=parent, key_name=key_name,
-                key=key, title=title,
-                lower_title=title.lower(),
-                artist=artist,
-                add_date=add_date,
-                isNew=is_new,
-                songList=tracks,
-                **kwds)
-
-    if cover_small is not None:
-      album.cover_small = cover_small
-    if cover_large is not None:
-      album.cover_large = cover_large
-    if asin is not None: # Amazon isn't working still as of time of writing
-      album.asin = asin
-
-    return album
 
   # TODO: make this a classmethod/instancemethod hybrid??? I wish I knew what
   # to friggin' Google.
@@ -129,6 +138,7 @@ class Album(CachedModel):
     keys = cls.get_key(title=title, is_new=is_new,
                        artist=artist, asin=asin,
                        order=order, num=num)
+
     if keys is not None:
       return cls.get(keys=keys, use_datastore=use_datastore)
     return None
@@ -137,43 +147,39 @@ class Album(CachedModel):
   def get_key(cls, title=None, artist=None, is_new=None,
               asin=None,
               order=None, num=-1):
-    query = cls.all(keys_only=True)
+    query = cls.query()
 
     if title is not None:
-      query.filter("title =", title)
+      query.filter(RawAlbum.title == title)
     if artist is not None:
-      query.filter("artist =", artist)
+      query.filter(RawAlbum.artist == artist)
     if is_new is not None:
-      query.filter("isNew =", is_new)
+      query.filter(RawAlbum.isNew == is_new)
     if asin is not None:
-      query.filter("asin =", asin)
+      query.filter(RawAlbum.asin == asin)
 
     # Usual album orders: 'add_date'
     if order is not None:
       query.order(order)
 
     if num == -1:
-      return query.get()
-    return query.fetch(num)
+      return query.get(keys_only=True)
+    return query.fetch(num, keys_only=True)
 
-  def put(self, is_new=None):
-    if is_new is not None:
-      self.wasNew = self.isNew
-      self.isNew = is_new
-
+  def put(self):
     # If we've toggled the newness of the album, update cache.
     try:
       logging.debug(self.wasNew)
-      if self.wasNew != self.isNew:
+      if self.wasNew != self.is_new:
         logging.debug("We're about to update newcache")
         new_albums = self.get_new_keys()
         if self.isNew:
           if not new_albums:
-            new_albums = [self.key(),]
+            new_albums = [self.key,]
           else:
-            new_albums.append(self.key())
+            new_albums.append(self.key)
         else:
-          new_albums.remove(self.key())
+          new_albums.remove(self.key)
 
         self.cache_set(new_albums, self.NEW)
     except AttributeError:
@@ -183,29 +189,29 @@ class Album(CachedModel):
 
   # Albums are immutable Datastore entries, except for is_new status.
   @property
-  def p_title(self):
-    return self.title
+  def title(self):
+    return self._dbentry.title
   @property
-  def p_artist(self):
-    return self.artist
+  def artist(self):
+    return self._dbentry.artist
   @property
-  def p_tracklist(self):
-    return self.songList
+  def tracklist(self):
+    return self._dbentry.songList
   @property
-  def p_add_date(self):
-    return self.add_date
+  def add_date(self):
+    return self._dbentry.add_date
 
   @property
-  def p_is_new(self):
-    return self.isNew
+  def is_new(self):
+    return self._dbentry.isNew
 
 
   def set_new(self):
     self.wasNew = self.isNew
-    self.isNew = True
+    self._dbentry.isNew = True
   def unset_new(self):
     self.wasNew = self.isNew
-    self.isNew = False
+    self._dbentry.isNew = False
 
   @classmethod
   def get_new(cls, num=36, keys_only=False, sort=None):
@@ -241,20 +247,14 @@ class Song(CachedModel):
   '''A Song is an (entirely) immutable datastore object which represents
   a song; e.g. one played in the past or an element in a list of tracks.
   '''
-  ENTRY = "song_key%s"
-
-  # GAE Datastore properties
-  title = db.StringProperty()
-  artist = db.StringProperty()
-  album = db.ReferenceProperty(Album)
 
   @property
   def album_key(self):
-    return Song.album.get_value_for_datastore(self)
+    return self._dbentry.album
 
   def to_json(self):
     return {
-      'key': str_or_none(self.key()),
+      'key': str_or_none(self.key),
       'title': self.title,
       'artist': self.artist,
       'album_key': str_or_none(self.album_key),
@@ -323,7 +323,6 @@ class ArtistName(CachedModel):
   ## Functions for getting and setting Artists,
   ## Specifically, caching artist name autocompletion
   COMPLETE = "artist_pref%s"
-  ENTRY = "artist_key%s"
 
   # Minimum number of entries in the cache with which we would even consider
   # not rechecking the datastore. Figit with this number to balance reads and
@@ -331,12 +330,6 @@ class ArtistName(CachedModel):
   # a score for artist names and prefixes?
   MIN_AC_CACHE = 10
   MIN_AC_RESULTS = 5
-
-  # GAE Datastore property list
-  artist_name = db.StringProperty()
-  lowercase_name = db.StringProperty()
-  search_name = db.StringProperty()
-  search_names = db.StringListProperty() # Deprecated. Use search_name
 
   @classmethod
   def new(cls, artist_name, key_name=None, **kwds):

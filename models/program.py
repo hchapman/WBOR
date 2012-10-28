@@ -9,6 +9,8 @@ from base_models import (CachedModel, QueryError, ModelError, NoSuchEntry)
 from base_models import quantummethod, as_key
 from base_models import slugify
 
+from _raw_models import Program as RawProgram
+
 # Global python imports
 import datetime
 import random
@@ -18,25 +20,36 @@ import logging
 from itertools import izip
 
 class Program(CachedModel):
+  _RAW = RawProgram
+
   ## Functions for getting and setting Programs
-  ENTRY = "program_key%s"
   EXPIRE = 360  # Program cache lasts for one hour maximum
 
   BY_DJ_ENTRY = "programs_by_dj%s"
 
-  @classmethod
-  def new(cls, title, slug, desc, dj_list, page_html, current=True):
+  def __init__(self, raw=None, raw_key=None, title="", slug="", desc="", 
+               dj_list=[], page_html="", current=True):
+    if raw is not None:
+      super(Program, self).__init__(raw=raw)
+      return
+    elif raw_key is not None:
+      super(Program, self).__init__(raw_key=raw_key)
+      return
+
     if not title:
       raise Exception("Insufficient data to create show")
 
-    program = cls(title=title,
-                  slug=slugify(slug if slug else title),
-                  desc=desc,
-                  dj_list=[as_key(dj) for dj in dj_list if dj],
-                  page_html=page_html,
-                  current=bool(current))
+    super(Program, self).__init__(title=title,
+                                  slug=slugify(slug if slug else title),
+                                  desc=desc,
+                                  dj_list=[as_key(dj) for dj in dj_list if dj],
+                                  page_html=page_html,
+                                  current=bool(current))
 
-    return program
+  @classmethod
+  def new(cls, title, slug, desc, dj_list, page_html, current=True):
+    return cls(title=title, slug=slug, desc=desc, dj_list=dj_list, 
+               page_html=page_html, current=True)
 
   def put(self):
     return super(Program, self).put()
@@ -58,20 +71,20 @@ class Program(CachedModel):
 
   @classmethod
   def get_key(cls, slug=None, dj=None, order=None, num=-1):
-    query = cls.all(keys_only=True)
+    query = cls.query()
 
     if slug is not None:
-      query.filter("slug =", slug)
+      query.filter(RawProgram.slug == slug)
     if dj is not None:
-      query.filter("dj_list =", as_key(dj))
+      query.filter(RawProgram.dj_list == as_key(dj))
 
     if order is not None:
       query.order(order)
 
     # Consider adding query caching here, if necessary
     if num == -1:
-      return query.get()
-    return query.fetch(num)
+      return query.get(keys_only=True)
+    return query.fetch(num, keys_only=True)
 
   # Query-caching method if searching by dj
   @classmethod
@@ -104,65 +117,56 @@ class Program(CachedModel):
         return cls.get(cached[-1])
       return cls.get(cached[:num])
 
-  title = db.StringProperty()
-  slug = db.StringProperty()
-  desc = db.StringProperty(multiline=True)
-  dj_list = db.ListProperty(db.Key)
-  page_html = db.TextProperty()
-  top_artists = db.StringListProperty()
-  top_playcounts = db.ListProperty(int)
-  current = db.BooleanProperty(default=False)
-
   @property
-  def p_title(self):
-    return self.title
-  @p_title.setter
-  def p_title(self, title):
+  def title(self):
+    return self._dbentry.title
+  @title.setter
+  def title(self, title):
     if not title:
       raise ModelError("A show's title cannot be blank")
-    self.title = title.strip()
+    self._dbentry.title = title.strip()
 
   @property
-  def p_slug(self):
-    return self.slug
-  @p_slug.setter
-  def p_slug(self, slug):
-    self.slug = slugify(slug if slug else title)
+  def slug(self):
+    return self._dbentry.slug
+  @slug.setter
+  def slug(self, slug):
+    self._dbentry.slug = slugify(slug if slug else title)
 
   @property
-  def p_desc(self):
-    return self.desc
-  @p_desc.setter
-  def p_desc(self, desc):
-    self.desc = desc.strip() if desc else ""
+  def desc(self):
+    return self._dbentry.desc
+  @desc.setter
+  def desc(self, desc):
+    self._dbentry.desc = desc.strip() if desc else ""
 
   @property
-  def p_page_html(self):
-    return self.page_html
-  @p_page_html.setter
-  def p_page_html(self, page_html):
-    self.page_html = page_html.strip() if page_html else ""
+  def page_html(self):
+    return self._dbentry.page_html
+  @page_html.setter
+  def page_html(self, page_html):
+    self._dbentry.page_html = page_html.strip() if page_html else ""
 
   @property
-  def p_current(self):
-    return self.current
-  @p_current.setter
-  def p_current(self, current):
-    self.current = bool(current)
+  def current(self):
+    return self._dbentry.current
+  @current.setter
+  def current(self, current):
+    self._dbentry.current = bool(current)
 
   @property
-  def p_dj_list(self):
-    return self.dj_list
-  @p_dj_list.setter
-  def p_dj_list(self, dj_list):
-    self.dj_list = [as_key(dj) for dj in dj_list if dj]
+  def dj_list(self):
+    return self._dbentry.dj_list
+  @dj_list.setter
+  def dj_list(self, dj_list):
+    self._dbentry.dj_list = [as_key(dj) for dj in dj_list if dj]
 
   @property
-  def p_num_top_plays(self):
-    return self.top_playcounts[0]
+  def num_top_plays(self):
+    return self._dbentry.top_playcounts[0]
   @property
-  def p_top_artists(self):
-    return izip(self.top_artists, self.top_playcounts)
+  def top_artists(self):
+    return izip(self._dbentry.top_artists, self._dbentry.top_playcounts)
 
   def get_last_plays(self, *args, **kwargs):
     return []
@@ -193,7 +197,7 @@ class Program(CachedModel):
 
   def to_json(self):
     return {
-      'key': str_or_none(self.key()),
+      'key': str_or_none(self.key),
       'title': self.title,
       'slug': self.slug,
       'desc': self.desc,

@@ -73,7 +73,7 @@ class DjComplete(BaseHandler):
     self.response.out.write(json.dumps({
           'query': q,
           'suggestions': ["%s - %s"%(dj.p_fullname, dj.p_email) for dj in djs],
-          'data': [{'key': str(dj.key()),
+          'data': [{'key': str(dj.key),
                     'name': dj.p_fullname,
                     'email': dj.p_email} for dj in djs],}))
 
@@ -160,7 +160,7 @@ class Setup(BaseHandler):
       program = models.Program(
         title='Seth\'s Show', slug='seth',
         desc='This is the show where Seth plays his favorite music.',
-        dj_list=[seth.key()],
+        dj_list=[seth.key],
         page_html='a <b>BOLD</b> show!')
       program.put()
     for l in labels:
@@ -172,8 +172,8 @@ class Setup(BaseHandler):
         permission.dj_list=[]
         permission.put()
       finally:
-        if seth.key() not in permission.dj_list:
-          permission.dj_list.append(seth.key())
+        if seth.key not in permission.dj_list:
+          permission.dj_list.append(seth.key)
           permission.put()
     if not models.getLastPosts(3):
       post1 = models.BlogPost(
@@ -611,9 +611,9 @@ class TestModels(BaseHandler):
   def get(self):
     from models._raw_models import Play
     self.response.out.write("hey there")
-    key = Play.all().get()
+    key = Play.query().get(keys_only=True)
     self.response.out.write(key)
-    play = Play.get(key)
+    play = key.get()
     self.response.out.write(play)
 
 

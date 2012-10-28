@@ -7,7 +7,7 @@ from __future__ import with_statement
 
 # GAE Imports
 from google.appengine.api import memcache
-from google.appengine.ext import db
+from google.appengine.ext import db, ndb
 from google.appengine.ext import blobstore
 from google.appengine.api import files
 
@@ -180,7 +180,7 @@ class CachedModel(db.Model):
   @property
   def key(self):
     if self._dbentry:
-      return self._dbentry.key()
+      return self._dbentry.key
     return super(CachedModel, self).key()
 
   def __init__(self, raw=None, parent=None, key_name=None, cached=True,
@@ -190,7 +190,8 @@ class CachedModel(db.Model):
       if raw is not None:
         self._dbentry = raw
       else:
-        self._dbentry = self._RAW(parent=parent, key_name=key_name, **kwargs)
+        parent = None
+        self._dbentry = self._RAW(**kwargs)
     else:
       self._dbentry = None
       super(CachedModel, self).__init__(parent=parent,
@@ -237,9 +238,9 @@ class CachedModel(db.Model):
     return memcache.get(cache_key %args)
 
   def add_object_cache(self):
-    self.cache_set(self, self.ENTRY %self.key)
+    pass # ndb manages entity caching itself
   def purge_object_cache(self):
-    self.cache_delete(self.ENTRY %self.key)
+    pass # ndb manages entity caching itself
 
   def add_to_cache(self):
     '''
@@ -266,84 +267,19 @@ class CachedModel(db.Model):
     Get the data for (a) model(s) by its key(s) using the cache first,
     and then possibly datastore if necessary
     '''
+    # TODO: Don't idiot-proof this, make rest of code more observant
     if keys is None:
       return None
     if isinstance(keys, cls):
       return keys
     elif cls._RAW is not None and isinstance(keys, cls._RAW):
-      obj = cls(raw=keys)
+      return cls(raw=keys)
 
     if is_key(keys) or one_key:
-      keys = (as_key(keys),)
-      one_key = True
+      return cls(raw=keys.get())
 
-    if not one_key:
-      objs = []
-      db_fetch_keys = []
-
-    logging.debug(keys)
-
-    for key in keys:
-      if key is not None:
-        if isinstance(key, cls):
-          obj = key
-        elif cls._RAW is not None and isinstance(key, cls._RAW):
-          obj = cls(raw=key)
-        else:
-          obj = cls.cache_get(cls.ENTRY %key)
-
-        if not one_key and obj is not None:
-          objs.append(obj)
-
-        elif one_key:
-          if obj is not None:
-            return obj
-          reads = cls.cache_get(cls.UNCACHED_READ)
-          reads = reads if reads is not None else 0
-          cls.cache_set(reads+1, cls.UNCACHED_READ)
-          logging.info("Had to make %s datastore reads in total so far"%reads)
-          if cls._RAW is None:
-            obj = super(CachedModel, cls).get(key)
-          else:
-            obj = cls(raw=cls._RAW.get(key))
-          if obj is not None:
-            return obj.add_to_cache()
-          return None
-
-        # Store the key to batch fetch, and the position to place it
-        elif use_datastore:
-          db_fetch_keys.append((len(objs), key))
-          objs.append(None)
-
-    if not use_datastore:
-      return keys
-
-    # Improve this if possible. Use a batch fetch on non-memcache
-    # keys.
-    logging.debug("Fetch keys")
-    logging.debug(db_fetch_keys)
-    db_fetch_zip = zip(*db_fetch_keys) #[0]: idx, [1]: key
-    logging.debug(db_fetch_zip)
-    if len(db_fetch_zip) == 0:
-      return objs
-
-    logging.debug(objs)
-    reads = cls.cache_get(cls.UNCACHED_READ)
-    reads = reads if reads is not None else 0
-    if cls._RAW is None:
-      results = super(CachedModel, cls).get(db_fetch_zip[1])
-    else:
-      logging.error(db_fetch_zip[1])
-      results = [cls(raw=raw) for raw in cls._RAW.get(db_fetch_zip[1])]
-    for i, obj in zip(db_fetch_zip[0],
-                      results):
-      reads += 1
-      logging.debug(i)
-      objs[i] = obj.add_to_cache()
-    cls.cache_set(reads, cls.UNCACHED_READ)
-    logging.info("Had to make %s datastore reads in total so far"%reads)
-
-    return filter(None, objs)
+    raw_objs = filter(None, ndb.get_multi(keys))
+    return [cls(raw=raw) for raw in raw_objs]
 
   @classmethod
   def get_by_index(cls, index, *args, **kwargs):

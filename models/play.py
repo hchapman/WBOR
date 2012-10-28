@@ -115,17 +115,16 @@ class Play(LastCachedModel):
   LAST_ORDER = -1 # Sort from most recent backwards
   LAST_ORDERBY = "play_date" # How plays should be ordered in last cache
   SHOW_LAST = "last_plays_show%s" #possibly keep with show instead
-  ENTRY = "play_key%s"
 
   TOP_SONGS = "@top_songs_before%s_after%s"
   TOP_ALBUMS = "@top_albums_before%s_after%s"
 
   @property
   def program_key(self):
-    return self._RAW.program.get_value_for_datastore(self._dbentry)
+    return self._dbentry.program
   @property
   def song_key(self):
-    return self._RAW.song.get_value_for_datastore(self._dbentry)
+    return self._dbentry.song
 
   ## Properties
   @property
@@ -208,27 +207,27 @@ class Play(LastCachedModel):
   @classmethod
   def get_key(cls, before=None, after=None, is_new=None,
              order=None, num=-1):
-    query = cls._RAW.all(keys_only=True)
+    query = cls._RAW.query()
 
     if is_new is not None:
-      query.filter("isNew =", is_new)
+      query.filter(RawPlay.isNew == is_new)
     if after is not None:
-      query.filter("play_date >=", after)
+      query.filter(RawPlay.play_date >= datetime.datetime.combine(after, datetime.time()))
     if before is not None:
-      query.filter("play_date <=", before)
+      query.filter(RawPlay.play_date <= datetime.datetime.combine(before, datetime.time()))
     if order is not None:
       query.order(order)
 
     if num == -1:
-      return query.get()
-    return query.fetch(num)
+      return query.get(keys_only=True)
+    return query.fetch(num, keys_only=True)
 
   def put(self):
     key = super(Play, self).put()
 
     if key and self.is_fresh and self.program:
-      program = self.p_program
-      program.update_top_artists(self.p_artist)
+      program = self.program
+      program.update_top_artists(self.artist)
       program.put()
 
     return key
@@ -305,11 +304,12 @@ class Play(LastCachedModel):
           songs[song_key] += 1
         else:
           songs[song_key] = 1
-        album_key = play.p_song.album_key
-        if album_key in albums:
-          albums[album_key] += 1
-        else:
-          albums[album_key] = 1
+        if play.song_key is not None and play.song.album_key is not None:
+          album_key = play.song.album_key
+          if album_key in albums:
+            albums[album_key] += 1
+          else:
+            albums[album_key] = 1
 
       songs = songs.items()
       albums = albums.items()
@@ -376,7 +376,7 @@ class Psa(LastCachedModel):
   @classmethod
   def get_key(cls, before=None, after=None,
              order=None, num=-1):
-    query = cls._RAW.all(keys_only=True)
+    query = Psa.all(keys_only=True)
 
     if after is not None:
       query.filter("play_date >=", after)
