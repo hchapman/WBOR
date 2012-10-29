@@ -62,6 +62,18 @@ class StationID(ndb.Model):
   program = ndb.KeyProperty(kind=Program)
   play_date = ndb.DateTimeProperty()
 
+class BlogPost(ndb.Model):
+  title = ndb.StringProperty()
+  text = ndb.TextProperty()
+  post_date = ndb.DateTimeProperty()
+  slug = ndb.StringProperty()
+
+class Event(ndb.Model):
+  title = ndb.StringProperty()
+  event_date = ndb.DateTimeProperty()
+  desc = ndb.TextProperty()
+  url = ndb.StringProperty()
+
 def search_namify(artist_name):
   SEARCH_IGNORE_PREFIXES = (
     "the ",
