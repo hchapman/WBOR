@@ -162,7 +162,7 @@ class QueryCache(CacheItem):
   def data(self):
     return self._data
 
-class CachedModel(db.Model):
+class CachedModel(object):
   _RAW = None
   ''' A CachedModel is a database model which tries its best to keep
   its information synced in the memcache so that fewer database hits
@@ -175,39 +175,41 @@ class CachedModel(db.Model):
   LOG_SET_FAIL = "Memcache set(%s, %s) failed"
   LOG_DEL_ERROR = "Memcache delete(%s) failed with error code %s"
 
-  ENTRY = "cachedmodel_key%s"
-
   @property
   def key(self):
     if self._dbentry:
       return self._dbentry.key
-    return super(CachedModel, self).key()
-
-  def __init__(self, raw=None, parent=None, key_name=None, cached=True,
-               **kwargs):
-    self._cached = cached
-    if self._RAW:
-      if raw is not None:
-        self._dbentry = raw
-      else:
-        parent = None
-        self._dbentry = self._RAW(**kwargs)
-    else:
-      self._dbentry = None
-      super(CachedModel, self).__init__(parent=parent,
-                                        key_name=key_name, **kwargs)
-
-  @classmethod
-  def as_object(cls, obj):
-    if cls._RAW:
-      cls = cls._RAW
-
-    if isinstance(obj, cls):
-      return obj
-    elif is_key(obj):
-      return cls.get(obj)
+    elif self._dbkey:
+      return self._dbkey
     else:
       return None
+
+  @property
+  def raw(self):
+    if self._dbentry is None and self._dbkey is not None:
+      self._dbentry = self._dbkey.get()
+    return self._dbentry
+
+  def __init__(self, raw=None, raw_key=None, parent=None, cached=True,
+               **kwargs):
+    self._cached = cached
+    self._dbentry = None
+
+    if raw is not None:
+      if not isinstance(raw, self._RAW):
+        raise Exception("Passed raw object must be of type %s or a child"%self._RAWKIND)
+      self._dbentry = raw
+
+    elif raw_key is not None:
+      if not isinstance(raw_key, ndb.Key):
+        raise Exception("raw_key must be of type ndb.Key")
+      if raw_key.kind() != self._RAWKIND:
+        raise Exception("raw_key must point to an entry of type %s"%self._RAWKIND)
+      self._dbkey = raw_key
+      self._dbentry = None
+
+    else:
+      self._dbentry = self._RAW(parent=parent, **kwargs)
 
   @classmethod
   def cache_set(cls, value, cache_key, *args):
@@ -237,11 +239,6 @@ class CachedModel(db.Model):
     '''
     return memcache.get(cache_key %args)
 
-  def add_object_cache(self):
-    pass # ndb manages entity caching itself
-  def purge_object_cache(self):
-    pass # ndb manages entity caching itself
-
   def add_to_cache(self):
     '''
     Populate the memcache with self. The base only stores the object
@@ -250,7 +247,6 @@ class CachedModel(db.Model):
 
     For chaining purposes, returns self
     '''
-    self.add_object_cache()
     return self
 
   def purge_from_cache(self):
@@ -258,7 +254,6 @@ class CachedModel(db.Model):
     Remove self from the memcache where applicable. The opposite of
     "add_to_cache".
     '''
-    self.purge_object_cache()
     return self
 
   @classmethod
@@ -303,24 +298,24 @@ class CachedModel(db.Model):
     '''
     Update datastore with self, and then update memcache for self.
     '''
-    ret_val = super(CachedModel, self).put()
-    self.add_to_cache()
-    return ret_val
+    if self._dbentry:
+      ret_val = self._dbentry.put()
+      if ret_val:
+        self.add_to_cache()
+      return ret_val
+    
+    raise Exception("Cannot put() nonexistant raw database model")
 
   def delete(self):
     '''
     Remove self from memcache, then from datastore.
     '''
     self.purge_from_cache()
-    super(CachedModel, self).delete()
+    self.key.delete()
 
   @classmethod
   def delete_key(cls, key):
-    elt = cls.get(keys=key, use_datastore=False)
-    if elt is None:
-      db.delete(key)
-    else:
-      elt.delete()
+    cls(raw_key=key).delete()
 
 class ApiModel(CachedModel):
   def to_json():

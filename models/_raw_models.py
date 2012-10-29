@@ -35,6 +35,29 @@ class Play(ndb.Model):
 
 class ArtistName(ndb.Model):
   artist_name = ndb.StringProperty()
-  lowercase_name = ndb.StringProperty()
-  search_name = ndb.StringProperty()
+  lowercase_name = ndb.ComputedProperty(lambda self: self.artist_name.lower())
+  search_name = ndb.ComputedProperty(lambda self: search_namify(self.artist_name))
   search_names = ndb.StringProperty(repeated=True)
+
+class Psa(ndb.Model):
+  desc = ndb.StringProperty()
+  program = ndb.KeyProperty(kind=Program)
+  play_date = ndb.DateTimeProperty()
+
+class StationID(ndb.Model):
+  program = ndb.KeyProperty(kind=Program)
+  play_date = ndb.DateTimeProperty()
+
+def search_namify(artist_name):
+  SEARCH_IGNORE_PREFIXES = (
+    "the ",
+    "a ",
+    "an ",)
+
+  name = artist_name.lower()
+
+  for prefix in SEARCH_IGNORE_PREFIXES:
+    if name.startswith(prefix):
+      name = name[len(prefix):]
+
+  return name

@@ -22,6 +22,7 @@ import itertools
 
 class Album(CachedModel):
   _RAW = RawAlbum
+  _RAWKIND = "Album"
 
   NEW = "new_albums" # Keep the newest albums cached.
   MIN_NEW = 50 # We want to keep so many new albums in cache, since it's the
@@ -31,11 +32,11 @@ class Album(CachedModel):
 
   @property
   def cover_small_key(self):
-    return self._dbentry.cover_small
+    return self.raw.cover_small
 
   @property
   def cover_large_key(self):
-    return self._dbentry.cover_large
+    return self.raw.cover_large
 
   def to_json(self):
     return {
@@ -46,7 +47,7 @@ class Album(CachedModel):
       'song_list': [str_or_none(song) for song in self.tracklist],
       'cover_small_key': str_or_none(self.cover_small_key),
       'cover_large_key': str_or_none(self.cover_large_key),
-      }
+    }
 
   def __init__(self, raw=None, raw_key=None, title=None, artist=None, tracks=[],
                add_date=None, asin=None,
@@ -160,7 +161,7 @@ class Album(CachedModel):
 
     # Usual album orders: 'add_date'
     if order is not None:
-      query.order(order)
+      query.order(*order)
 
     if num == -1:
       return query.get(keys_only=True)
@@ -169,11 +170,11 @@ class Album(CachedModel):
   def put(self):
     # If we've toggled the newness of the album, update cache.
     try:
-      logging.debug(self.wasNew)
-      if self.wasNew != self.is_new:
+      logging.debug(self._was_new)
+      if self._was_new != self.is_new:
         logging.debug("We're about to update newcache")
         new_albums = self.get_new_keys()
-        if self.isNew:
+        if self.is_new:
           if not new_albums:
             new_albums = [self.key,]
           else:
@@ -190,28 +191,26 @@ class Album(CachedModel):
   # Albums are immutable Datastore entries, except for is_new status.
   @property
   def title(self):
-    return self._dbentry.title
+    return self.raw.title
   @property
   def artist(self):
-    return self._dbentry.artist
+    return self.raw.artist
   @property
   def tracklist(self):
-    return self._dbentry.songList
+    return self.raw.songList
   @property
   def add_date(self):
-    return self._dbentry.add_date
-
+    return self.raw.add_date
   @property
   def is_new(self):
-    return self._dbentry.isNew
-
+    return self.raw.isNew
 
   def set_new(self):
-    self.wasNew = self.isNew
-    self._dbentry.isNew = True
+    self._was_new = self.is_new
+    self.raw.isNew = True
   def unset_new(self):
-    self.wasNew = self.isNew
-    self._dbentry.isNew = False
+    self._was_new = self.is_new
+    self.raw.isNew = False
 
   @classmethod
   def get_new(cls, num=36, keys_only=False, sort=None):
@@ -221,7 +220,7 @@ class Album(CachedModel):
     cached = cls.get_cached_query(cls.NEW)
     if not cached or cached.need_fetch(num):
       cached.set(
-        cls.get_key(is_new=True, order="-add_date", num=num))
+        cls.get_key(is_new=True, order=(-Album.add_date,), num=num))
 
     cached.save()
 
@@ -250,7 +249,7 @@ class Song(CachedModel):
 
   @property
   def album_key(self):
-    return self._dbentry.album
+    return self.raw.album
 
   def to_json(self):
     return {
@@ -260,18 +259,30 @@ class Song(CachedModel):
       'album_key': str_or_none(self.album_key),
       }
 
-  @classmethod
-  def new(cls, title, artist, album=None,
-               parent=None, key_name=None, **kwds):
+  def __init__(self, raw=None, raw_key=None,
+               title=None, artist=None, album=None,
+               parent=None, **kwds):
+    if raw is not None:
+      super(Song, self).__init(raw=raw)
+    elif raw_key is not None:
+      super()
+    
     if parent is None:
       parent = album
 
-    song = cls(parent=parent, key_name=key_name,
-               title=title, artist=artist, **kwds)
+    super(Song, self).__init__(parent=parent, 
+                               title=title, artist=artist, album=album, 
+                               **kwds)
     if album is not None:
-      song.album = album
+      self.raw.album = album
 
     return song
+
+  @classmethod
+  def new(cls, title, artist, album=None,
+               parent=None, **kwds):
+    return Song(title=title, artist=artist, album=album,
+                parent=parent,  **kwds)
 
   def add_to_cache(self):
     super(Song, self).add_to_cache()
@@ -310,16 +321,19 @@ class Song(CachedModel):
     return super(Song, self).put()
 
   @property
-  def p_title(self):
-    return self.title
+  def title(self):
+    return self.raw.title
   @property
-  def p_artist(self):
-    return self.artist
+  def artist(self):
+    return self.raw.artist
   @property
-  def p_album(self):
-    return self.album
+  def album(self):
+    return self.raw.album
 
 class ArtistName(CachedModel):
+  _RAW = RawArtistName
+  _RAWKIND = "ArtistName"
+
   ## Functions for getting and setting Artists,
   ## Specifically, caching artist name autocompletion
   COMPLETE = "artist_pref%s"
@@ -331,32 +345,42 @@ class ArtistName(CachedModel):
   MIN_AC_CACHE = 10
   MIN_AC_RESULTS = 5
 
+  def __init__(self, raw=None, raw_key=None, 
+               artist_name=None, **kwds):
+    if raw is not None:
+      super(ArtistName, self).__init__(raw=raw)
+      return
+    elif raw_key is not None:
+      super(ArtistName, self).__init__(raw_key=raw_key)
+      return
+    else:
+      super(ArtistName, self).__init__(artist_name=artist_name, **kwds)
+      return
+
+  @property
+  def artist_name(self):
+    return self.raw.artist_name
+  @property
+  def lower_name(self):
+    return self.raw.lowercase_name
+  @property
+  def search_name(self):
+    return self.raw.search_name
+
   @classmethod
-  def new(cls, artist_name, key_name=None, **kwds):
+  def new(cls, artist_name, **kwds):
+    return cls(artist_name=artist_name, **kwds)
+
+  @classmethod
+  def try_put(cls, artist_name, **kwds):
     artist = cls.get(artist_name=artist_name)
     if artist:
       return artist
 
     artist = cls(
-      key_name=key_name,
       artist_name=artist_name,
-      lowercase_name=artist_name.lower(),
-      search_name=cls.get_search_name(artist_name),
       **kwds)
-    return artist
 
-  @classmethod
-  def try_put(cls, artist_name, key_name=None, **kwds):
-    artist = cls.get(artist_name=artist_name)
-    if artist:
-      return artist
-
-    artist = cls(
-      key_name=key_name,
-      artist_name=artist_name,
-      lowercase_name=artist_name.lower(),
-      search_name=cls.get_search_name(artist_name),
-      **kwds)
     artist.put()
     return artist
 
@@ -371,17 +395,18 @@ class ArtistName(CachedModel):
 
     keys = cls.get_key(artist_name=artist_name, num=num)
     if keys is not None:
-      super(ArtistName, cls).get(keys=keys, use_datastore=use_datastore)
+      return super(ArtistName, cls).get(keys=keys, use_datastore=use_datastore)
     return None
 
   @classmethod
-  def get_key(cls, artist_name, num=-1):
-    query = cls.all(keys_only=True)
-    query.filter("lowercase_name =", artist_name.lower())
+  def get_key(cls, artist_name=None, num=-1):
+    query = RawArtistName.query()
+    if artist_name:
+      query.filter(RawArtistName.lowercase_name == artist_name.lower())
 
     if num == -1:
-      return query.get()
-    return query.fetch(num)
+      return query.get(keys_only=True)
+    return query.fetch(num, keys_only=True)
 
   @staticmethod
   def get_search_name(artist_name):
@@ -398,19 +423,14 @@ class ArtistName(CachedModel):
 
     return name
 
-  @classmethod
-  def has_prefix(cls, artist_key, prefix):
+  def has_prefix(self, prefix):
     prefixes = prefix.split()
 
-    artist = cls.get(artist_key)
-    if artist.search_name is None:
-      if not artist.search_names:
-        artist.search_name = cls.get_search_name(artist.artist_name)
-      else:
-        artist.search_name = " ".join(artist.search_names)
-      artist.put()
+    if self.search_name is None:
+      self.put() # Maybe updates computed properties??
+      assert(self.search_name is not None)
 
-    for name_part in artist.search_name.split():
+    for name_part in self.search_name.split():
       check_prefixes = prefixes
       for prefix in check_prefixes:
         if name_part.startswith(prefix):
@@ -467,7 +487,7 @@ class ArtistName(CachedModel):
         return cls.get(cache_artists)
 
       # Otherwise we're going to have to search in the cache.
-      results = filter(lambda a: cls.has_prefix(a, prefix),
+      results = filter(lambda a: cls.get(a).has_prefix(prefix),
                        cache_artists)
       if cached_results["max_results"]:
         # We're as perfect as we can be, so cache the results
@@ -483,12 +503,14 @@ class ArtistName(CachedModel):
           return cls.get(results)
         return cls.get(results)
 
-    artists_full = (cls.all(keys_only=True)
+    # My calculations say this uses two more Smalls than we need but... shit,
+    # last I looked it's not smalls we're running over on
+    artists_full = (cls.query()
                     .filter("lowercase_name >=", prefix)
-                    .filter("lowercase_name <", prefix + u"\ufffd").fetch(10))
-    artists_sn = (cls.all(keys_only=True)
+                    .filter("lowercase_name <", prefix + u"\ufffd").fetch(10, keys_only=True))
+    artists_sn = (cls.query()
                   .filter("search_name >=", prefix)
-                  .filter("search_name <", prefix + u"\ufffd").fetch(10))
+                  .filter("search_name <", prefix + u"\ufffd").fetch(10, keys_only=True))
     max_results = len(artists_full) < 10 and len(artists_sn) < 10
     artist_dict = {}
     all_artists = cls.get(artists_full + artists_sn)
@@ -501,6 +523,6 @@ class ArtistName(CachedModel):
 
     results_dict = {"recache_count": 0,
                     "max_results": max_results,
-                    "artists": [artist.key() for artist in artists]}
+                    "artists": [artist.key for artist in artists]}
     cls.cache_set(results_dict, cls.COMPLETE, prefix)
     return artists

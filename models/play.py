@@ -108,6 +108,8 @@ class LastCachedModel(CachedModel):
 
 class Play(LastCachedModel):
   _RAW = RawPlay
+  _RAWKIND = "Play"
+
   '''A Play is an (entirely) immutable datastore object which represents
   a charted song
   '''
@@ -421,10 +423,5 @@ class Psa(LastCachedModel):
     return cls.get_last(num=num, keys_only=True,
                         program=program, before=before, after=after)
 
-  desc = db.StringProperty()
-  program = db.ReferenceProperty(Program)
-  play_date = db.DateTimeProperty()
-
-class StationID(db.Model):
-  program = db.ReferenceProperty(Program)
-  play_date = db.DateTimeProperty()
+class StationID(object):
+  pass
