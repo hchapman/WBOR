@@ -14,6 +14,9 @@ from passwd_crypto import hash_password, check_password
 from base_models import (CachedModel, QueryError, ModelError, NoSuchEntry)
 from base_models import quantummethod, as_key, as_keys, is_key
 
+from _raw_models import Dj as RawDj
+from _raw_models import Permission as RawPermission
+
 # Global python imports
 import datetime
 import random
@@ -39,8 +42,10 @@ class InvalidLogin(ModelError):
   pass
 
 class Dj(CachedModel):
+  _RAW = RawDj
+  _RAWKIND = "Dj"
+
   COMPLETE = "dj_pref%s"
-  ENTRY = "dj_key%s"
 
   # Minimum number of entries in the cache with which we would even consider
   # not rechecking the datastore. Figit with this number to balance reads and
@@ -53,18 +58,12 @@ class Dj(CachedModel):
   EMAIL = "dj_email%s"
 
   # GAE Datastore properties
-  fullname = db.StringProperty()
-  lowername = db.StringProperty()
-  email = db.StringProperty()
-  username = db.StringProperty()
-  password_hash = db.StringProperty()
-  pw_reset_expire = db.DateTimeProperty()
-  pw_reset_hash = db.StringProperty()
+
 
   @quantummethod
   def add_username_cache(obj, key=None, username=None):
     key = obj.key if key is None else key
-    username = obj.p_username if username is None else username
+    username = obj.username if username is None else username
     return obj.cache_set(key, obj.USERNAME, username)
 
   @classmethod
@@ -72,7 +71,7 @@ class Dj(CachedModel):
     cls.cache_delete(cls.USERNAME, username)
 
   def purge_own_username_cache(self):
-    self.purge_username_cache(self.p_username)
+    self.purge_username_cache(self.username)
     return self
 
   @classmethod
@@ -83,10 +82,10 @@ class Dj(CachedModel):
     cls.cache_delete(cls.EMAIL, email)
 
   def add_own_email_cache(self):
-    self.add_email_cache(self.key, self.p_email)
+    self.add_email_cache(self.key, self.email)
     return self
   def purge_own_email_cache(self):
-    self.purge_email_cache(self.p_email)
+    self.purge_email_cache(self.email)
     return self
 
   def add_to_cache(self):
@@ -117,44 +116,54 @@ class Dj(CachedModel):
   @classmethod
   def get_key(cls, username=None, email=None, program=None,
              order=None, num=-1):
-    query = cls.all(keys_only=True)
+    query = RawDj.query()
 
     if username is not None:
-      query.filter("username =", username)
+      query.filter(RawDj.username == username)
     if email is not None:
-      query.filter("email =", email)
+      query.filter(RawDj.email == email)
 
     if order is not None:
       query.order(order)
 
     if num == -1:
-      return query.get()
-    return query.fetch(num)
+      return query.get(keys_only=True)
+    return query.fetch(num, keys_only=True)
 
-  @classmethod
-  def new(cls, email=None, fullname=None, username=None,
-          password=None, fix_email=True):
+  def __init__(self, raw=None, raw_key=None,
+               email=None, fullname=None, username=None,
+               password=None, fix_email=True):
+    if raw is not None:
+      super(Dj, self).__init__(raw=raw)
+      return
+    elif raw_key is not None:
+      super(Dj, self).__init__(raw_key=raw_key)
+      return
+
     if None in (email, fullname, username, password):
       raise Exception("Insufficient fields for new Dj")
 
-    dj = cls(fullname=fullname,
-             lowername=fullname.lower(),
-             email=fix_bare_email(email) if fix_email else email,
-             username=username,
-             password_hash=hash_password(password))
+    super(Dj, self).__init__(fullname=fullname,
+                             email=(fix_bare_email(email) if fix_email
+                                    else email),
+                             username=username,
+                             password_hash=hash_password(password))
 
-    return dj
+  @classmethod
+  def new(cls, email, fullname, username, password, fix_email=True):
+    return cls(email=email, fullname=fullname, username=username,
+               password=password, fix_email=fix_email)
 
   def put(self, fullname=None, username=None, email=None, password=None,
           fix_email=True):
     if fullname is not None:
-      self.p_fullname = fullname
+      self.fullname = fullname
     if email is not None:
-      self.p_email = email
+      self.email = email
     if username is not None: # Although this should be an immutable property
-      self.p_username = username
+      self.username = username
     if password is not None:
-      self.p_password = password
+      self.password = password
 
     # TODO: inject dj into autocompletion
 
@@ -173,24 +182,21 @@ class Dj(CachedModel):
     return reset_key
 
   @property
-  def p_fullname(self):
-    return self.fullname
+  def fullname(self):
+    return self.raw.fullname
+  @property
+  def lowername(self):
+    return self.raw.lowername
+  @fullname.setter
+  def fullname(self, fullname):
+    self.raw.fullname = fullname.strip()
 
   @property
-  def p_lowername(self):
-    return self.lowername
+  def username(self):
+    return self.raw.username
 
-  @p_fullname.setter
-  def p_fullname(self, fullname):
-    self.fullname = fullname.strip()
-    self.lowername = fullname.lower().strip()
-
-  @property
-  def p_username(self):
-    return self.username
-
-  @p_username.setter
-  def p_username(self, username):
+  @username.setter
+  def username(self, username):
     username = username.strip()
     try:
       other = self.get_key_by_username(username)
@@ -200,14 +206,13 @@ class Dj(CachedModel):
       pass
 
     self.purge_own_username_cache()
-    self.username = username
+    self.raw.username = username
 
   @property
-  def p_email(self):
-    return self.email
-
-  @p_email.setter
-  def p_email(self, email):
+  def email(self):
+    return self.raw.email
+  @email.setter
+  def email(self, email):
     email = fix_bare_email(email.strip())
     try:
       other = self.get_key_by_email(email)
@@ -218,15 +223,14 @@ class Dj(CachedModel):
       pass
 
     self.purge_own_email_cache()
-    self.email = email
+    self.raw.email = email
 
   @property
-  def p_password(self):
-    return self.password_hash
-
-  @p_password.setter
-  def p_password(self, password):
-    self.password_hash = hash_password(password)
+  def password(self):
+    return self.raw.password_hash
+  @password.setter
+  def password(self, password):
+    self.raw.password_hash = hash_password(password)
 
   # TODO: instead use paging and cursors (is that what they're called)
   # to return part of all the Djs (in case there end up being more than 1000!)
@@ -274,10 +278,10 @@ class Dj(CachedModel):
     return cls.get_by_email(email=email, keys_only=True)
 
   def email_matches(self, email):
-    return self.p_email == fix_bare_email(email)
+    return self.email == fix_bare_email(email)
 
   def password_matches(self, password):
-    return check_password(self.p_password, password)
+    return check_password(self.password, password)
 
   @classmethod
   def login(cls, username, password):
@@ -307,13 +311,10 @@ class Dj(CachedModel):
       dj.put()
       return dj
 
-  @classmethod
-  def has_prefix(cls, dj_key, prefix):
+  def has_prefix(self, prefix):
     prefixes = prefix.split()
 
-    dj = cls.get(dj_key)
-
-    for name_part in dj.lowername.split():
+    for name_part in self.lowername.split():
       check_prefixes = prefixes
       for prefix in check_prefixes:
         if name_part.startswith(prefix):
@@ -324,7 +325,7 @@ class Dj(CachedModel):
 
     check_prefixes = prefixes
     for prefix in check_prefixes:
-      if dj.email.startswith(prefix):
+      if self.email.startswith(prefix):
         prefixes.remove(prefix)
         if len(prefixes) == 0:
           return True
@@ -332,7 +333,7 @@ class Dj(CachedModel):
 
     check_prefixes = prefixes
     for prefix in check_prefixes:
-      if dj.username.startswith(prefix):
+      if self.username.startswith(prefix):
         prefixes.remove(prefix)
         if len(prefixes) == 0:
           return True
@@ -386,7 +387,7 @@ class Dj(CachedModel):
         return cls.get(cache_djs)
 
       # Otherwise we're going to have to search in the cache.
-      results = filter(lambda a: cls.has_prefix(a, prefix),
+      results = filter(lambda a: cls.get(a).has_prefix(prefix),
                        cache_djs)
       if cached_results["max_results"]:
         # We're as perfect as we can be, so cache the results
@@ -402,15 +403,18 @@ class Dj(CachedModel):
           return cls.get(results)
         return cls.get(results)
 
-    djs_by_full = (cls.all(keys_only=True)
-                    .filter("lowername >=", prefix)
-                    .filter("lowername <", prefix + u"\ufffd").fetch(10))
-    djs_by_email = (cls.all(keys_only=True)
-                  .filter("email >=", prefix)
-                  .filter("email <", prefix + u"\ufffd").fetch(10))
-    djs_by_username = (cls.all(keys_only=True)
-                       .filter("username >=", prefix)
-                       .filter("username <", prefix + u"\ufffd").fetch(10))
+    djs_by_full = (cls._RAW.query()
+                   .filter(cls._RAW.lowername >= prefix)
+                   .filter(cls._RAW.lowername < (prefix + u"\ufffd"))
+                   .fetch(10, keys_only=True))
+    djs_by_email = (cls._RAW.query()
+                    .filter(cls._RAW.email >= prefix)
+                    .filter(cls._RAW.email < (prefix + u"\ufffd"))
+                    .fetch(10, keys_only=True))
+    djs_by_username = (cls._RAW.query()
+                       .filter(cls._RAW.username >= prefix)
+                       .filter(cls._RAW.username < (prefix + u"\ufffd"))
+                       .fetch(10, keys_only=True))
 
     max_results = (len(djs_by_full) < 10 and
                    len(djs_by_email) < 10 and
@@ -429,7 +433,8 @@ class Dj(CachedModel):
 
 
 class Permission(CachedModel):
-  ENTRY = "permission_key%s"
+  _RAW = RawPermission
+  _RAWKIND = "Permission"
 
   # Other memcache key constants
   TITLE = "permission_title%s"
@@ -452,11 +457,23 @@ class Permission(CachedModel):
                  EVENT_EDIT,)
 
   # GAE Datastore properties
-  title = db.StringProperty()
-  dj_list = db.ListProperty(db.Key)
 
-  def __init__(self, parent=None, key_name=None, **kwds):
-    super(Permission, self).__init__(parent=parent, key_name=key_name, **kwds)
+  def __init__(self, raw=None, raw_key=None,
+               title=None, dj_list=[],
+               parent=None, **kwds):
+    if raw is not None:
+      super(Permission, self).__init__(raw=raw)
+      return
+    elif raw_key is not None:
+      super(Permission, self).__init__(raw_key=raw_key)
+      return
+
+    super(Permission, self).__init__(title=title, dj_list=dj_list,
+                                     parent=parent, **kwds)
+
+  @classmethod
+  def new(cls, title, dj_list=[], parent=None, **kwargs):
+    return cls(title=title, dj_list=dj_list, parent=parent, **kwargs)
 
   @classmethod
   def add_title_cache(cls, key, title):
@@ -525,17 +542,17 @@ class Permission(CachedModel):
   @classmethod
   def get_key(cls, title=None,
              order=None, num=-1):
-    query = cls.all(keys_only=True)
+    query = cls._RAW.query()
 
     if title is not None:
-      query.filter("title =", title)
+      query.filter(cls._RAW.title == title)
 
     if order is not None:
       query.order(order)
 
     if num == -1:
-      return query.get()
-    return query.fetch(num)
+      return query.get(keys_only=True)
+    return query.fetch(num, keys_only=True)
 
   def put(self, dj_list=None):
     if dj_list is not None:
@@ -561,8 +578,11 @@ class Permission(CachedModel):
     return dj is not None and as_key(dj) in self.dj_list
 
   @property
-  def p_title(self):
-    return self.title
+  def title(self):
+    return self.raw.title
+  @property
+  def dj_list(self):
+    return self.raw.dj_list
 
   @classmethod
   def get_all(cls, keys_only=False):

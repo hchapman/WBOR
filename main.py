@@ -147,8 +147,7 @@ class AlbumInfo(BaseHandler):
 
 class Setup(BaseHandler):
   def get(self):
-    labels = ["Manage DJs", "Manage Programs", "Manage Permissions",
-              "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
+    labels = Permission.PERMISSIONS
     try:
       seth = Dj.get_by_email("seth.glickman@gmail.com")
     except NoSuchEntry:
@@ -167,13 +166,11 @@ class Setup(BaseHandler):
       try:
         permission = Permission.get_by_title(l)
       except NoSuchEntry:
-        permission = Permission()
-        permission.title=l
-        permission.dj_list=[]
+        permission = Permission.new(l, [])
         permission.put()
       finally:
         if seth.key not in permission.dj_list:
-          permission.dj_list.append(seth.key)
+          permission.add_dj(seth.key)
           permission.put()
     if not models.getLastPosts(3):
       post1 = models.BlogPost(
@@ -210,10 +207,10 @@ class Setup(BaseHandler):
       "Crayon Fields",
       ]
     for a in artists:
-      if not models.ArtistName.all().filter("artist_name =", a).fetch(1):
-        ar = models.ArtistName(
-          artist_name=a, lowercase_name=a.lower(),
-          search_names=models.artistSearchName(a).split())
+      if not (models.ArtistName._RAW.query()
+              .filter(models.ArtistName._RAW.artist_name == a)
+              .fetch(1, keys_only=True)):
+        ar = models.ArtistName.new(artist_name=a)
         ar.put()
     self.session.add_flash("Permissions set up, ArtistNames set up, "
                            "Blog posts set up, DJ Seth entered.")
@@ -691,6 +688,6 @@ app = webapp2.WSGIApplication([
     ('/contact/?', ContactPage),
     ('/events/?', EventPage),
     ('/albums/([^/]*)/?', ViewCoverHandler),
-    ('/callvoice/?', CallVoice), 
+    ('/callvoice/?', CallVoice),
     ('/testmodels/?', TestModels),
     ], debug=True, config=webapp2conf)

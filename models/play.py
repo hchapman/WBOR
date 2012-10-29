@@ -123,10 +123,10 @@ class Play(LastCachedModel):
 
   @property
   def program_key(self):
-    return self._dbentry.program
+    return self.raw.program
   @property
   def song_key(self):
-    return self._dbentry.song
+    return self.raw.song
 
   ## Properties
   @property
@@ -137,13 +137,13 @@ class Play(LastCachedModel):
     return Program.get(self.program_key)
   @property
   def play_date(self):
-    return self._dbentry.play_date
+    return self.raw.play_date
   @property
   def is_new(self):
-    return self._dbentry.isNew
+    return self.raw.isNew
   @property
   def artist(self):
-    return self._dbentry.artist
+    return self.raw.artist
 
   def to_json(self):
     return {

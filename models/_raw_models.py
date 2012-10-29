@@ -1,10 +1,23 @@
 from google.appengine.ext import ndb
 
+class Dj(ndb.Model):
+  fullname = ndb.StringProperty()
+  lowername = ndb.ComputedProperty(lambda self: self.fullname.strip().lower())
+  email = ndb.StringProperty()
+  username = ndb.StringProperty()
+  password_hash = ndb.StringProperty()
+  pw_reset_expire = ndb.DateTimeProperty()
+  pw_reset_hash = ndb.StringProperty()
+
+class Permission(ndb.Model):
+  title = ndb.StringProperty()
+  dj_list = ndb.KeyProperty(kind=Dj, repeated=True)
+
 class Program(ndb.Model):
   title = ndb.StringProperty()
   slug = ndb.StringProperty()
   desc = ndb.StringProperty()
-  dj_list = ndb.KeyProperty(repeated=True)
+  dj_list = ndb.KeyProperty(kind=Dj, repeated=True)
   page_html = ndb.TextProperty()
   top_artists = ndb.StringProperty(repeated=True)
   top_playcounts = ndb.IntegerProperty(repeated=True)
@@ -13,7 +26,7 @@ class Program(ndb.Model):
 class Album(ndb.Model):
   title = ndb.StringProperty(required=True)
   asin = ndb.StringProperty()
-  lower_title = ndb.ComputedProperty(lambda self: self.title.lower())
+  lower_title = ndb.ComputedProperty(lambda self: self.title.strip().lower())
   artist = ndb.StringProperty()
   add_date = ndb.DateTimeProperty()
   isNew = ndb.BooleanProperty(default=False)
@@ -36,7 +49,8 @@ class Play(ndb.Model):
 class ArtistName(ndb.Model):
   artist_name = ndb.StringProperty()
   lowercase_name = ndb.ComputedProperty(lambda self: self.artist_name.lower())
-  search_name = ndb.ComputedProperty(lambda self: search_namify(self.artist_name))
+  search_name = ndb.ComputedProperty(
+    lambda self: search_namify(self.artist_name))
   search_names = ndb.StringProperty(repeated=True)
 
 class Psa(ndb.Model):

@@ -55,7 +55,7 @@ class Album(CachedModel):
                key=None, **kwds):
     if raw is not None:
       super(Album, self).__init__(raw=raw)
-      return 
+      return
     elif raw_key is not None:
       super(Album, self).__init__(raw_key=raw_key)
       return
@@ -148,7 +148,7 @@ class Album(CachedModel):
   def get_key(cls, title=None, artist=None, is_new=None,
               asin=None,
               order=None, num=-1):
-    query = cls.query()
+    query = RawAlbum.query()
 
     if title is not None:
       query.filter(RawAlbum.title == title)
@@ -220,7 +220,7 @@ class Album(CachedModel):
     cached = cls.get_cached_query(cls.NEW)
     if not cached or cached.need_fetch(num):
       cached.set(
-        cls.get_key(is_new=True, order=(-Album.add_date,), num=num))
+        cls.get_key(is_new=True, order=(-RawAlbum.add_date,), num=num))
 
     cached.save()
 
@@ -243,6 +243,8 @@ class Album(CachedModel):
     return cls.get_new(num, keys_only=True)
 
 class Song(CachedModel):
+  _RAW = RawSong
+  _RAWKIND = "Song"
   '''A Song is an (entirely) immutable datastore object which represents
   a song; e.g. one played in the past or an element in a list of tracks.
   '''
@@ -266,12 +268,12 @@ class Song(CachedModel):
       super(Song, self).__init(raw=raw)
     elif raw_key is not None:
       super()
-    
+
     if parent is None:
       parent = album
 
-    super(Song, self).__init__(parent=parent, 
-                               title=title, artist=artist, album=album, 
+    super(Song, self).__init__(parent=parent,
+                               title=title, artist=artist, album=album,
                                **kwds)
     if album is not None:
       self.raw.album = album
@@ -345,7 +347,7 @@ class ArtistName(CachedModel):
   MIN_AC_CACHE = 10
   MIN_AC_RESULTS = 5
 
-  def __init__(self, raw=None, raw_key=None, 
+  def __init__(self, raw=None, raw_key=None,
                artist_name=None, **kwds):
     if raw is not None:
       super(ArtistName, self).__init__(raw=raw)
@@ -505,12 +507,14 @@ class ArtistName(CachedModel):
 
     # My calculations say this uses two more Smalls than we need but... shit,
     # last I looked it's not smalls we're running over on
-    artists_full = (cls.query()
-                    .filter("lowercase_name >=", prefix)
-                    .filter("lowercase_name <", prefix + u"\ufffd").fetch(10, keys_only=True))
-    artists_sn = (cls.query()
-                  .filter("search_name >=", prefix)
-                  .filter("search_name <", prefix + u"\ufffd").fetch(10, keys_only=True))
+    artists_full = (RawArtistName.query()
+                    .filter(RawArtistName.lowercase_name >= prefix)
+                    .filter(RawArtistName.lowercase_name < (prefix + u"\ufffd"))
+                    .fetch(10, keys_only=True))
+    artists_sn = (RawArtistName.query()
+                  .filter(RawArtistName.search_name >= prefix)
+                  .filter(RawArtistName.search_name < (prefix + u"\ufffd"))
+                  .fetch(10, keys_only=True))
     max_results = len(artists_full) < 10 and len(artists_sn) < 10
     artist_dict = {}
     all_artists = cls.get(artists_full + artists_sn)

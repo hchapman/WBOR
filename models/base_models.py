@@ -30,6 +30,7 @@ _space_re = re.compile(r'[\t \-_]')
 def slugify(text, delim=u'-'):
   """Generates an slightly worse ASCII-only slug."""
   result = []
+  text = unicode(text)
   for word in _space_re.split(_punct_re.sub("", text.lower())):
     word = normalize('NFKD', word).encode('ascii', 'ignore')
     if word:
@@ -80,17 +81,17 @@ def quantummethod(f):
   return descript(f)
 
 def is_key(obj):
-  return (isinstance(obj, db.Key) or
+  return (isinstance(obj, ndb.Key) or
           isinstance(obj, str) or
           isinstance(obj, unicode))
 
 def as_key(obj):
   if isinstance(obj, str) or isinstance(obj, unicode):
-    return db.Key(obj)
-  if isinstance(obj, db.Key):
+    return ndb.Key(urlsafe=obj)
+  if isinstance(obj, ndb.Key):
     return obj
-  if isinstance(obj, db.Model):
-    return obj.key()
+  if isinstance(obj, ndb.Model):
+    return obj.key
   return None
 
 def as_keys(key_list):
@@ -197,14 +198,18 @@ class CachedModel(object):
 
     if raw is not None:
       if not isinstance(raw, self._RAW):
-        raise Exception("Passed raw object must be of type %s or a child"%self._RAWKIND)
+        raise Exception(
+          "Passed raw object must be of type %s or a child. "
+          "Raw object was of kind %s."%
+          (self._RAWKIND, raw.__class__.__name__))
       self._dbentry = raw
 
     elif raw_key is not None:
       if not isinstance(raw_key, ndb.Key):
         raise Exception("raw_key must be of type ndb.Key")
       if raw_key.kind() != self._RAWKIND:
-        raise Exception("raw_key must point to an entry of type %s"%self._RAWKIND)
+        raise Exception(
+          "raw_key must point to an entry of type %s"%self._RAWKIND)
       self._dbkey = raw_key
       self._dbentry = None
 
@@ -303,7 +308,7 @@ class CachedModel(object):
       if ret_val:
         self.add_to_cache()
       return ret_val
-    
+
     raise Exception("Cannot put() nonexistant raw database model")
 
   def delete(self):
