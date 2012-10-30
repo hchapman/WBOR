@@ -118,18 +118,26 @@ class QueryCache(CacheItem):
 
   _dblen represents the most recent guesstimate of the (minimum)
   number of keys that an actual query would return'''
-  def __init__(self, cachekey, keylist=[], maxl=False, keylen=0):
+  def __init__(self, cachekey, keylist=None, cursor=None, maxl=False, keylen=0):
+    if keylist is None: keylist = []
     super(QueryCache, self).__init__(cachekey)
-    self.set(keylist, maxl, keylen)
+
+    self.set(keylist=keylist, cursor=cursor, probably_more=not maxl, keylen=keylen)
+
 
   @classmethod
   def fetch(cls, cachekey):
     result = CachedModel.cache_get(cachekey)
+
     if result is None:
       return cls(cachekey)
-    return cls(cachekey, *result)
+    return cls(cachekey, **result)
+
   def save(self):
-    super(QueryCache, self).save((self._data, self._maxl))
+
+    super(QueryCache, self).save({'keylist': self._data, 
+                                  'cursor': self._cursor, 
+                                  'maxl': self._maxl})
 
   def insert(self, idx, key):
     self._data.insert(idx, key)
@@ -137,17 +145,28 @@ class QueryCache(CacheItem):
   def append(self, key):
     self._data.append(key)
 
+  def extend(self, keys):
+    self._data.extend(keys)
+
   def prepend(self, key):
     self.insert(0, key)
 
   def __len__(self):
     return len(self._data)
 
-  def set(self, keylist, maxl=False, keylen=0):
+  def set(self, keylist, cursor=None, probably_more=False, keylen=0):
     ''' Set the data for this QueryCache with real results from
     a datastore query'''
     self._data = keylist
-    self._maxl = maxl or (len(keylist) < keylen and keylen >= 0)
+    self._cursor = cursor
+    self._maxl = not probably_more #maxl or (len(keylist) < keylen and keylen >= 0)
+
+  def extend_by(self, keylist, cursor=None, probably_more=False, keylen=0):
+    ''' Extend the data for this QueryCache with real results from
+    a datastore query'''
+    self._data.extend(keylist)
+    self._cursor = cursor
+    self._maxl = not probably_more
 
   def need_fetch(self, num):
     ''' Determines if we need a new fetch from the datastore
@@ -162,6 +181,20 @@ class QueryCache(CacheItem):
   @property
   def data(self):
     return self._data
+
+  @property
+  def cursor(self):
+    return self._cursor
+  @cursor.setter
+  def cursor(self, cursor):
+    self._cursor = cursor
+
+  @property
+  def more(self):
+    return not self._maxl
+  @more.setter
+  def more(self, more):
+    self._maxl = not more
 
 class CachedModel(object):
   _RAW = None
@@ -242,7 +275,8 @@ class CachedModel(object):
     '''
     Classmethod to access memcache.get
     '''
-    return memcache.get(cache_key %args)
+    result = memcache.get(cache_key %args)
+    return result
 
   def add_to_cache(self):
     '''

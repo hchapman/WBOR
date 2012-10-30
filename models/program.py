@@ -28,7 +28,7 @@ class Program(CachedModel):
   BY_DJ_ENTRY = "programs_by_dj%s"
 
   def __init__(self, raw=None, raw_key=None, title="", slug="", desc="", 
-               dj_list=[], page_html="", current=True):
+               dj_list=None, page_html="", current=True):
     if raw is not None:
       super(Program, self).__init__(raw=raw)
       return
@@ -36,6 +36,7 @@ class Program(CachedModel):
       super(Program, self).__init__(raw_key=raw_key)
       return
 
+    if dj_list is None: dj_list = []
     if not title:
       raise Exception("Insufficient data to create show")
 
@@ -74,12 +75,12 @@ class Program(CachedModel):
     query = cls.query()
 
     if slug is not None:
-      query.filter(RawProgram.slug == slug)
+      query = query.filter(RawProgram.slug == slug)
     if dj is not None:
-      query.filter(RawProgram.dj_list == as_key(dj))
+      query = query.filter(RawProgram.dj_list == as_key(dj))
 
     if order is not None:
-      query.order(order)
+      query = query.order(order)
 
     # Consider adding query caching here, if necessary
     if num == -1:

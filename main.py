@@ -14,9 +14,9 @@ from models.tracks import Album, Song, ArtistName
 from models.play import Play
 from models.base_models import NoSuchEntry
 from models.program import Program
+from models.blog import BlogPost
 
 import amazon
-import models_old as models
 
 from google.appengine.api import urlfetch
 from google.appengine.api import memcache
@@ -50,9 +50,9 @@ class MainPage(BaseHandler):
     song_num = 10
     album_num = 10
     top_songs, top_albums = Play.get_top(start, end, song_num, album_num)
-    posts = models.getLastPosts(3)
-    events = models.getEventsAfter(datetime.datetime.now() -
-                                   datetime.timedelta(days=1), 3)
+    posts = BlogPost.get_last(num=1)
+    events = [] #models.getEventsAfter(datetime.datetime.now() -
+              #                     datetime.timedelta(days=1), 3)
     template_values = {
       'news_selected': True,
       'flash': self.flashes,
@@ -156,7 +156,7 @@ class Setup(BaseHandler):
                     password='testme')
       seth.put()
 
-      program = models.Program(
+      program = Program.new(
         title='Seth\'s Show', slug='seth',
         desc='This is the show where Seth plays his favorite music.',
         dj_list=[seth.key],
@@ -172,19 +172,19 @@ class Setup(BaseHandler):
         if seth.key not in permission.dj_list:
           permission.add_dj(seth.key)
           permission.put()
-    if not models.getLastPosts(3):
-      post1 = models.BlogPost(
+    if not BlogPost.get_last(num=3):
+      post1 = BlogPost.new(
         title="Blog's first post!",
         text="This is really just filler text on the first post.",
         slug="first-post", post_date=datetime.datetime.now())
       post1.put()
       time.sleep(2)
-      post2 = models.BlogPost(
+      post2 = BlogPost.new(
         title="Blog's second post!",
         text="More filler text, alas.",
         slug="second-post", post_date=datetime.datetime.now())
       post2.put()
-      contactspage = models.BlogPost(
+      contactspage = BlogPost.new(
         title="Contacts Page",
         text="This is a dummy stub for the contacts page. Lorem ipsum whatnot",
         slug="contacts-page", post_date=datetime.datetime.now())
@@ -207,10 +207,10 @@ class Setup(BaseHandler):
       "Crayon Fields",
       ]
     for a in artists:
-      if not (models.ArtistName._RAW.query()
-              .filter(models.ArtistName._RAW.artist_name == a)
+      if not (ArtistName._RAW.query()
+              .filter(ArtistName._RAW.artist_name == a)
               .fetch(1, keys_only=True)):
-        ar = models.ArtistName.new(artist_name=a)
+        ar = ArtistName.new(artist_name=a)
         ar.put()
     self.session.add_flash("Permissions set up, ArtistNames set up, "
                            "Blog posts set up, DJ Seth entered.")

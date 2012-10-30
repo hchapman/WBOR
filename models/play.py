@@ -49,12 +49,19 @@ class LastCachedModel(CachedModel):
       num = 1
 
     cached = cls.get_cached_query(cls.LAST)
-
-    order_str = "%s" if cls.LAST_ORDER>0 else "-%s"
-    order_str = order_str%cls.LAST_ORDERBY
+    logging.error("Got %s. Cachekey %s."%(cached.data, cached._key))
 
     if cached.need_fetch(num):
-      cached.set(cls.get_key(num=num, order=order_str), num)
+      try:
+        num_to_fetch = num - len(cached)
+        keys, cursor, more = cls.get_key(num=num_to_fetch, order=cls.LAST_ORDERBY, 
+                                         page=True, cursor=cached.cursor)
+        cached.extend_by(keys, cursor=cursor, probably_more=more)
+      except BadRequestError:
+        keys, cursor, more = cls.get_key(num=num, order=cls.LAST_ORDERBY, 
+                                         page=True, cursor=None)
+        cached.set(keys, cursor=cursor, probably_more=more)
+
       cached.save()
 
     if not cached:
@@ -70,7 +77,7 @@ class LastCachedModel(CachedModel):
         return cls.get(cached[-1])
 
       return sorted(cls.get(cached[:num]),
-                    key=lambda elt: getattr(elt, cls.LAST_ORDERBY),
+                    key=lambda elt: cls._orderby(elt),
                     reverse=(cls.LAST_ORDER < 0))
 
   @classmethod
@@ -113,13 +120,17 @@ class Play(LastCachedModel):
   '''A Play is an (entirely) immutable datastore object which represents
   a charted song
   '''
-  LAST = "@@last_plays" # Tuple of last_plays_list, db_count
+  LAST = "@last_plays" # Tuple of last_plays_list, db_count
   LAST_ORDER = -1 # Sort from most recent backwards
-  LAST_ORDERBY = "play_date" # How plays should be ordered in last cache
+  LAST_ORDERBY = (_RAW.play_date,) # How plays should be ordered in last cache
   SHOW_LAST = "last_plays_show%s" #possibly keep with show instead
 
   TOP_SONGS = "@top_songs_before%s_after%s"
   TOP_ALBUMS = "@top_albums_before%s_after%s"
+
+  @staticmethod
+  def _orderby(raw):
+    return raw.play_date
 
   @property
   def program_key(self):
@@ -208,21 +219,24 @@ class Play(LastCachedModel):
 
   @classmethod
   def get_key(cls, before=None, after=None, is_new=None,
-             order=None, num=-1):
+             order=None, num=-1, page=False, cursor=None):
     query = cls._RAW.query()
 
     if is_new is not None:
-      query.filter(RawPlay.isNew == is_new)
+      query = query.filter(RawPlay.isNew == is_new)
     if after is not None:
-      query.filter(RawPlay.play_date >= datetime.datetime.combine(after, datetime.time()))
+      query = query.filter(RawPlay.play_date >= datetime.datetime.combine(after, datetime.time()))
     if before is not None:
-      query.filter(RawPlay.play_date <= datetime.datetime.combine(before, datetime.time()))
+      query = query.filter(RawPlay.play_date <= datetime.datetime.combine(before, datetime.time()))
     if order is not None:
-      query.order(order)
+      query = query.order(*order)
 
     if num == -1:
-      return query.get(keys_only=True)
-    return query.fetch(num, keys_only=True)
+      return query.get(keys_only=True, start_cursor=cursor)
+    elif not page:
+      return query.fetch(num, keys_only=True, start_cursor=cursor)
+    else:
+      return query.fetch_page(num, keys_only=True, start_cursor=cursor)
 
   def put(self):
     key = super(Play, self).put()
@@ -381,11 +395,11 @@ class Psa(LastCachedModel):
     query = Psa.all(keys_only=True)
 
     if after is not None:
-      query.filter("play_date >=", after)
+      query = query.filter("play_date >=", after)
     if before is not None:
-      query.filter("play_date <=", before)
+      query = query.filter("play_date <=", before)
     if order is not None:
-      query.order(order)
+      query.order(*order)
 
     if num == -1:
       return query.get()

@@ -8,6 +8,8 @@ from passwd_crypto import hash_password, check_password
 from base_models import (CachedModel, QueryError, ModelError, NoSuchEntry)
 from base_models import quantummethod, as_key
 
+from play import LastCachedModel
+
 from _raw_models import BlogPost as RawBlogPost
 from _raw_models import Event as RawEvent
 
@@ -16,9 +18,17 @@ import datetime
 import random
 import string
 
-class BlogPost(CachedModel):
+class BlogPost(LastCachedModel):
   _RAW = RawBlogPost
   _RAWKIND = "BlogPost"
+
+  LAST = "last_posts"
+  LAST_ORDER = -1
+  LAST_ORDERBY = (-_RAW.post_date,)
+
+  @staticmethod
+  def _orderby(raw):
+    return raw.post_date
 
   @property
   def title(self):
@@ -30,7 +40,7 @@ class BlogPost(CachedModel):
   @property
   def slug(self):
     return self.raw.slug
-  @slug.settter
+  @slug.setter
   def slug(self, slug):
     self.raw.slug = slug
 
@@ -67,6 +77,45 @@ class BlogPost(CachedModel):
     return cls(title=title, text=text, slug=slug, post_date=post_date,
                parent=parent, **kwds)
 
+  @classmethod
+  def get(cls, keys=None, slug=None, before=None, after=None, order=None, num=-1,
+          one_key=False):
+    if keys is not None:
+      return super(BlogPost, cls).get(keys=keys, 
+                                  one_key=one_key)
+    
+    keys = cls.get_key(before=before, after=after, slug=slug, order=order, num=num)
+    if keys is not None:
+      return cls.get(keys=keys)
+    return None
+
+  @classmethod
+  def get_key(cls, slug=None, before=None, after=None, order=None, 
+              num=-1, page=False, cursor=None):
+    query = cls._RAW.query()
+
+    if slug is not None:
+      query = query.filter(cls._RAW.slug == slug)
+    if after is not None:
+      query = query.filter(cls._RAW.play_date >= 
+                           datetime.datetime.combine(after, datetime.time()))
+    if before is not None:
+      query = query.filter(cls._RAW.play_date < 
+                           datetime.datetime.combine(after, datetime.time()))
+    
+    if order is not None:
+      query = query.order(*order)
+
+    if num == -1:
+      return query.get(keys_only=True, start_cursor=cursor)
+    elif not page:
+      return query.fetch(num, keys_only=True, start_cursor=cursor)
+    else:
+      return query.fetch_page(num, keys_only=True, start_cursor=cursor)
+
+  @classmethod
+  def get_last(cls, num=3, keys_only=False):
+    return super(BlogPost, cls).get_last(num=num, keys_only=keys_only)
 
 class Event(CachedModel):
   _RAW = RawEvent

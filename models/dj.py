@@ -119,12 +119,12 @@ class Dj(CachedModel):
     query = RawDj.query()
 
     if username is not None:
-      query.filter(RawDj.username == username)
+      query = query.filter(RawDj.username == username)
     if email is not None:
-      query.filter(RawDj.email == email)
+      query = query.filter(RawDj.email == email)
 
     if order is not None:
-      query.order(order)
+      query = query.order(order)
 
     if num == -1:
       return query.get(keys_only=True)
@@ -194,7 +194,6 @@ class Dj(CachedModel):
   @property
   def username(self):
     return self.raw.username
-
   @username.setter
   def username(self, username):
     username = username.strip()
@@ -459,7 +458,7 @@ class Permission(CachedModel):
   # GAE Datastore properties
 
   def __init__(self, raw=None, raw_key=None,
-               title=None, dj_list=[],
+               title=None, dj_list=None,
                parent=None, **kwds):
     if raw is not None:
       super(Permission, self).__init__(raw=raw)
@@ -468,11 +467,12 @@ class Permission(CachedModel):
       super(Permission, self).__init__(raw_key=raw_key)
       return
 
+    if dj_list is None: dj_list = []
     super(Permission, self).__init__(title=title, dj_list=dj_list,
                                      parent=parent, **kwds)
 
   @classmethod
-  def new(cls, title, dj_list=[], parent=None, **kwargs):
+  def new(cls, title, dj_list=None, parent=None, **kwargs):
     return cls(title=title, dj_list=dj_list, parent=parent, **kwargs)
 
   @classmethod
@@ -545,10 +545,10 @@ class Permission(CachedModel):
     query = cls._RAW.query()
 
     if title is not None:
-      query.filter(cls._RAW.title == title)
+      query = query.filter(cls._RAW.title == title)
 
     if order is not None:
-      query.order(order)
+      query = query.order(order)
 
     if num == -1:
       return query.get(keys_only=True)
@@ -564,8 +564,8 @@ class Permission(CachedModel):
     if is_key(djs) or isinstance(djs, Dj):
       djs = (djs,)
 
-    self.dj_list = list(set(self.dj_list).
-                        union(as_keys(djs)))
+    self.raw.dj_list = list(set(self.dj_list).
+                            union(as_keys(djs)))
 
   def remove_dj(self, djs):
     if is_key(djs) or isinstance(djs, Dj):

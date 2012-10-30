@@ -49,7 +49,7 @@ class Album(CachedModel):
       'cover_large_key': str_or_none(self.cover_large_key),
     }
 
-  def __init__(self, raw=None, raw_key=None, title=None, artist=None, tracks=[],
+  def __init__(self, raw=None, raw_key=None, title=None, artist=None, tracks=None,
                add_date=None, asin=None,
                cover_small=None, cover_large= None, is_new=True,
                key=None, **kwds):
@@ -60,6 +60,7 @@ class Album(CachedModel):
       super(Album, self).__init__(raw_key=raw_key)
       return
 
+    if tracks is None: tracks = []
     if not title:
       raise Exception("Cannot have an Album without a title")
     if add_date is None:
@@ -146,26 +147,30 @@ class Album(CachedModel):
 
   @classmethod
   def get_key(cls, title=None, artist=None, is_new=None,
-              asin=None,
-              order=None, num=-1):
+              asin=None, order=None, num=-1, page=False,
+              cursor=None):
     query = RawAlbum.query()
 
     if title is not None:
-      query.filter(RawAlbum.title == title)
+      query = query.filter(RawAlbum.title == title)
     if artist is not None:
-      query.filter(RawAlbum.artist == artist)
+      query = query.filter(RawAlbum.artist == artist)
     if is_new is not None:
-      query.filter(RawAlbum.isNew == is_new)
+      query = query.filter(RawAlbum.isNew == is_new)
     if asin is not None:
-      query.filter(RawAlbum.asin == asin)
+      query = query.filter(RawAlbum.asin == asin)
 
     # Usual album orders: 'add_date'
     if order is not None:
-      query.order(*order)
+      query = query.order(*order)
 
     if num == -1:
-      return query.get(keys_only=True)
-    return query.fetch(num, keys_only=True)
+      return query.get(keys_only=True, start_cursor=cursor)
+    elif not page:
+      return query.fetch(num, keys_only=True, start_cursor=cursor)
+    else:
+      return query.fetch_page(num, keys_only=True, start_cursor=cursor)
+    
 
   def put(self):
     # If we've toggled the newness of the album, update cache.
@@ -219,10 +224,14 @@ class Album(CachedModel):
 
     cached = cls.get_cached_query(cls.NEW)
     if not cached or cached.need_fetch(num):
-      cached.set(
-        cls.get_key(is_new=True, order=(-RawAlbum.add_date,), num=num))
-
-    cached.save()
+      num_to_fetch = num - len(cached)
+      keys, cursor, more = cls.get_key(is_new=True, 
+                                       order=(-RawAlbum.add_date,), num=num,
+                                       page=True, cursor=cached.cursor)
+      cached.extend(keys)
+      cached.cursor = cursor
+      cached.more = more
+      cached.save()
 
     if not cached:
       return []
@@ -313,7 +322,7 @@ class Song(CachedModel):
     query = cls.all(keys_only=True)
 
     if order is not None:
-      query.order(order)
+      query = query.order(order)
 
     if num == -1:
       return query.get()
@@ -404,7 +413,7 @@ class ArtistName(CachedModel):
   def get_key(cls, artist_name=None, num=-1):
     query = RawArtistName.query()
     if artist_name:
-      query.filter(RawArtistName.lowercase_name == artist_name.lower())
+      query = query.filter(RawArtistName.lowercase_name == artist_name.lower())
 
     if num == -1:
       return query.get(keys_only=True)
