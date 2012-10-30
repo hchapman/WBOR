@@ -50,7 +50,7 @@ class MainPage(BaseHandler):
     song_num = 10
     album_num = 10
     top_songs, top_albums = Play.get_top(start, end, song_num, album_num)
-    posts = BlogPost.get_last(num=1)
+    posts = BlogPost.get_last(num=3)
     events = [] #models.getEventsAfter(datetime.datetime.now() -
               #                     datetime.timedelta(days=1), 3)
     template_values = {
@@ -72,10 +72,10 @@ class DjComplete(BaseHandler):
     djs = Dj.autocomplete(q)
     self.response.out.write(json.dumps({
           'query': q,
-          'suggestions': ["%s - %s"%(dj.p_fullname, dj.p_email) for dj in djs],
+          'suggestions': ["%s - %s"%(dj.fullname, dj.email) for dj in djs],
           'data': [{'key': str(dj.key),
-                    'name': dj.p_fullname,
-                    'email': dj.p_email} for dj in djs],}))
+                    'name': dj.fullname,
+                    'email': dj.email} for dj in djs],}))
 
 class ArtistComplete(BaseHandler):
   def get(self):
@@ -263,8 +263,8 @@ class UpdateInfo(webapp2.RequestHandler):
       last_play = recent_songs[0]
       song, program = (last_play.song,
                        last_play.program)
-      song_string = song.p_title
-      artist_string = song.p_artist
+      song_string = song.title
+      artist_string = song.artist
       if program is not None:
         program_title, program_desc, program_slug = (program.title,
                                                      program.desc,
@@ -332,12 +332,12 @@ class SongList(BaseHandler):
             }))
       return
     songlist_html = template.render(get_path("ajax_songlist.html"), {
-        'songList': Song.get(album.p_tracklist),
+        'songList': Song.get(album.tracklist),
         })
     memcache.set("songlist_html_" + album_key, songlist_html)
     self.response.out.write(json.dumps({
           'songListHtml': template.render(get_path("ajax_songlist.html"), {
-              'songList': Song.get(album.p_tracklist),
+              'songList': Song.get(album.tracklist),
               }),
           'generated': 'generated',
           }))
@@ -405,7 +405,7 @@ class PlaylistPage(BaseHandler):
       if not selected_date:
         lastplay = Play.get_last()
         if lastplay:
-          selected_date = lastplay.p_play_date
+          selected_date = lastplay.play_date
 
       if selected_date:
         plays = models.getPlaysForDate(selected_date)

@@ -1,7 +1,7 @@
 import logging
 
 # Google App Engine imports
-from google.appengine.ext import db
+from google.appengine.ext import ndb
 
 from models import Permission
 
@@ -43,7 +43,7 @@ class UserHandler(BaseHandler):
   """
   def set_session_user(self, dj):
     """Takes a Dj model, and stores values into the session"""
-    djkey = dj.key()
+    djkey = dj.key
 
     permissions = {
       'djs': Permission.DJ_EDIT,
@@ -60,10 +60,10 @@ class UserHandler(BaseHandler):
     if not reduce(lambda x,y: x or y, permissions.values()):
       permissions = None
     self.session['dj'] = {
-        'key' : str(dj.key()),
-        'fullname' : dj.p_fullname,
-        'lowername' : dj.p_lowername,
-        'email' : dj.p_email,
+        'key' : dj.key.urlsafe(),
+        'fullname' : dj.fullname,
+        'lowername' : dj.lowername,
+        'email' : dj.email,
         'permissions' : permissions,
         }
 
@@ -78,7 +78,7 @@ class UserHandler(BaseHandler):
   def set_session_program(self, pgm):
     """Takes a Program model, and stores values to the session"""
     self.session['program'] = {
-        'key' : str(pgm.key()),
+        'key' : pgm.key.urlsafe(),
         'slug' : pgm.slug,
         'title' : pgm.title,
         }
@@ -107,12 +107,12 @@ class UserHandler(BaseHandler):
   def dj_key(self):
     key = self.session.get('dj').get('key')
     if key is not None:
-      return db.Key(key)
+      return ndb.Key(urlsafe=key)
     return None
 
   @property
   def program_key(self):
     key = self.session.get('program').get('key')
     if key is not None:
-      return db.Key(key)
+      return ndb.Key(urlsafe=key)
     return None

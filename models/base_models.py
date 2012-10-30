@@ -92,6 +92,8 @@ def as_key(obj):
     return obj
   if isinstance(obj, ndb.Model):
     return obj.key
+  if isinstance(obj, CachedModel):
+    return obj.key
   return None
 
 def as_keys(key_list):
@@ -118,11 +120,10 @@ class QueryCache(CacheItem):
 
   _dblen represents the most recent guesstimate of the (minimum)
   number of keys that an actual query would return'''
-  def __init__(self, cachekey, keylist=None, cursor=None, maxl=False, keylen=0):
-    if keylist is None: keylist = []
+  def __init__(self, cachekey, data=None, cursor=None, more=True, keylen=0):
+    if data is None: data = []
     super(QueryCache, self).__init__(cachekey)
-
-    self.set(keylist=keylist, cursor=cursor, probably_more=not maxl, keylen=keylen)
+    self.set(data=data, cursor=cursor, more=more, keylen=keylen)
 
 
   @classmethod
@@ -134,10 +135,12 @@ class QueryCache(CacheItem):
     return cls(cachekey, **result)
 
   def save(self):
-
-    super(QueryCache, self).save({'keylist': self._data, 
-                                  'cursor': self._cursor, 
-                                  'maxl': self._maxl})
+    logging.error(self._data)
+    logging.error(self._cursor)
+    logging.error(self._more)
+    super(QueryCache, self).save({'data': self._data,
+                                  'cursor': self._cursor,
+                                  'more': self._more})
 
   def insert(self, idx, key):
     self._data.insert(idx, key)
@@ -154,32 +157,32 @@ class QueryCache(CacheItem):
   def __len__(self):
     return len(self._data)
 
-  def set(self, keylist, cursor=None, probably_more=False, keylen=0):
+  def set(self, data, cursor=None, more=True, keylen=0):
     ''' Set the data for this QueryCache with real results from
     a datastore query'''
-    self._data = keylist
+    self._data = data
     self._cursor = cursor
-    self._maxl = not probably_more #maxl or (len(keylist) < keylen and keylen >= 0)
+    self._more = more
 
-  def extend_by(self, keylist, cursor=None, probably_more=False, keylen=0):
+  def extend_by(self, data, cursor=None, more=True, keylen=0):
     ''' Extend the data for this QueryCache with real results from
     a datastore query'''
-    self._data.extend(keylist)
+    self._data.extend(data)
     self._cursor = cursor
-    self._maxl = not probably_more
+    self._more = more
 
   def need_fetch(self, num):
     ''' Determines if we need a new fetch from the datastore
     We need a new fetch if:
       a. We have fewer keys than the desired number AND
       b. We don't have maximal cache'''
-    return (num > len(self) and not self._maxl)
+    return (num > len(self) and self._more) or len(self) <= 0
 
   def __getitem__(self, key):
-    return self._data[key]
+    return self._data[key][0]
 
   @property
-  def data(self):
+  def results(self):
     return self._data
 
   @property
@@ -191,10 +194,31 @@ class QueryCache(CacheItem):
 
   @property
   def more(self):
-    return not self._maxl
+    return self._more
   @more.setter
   def more(self, more):
-    self._maxl = not more
+    self._more = more
+
+class SortedQueryCache(QueryCache):
+  def __init__(self, cachekey, data=None, cursor=None, more=True, keylen=0,
+               sort_fn=None):
+    if data is None: data = []
+    super(SortedQueryCache, self).__init__(cachekey, data=data, cursor=cursor,
+                                           more=more, keylen=keylen)
+
+  def ordered_unique_insert(self, new_key, new_val):
+    """Run through data until we find where to add the new key. Don't
+    add the key if no spot is found"""
+    for i, (key, val) in enumerate(self._data):
+      if new_val > val:
+        self._data.insert(i, (new_key, new_val))
+        break
+
+  @property
+  def results(self):
+    if self._data:
+      return zip(*self._data)[0]
+    return []
 
 class CachedModel(object):
   _RAW = None
@@ -313,11 +337,12 @@ class CachedModel(object):
       return cls(raw=keys.get())
 
     raw_objs = filter(None, ndb.get_multi(keys))
-    return [cls(raw=raw) for raw in raw_objs]
+    rslt = [cls(raw=raw) for raw in raw_objs]
+    return rslt
 
   @classmethod
   def get_by_index(cls, index, *args, **kwargs):
-    keys_only = True if kwargs.get("keys_only") else False
+    keys_only = kwargs.get("keys_only") or False
     cached = cls.cache_get(index, *args)
 
     if cached is not None:

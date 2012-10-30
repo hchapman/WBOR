@@ -9,9 +9,11 @@
 from __future__ import with_statement
 
 # GAE Imports
-from google.appengine.ext import db
+from google.appengine.ext import db, ndb
 
 from _raw_models import Play as RawPlay
+from _raw_models import Psa as RawPsa
+from _raw_models import StationID as RawStationID
 
 # Local module imports
 from base_models import *
@@ -48,70 +50,60 @@ class LastCachedModel(CachedModel):
       only_one = True
       num = 1
 
-    cached = cls.get_cached_query(cls.LAST)
-    logging.error("Got %s. Cachekey %s."%(cached.data, cached._key))
+    cached = SortedQueryCache.fetch(cls.LAST)
 
+    last = []
+    cached_keys = []
     if cached.need_fetch(num):
       try:
         num_to_fetch = num - len(cached)
-        keys, cursor, more = cls.get_key(num=num_to_fetch, order=cls.LAST_ORDERBY, 
-                                         page=True, cursor=cached.cursor)
-        cached.extend_by(keys, cursor=cursor, probably_more=more)
-      except BadRequestError:
-        keys, cursor, more = cls.get_key(num=num, order=cls.LAST_ORDERBY, 
-                                         page=True, cursor=None)
-        cached.set(keys, cursor=cursor, probably_more=more)
+        last, cursor, more = cls.get(num=num_to_fetch,
+                                     order=cls.LAST_ORDERBY,
+                                     page=True, cursor=cached.cursor)
+        cached_keys = cached.results
+        cached.extend_by([(obj.key, obj._orderby) for obj in last],
+                         cursor=cursor, more=more)
+      except db.BadRequestError:
+        last, cursor, more = cls.get(num=num, order=cls.LAST_ORDERBY,
+                                 page=True, cursor=None)
+        cached_keys = []
+        cached.set([(obj.key, obj._orderby) for obj in last],
+                   cursor=cursor, more=more)
 
       cached.save()
+    else:
+      cached_keys = cached.results
 
     if not cached:
       return []
 
     if keys_only:
       if only_one:
-        return cached[-1]
+        return cached.results[-1]
 
-      return cached[:num]
+      return cached.results
     else:
       if only_one:
-        return cls.get(cached[-1])
+        return cls.get(cached.results[-1])
 
-      return sorted(cls.get(cached[:num]),
-                    key=lambda elt: cls._orderby(elt),
-                    reverse=(cls.LAST_ORDER < 0))
+      rslt = cls.get(cached_keys) + last
+      return rslt
 
   @classmethod
   def get_last_keys(cls, num=-1, before=None, after=None):
-    return cls.get_last(num=num, before=before, after=after)
+    return cls.get_last(num=num, before=before, after=after, keys_only=True)
 
   # Method to add a new element to the lastcache for this class
   @classmethod
-  def add_to_last_cache(cls, key, orderby):
-    cached_result = cls.get_by_index(cls.LAST, keys_only=True)
-    if cached_result is None:
-      last_elts = []
-      last_db_count = None
-    else:
-      last_elts, last_db_count = cached_result
-
-    # Realistically, we never add new plays/PSAs/etc. unless they're new.
-    # so we don't have to be all fancy here. Feel free to do so.
-    if not last_elts:
-      last_elts = [key,]
-      last_db_count = (None if last_db_count is None
-                       else last_db_count + 1)
-    elif orderby > getattr(cls.get(last_elts[0]), cls.LAST_ORDERBY):
-      last_elts.insert(0, key)
-      last_db_count = (None if last_db_count is None
-                       else last_db_count + 1)
-
-    cls.cache_set((last_elts, last_db_count), cls.LAST)
+  def add_to_last_cache(cls, obj):
+    cached = cls.get_cached_query(cls.LAST)
+    cached.ordered_unique_insert(obj.key, obj._orderby)
+    cached.save()
 
   # Utility method so that a last-cacheable entry knows how to
   # lastcache itself.
   def add_own_last_cache(self):
-    self.add_to_last_cache(self.key(), orderby=getattr(self, self.LAST_ORDERBY))
-
+    self.add_to_last_cache(self.key, orderby=self._orderby)
 
 class Play(LastCachedModel):
   _RAW = RawPlay
@@ -166,7 +158,7 @@ class Play(LastCachedModel):
 
   def __init__(self, raw=None, song=None, program=None, artist=None,
                is_new=None, play_date=None,
-               parent=None, key_name=None,
+               parent=None,
                is_fresh=False, **kwds):
     if raw is not None:
       super(Play, self).__init__(raw=raw)
@@ -177,9 +169,11 @@ class Play(LastCachedModel):
       if play_date is None:
         play_date = datetime.datetime.now()
 
-      super(Play, self).__init__(parent=parent, key_name=key_name,
-                                 song=song, program=program,
-                                 artist=artist, play_date=play_date,
+      super(Play, self).__init__(parent=parent,
+                                 song=as_key(song),
+                                 program=as_key(program),
+                                 artist=artist,
+                                 play_date=play_date,
                                  isNew=is_new, **kwds)
 
     self.is_fresh = is_fresh
@@ -205,16 +199,23 @@ class Play(LastCachedModel):
 
   @classmethod
   def get(cls, keys=None, before=None, after=None, is_new=None, order=None,
-          num=-1, use_datastore=True, one_key=False):
+          num=-1, page=False, cursor=None, one_key=False):
     if keys is not None:
       return super(Play, cls).get(keys=keys,
-                                  use_datastore=use_datastore,
                                   one_key=one_key)
 
     keys = cls.get_key(before=before, after=after,
-                       is_new=is_new, order=order, num=num)
+                       is_new=is_new, order=order, num=num,
+                       page=page, cursor=cursor)
+    if page:
+      keys, cursor, more = keys
+
     if keys is not None:
-      return cls.get(keys=keys, use_datastore=use_datastore)
+      if page:
+        return (cls.get(keys=keys),
+                cursor, more)
+      else:
+        return cls.get(keys=keys)
     return None
 
   @classmethod
@@ -225,9 +226,11 @@ class Play(LastCachedModel):
     if is_new is not None:
       query = query.filter(RawPlay.isNew == is_new)
     if after is not None:
-      query = query.filter(RawPlay.play_date >= datetime.datetime.combine(after, datetime.time()))
+      query = query.filter(RawPlay.play_date >=
+                           datetime.datetime.combine(after, datetime.time()))
     if before is not None:
-      query = query.filter(RawPlay.play_date <= datetime.datetime.combine(before, datetime.time()))
+      query = query.filter(RawPlay.play_date <=
+                           datetime.datetime.combine(before, datetime.time()))
     if order is not None:
       query = query.order(*order)
 
@@ -267,8 +270,8 @@ class Play(LastCachedModel):
                                        before=before, after=after)
 
     # TODO: Pass other parameters to program's method
-    program = Program.as_object(program)
     if program is not None:
+      program = Program.as_object(program)
       return program.get_last_plays(num=num)
     return None if num == -1 else []
 
@@ -306,8 +309,8 @@ class Play(LastCachedModel):
             cached_songs.need_fetch(song_num) or
             cached_albums is None or
             cached_albums.need_fetch(album_num)):
-      songs = cached_songs.data
-      albums = cached_albums.data
+      songs = cached_songs.results
+      albums = cached_albums.results
 
     else:
       new_plays = cls.get(before=before, after=after, is_new=True, num=1000)
@@ -344,9 +347,12 @@ class Play(LastCachedModel):
 
 
 class Psa(LastCachedModel):
+  _RAW = RawPsa
+  _RAWKIND = "Psa"
+
   LAST = "@@last_psas" # Tuple of last_plays_list, db_count
   LAST_ORDER = -1 # Sort from most recent backwards
-  LAST_ORDERBY = "play_date" # How plays should be ordered in last cache
+  LAST_ORDERBY =  -_RAW.play_date # How plays should be ordered in last cache
   SHOW_LAST = "last_psas_show%s" #possibly keep with show instead
   ENTRY = "psa_key%s"
 

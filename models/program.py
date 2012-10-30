@@ -7,6 +7,7 @@ from google.appengine.ext import db
 from passwd_crypto import hash_password, check_password
 from base_models import (CachedModel, QueryError, ModelError, NoSuchEntry)
 from base_models import quantummethod, as_key
+from base_models import QueryCache
 from base_models import slugify
 
 from _raw_models import Program as RawProgram
@@ -27,7 +28,7 @@ class Program(CachedModel):
 
   BY_DJ_ENTRY = "programs_by_dj%s"
 
-  def __init__(self, raw=None, raw_key=None, title="", slug="", desc="", 
+  def __init__(self, raw=None, raw_key=None, title="", slug="", desc="",
                dj_list=None, page_html="", current=True):
     if raw is not None:
       super(Program, self).__init__(raw=raw)
@@ -49,7 +50,7 @@ class Program(CachedModel):
 
   @classmethod
   def new(cls, title, slug, desc, dj_list, page_html, current=True):
-    return cls(title=title, slug=slug, desc=desc, dj_list=dj_list, 
+    return cls(title=title, slug=slug, desc=desc, dj_list=dj_list,
                page_html=page_html, current=True)
 
   def put(self):
@@ -72,7 +73,7 @@ class Program(CachedModel):
 
   @classmethod
   def get_key(cls, slug=None, dj=None, order=None, num=-1):
-    query = cls.query()
+    query = cls._RAW.query()
 
     if slug is not None:
       query = query.filter(RawProgram.slug == slug)
@@ -100,23 +101,23 @@ class Program(CachedModel):
       only_one = True
       num = 1
 
-    cached = cls.get_cached_query(cls.BY_DJ_ENTRY, dj)
+    cached = QueryCache.fetch(cls.BY_DJ_ENTRY % dj)
 
-    if cached is None or cached.need_fetch(num):
+    if cached.need_fetch(num):
       cached.set(cls.get_key(num=num), num)
+      cached.save()
 
-    cached.save()
     if not cached:
       return []
 
     if keys_only:
       if only_one:
-        return cached[-1]
-      return cached[:num]
+        return cached.results[-1]
+      return cached.results[:num]
     else:
       if only_one:
-        return cls.get(cached[-1])
-      return cls.get(cached[:num])
+        return cls.get(cached.results[-1])
+      return cls.get(cached.results[:num])
 
   @property
   def title(self):

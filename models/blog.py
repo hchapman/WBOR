@@ -26,9 +26,9 @@ class BlogPost(LastCachedModel):
   LAST_ORDER = -1
   LAST_ORDERBY = (-_RAW.post_date,)
 
-  @staticmethod
-  def _orderby(raw):
-    return raw.post_date
+  @property
+  def _orderby(self):
+    return self.post_date
 
   @property
   def title(self):
@@ -78,31 +78,39 @@ class BlogPost(LastCachedModel):
                parent=parent, **kwds)
 
   @classmethod
-  def get(cls, keys=None, slug=None, before=None, after=None, order=None, num=-1,
-          one_key=False):
+  def get(cls, keys=None, slug=None, before=None,
+          after=None, order=None, num=-1, page=False,
+          cursor=None, one_key=False):
     if keys is not None:
-      return super(BlogPost, cls).get(keys=keys, 
+      return super(BlogPost, cls).get(keys=keys,
                                   one_key=one_key)
-    
-    keys = cls.get_key(before=before, after=after, slug=slug, order=order, num=num)
+
+    keys = cls.get_key(before=before, after=after, slug=slug,
+                       order=order, num=num, page=page, cursor=cursor)
+    if page:
+      keys, cursor, more = keys
+
     if keys is not None:
-      return cls.get(keys=keys)
+      if page:
+        return (cls.get(keys=keys), cursor, more)
+      else:
+        return cls.get(keys=keys)
     return None
 
   @classmethod
-  def get_key(cls, slug=None, before=None, after=None, order=None, 
+  def get_key(cls, slug=None, before=None, after=None, order=None,
               num=-1, page=False, cursor=None):
     query = cls._RAW.query()
 
     if slug is not None:
       query = query.filter(cls._RAW.slug == slug)
     if after is not None:
-      query = query.filter(cls._RAW.play_date >= 
+      query = query.filter(cls._RAW.play_date >=
                            datetime.datetime.combine(after, datetime.time()))
     if before is not None:
-      query = query.filter(cls._RAW.play_date < 
+      query = query.filter(cls._RAW.play_date <
                            datetime.datetime.combine(after, datetime.time()))
-    
+
     if order is not None:
       query = query.order(*order)
 

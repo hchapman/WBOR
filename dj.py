@@ -26,6 +26,8 @@ from google.appengine.api import memcache
 from google.appengine.api import images
 from google.appengine.api import files
 
+from google.appengine.ext import ndb
+
 import webapp2
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
@@ -35,7 +37,6 @@ import pylast
 from handlers import UserHandler
 from passwd_crypto import hash_password
 from slughifi import slughifi
-import models_old as models
 
 from models.base_models import (NoSuchEntry,)
 from models.dj import (Dj, Permission, InvalidLogin,
@@ -43,6 +44,7 @@ from models.dj import (Dj, Permission, InvalidLogin,
 from models.tracks import Album, Song, ArtistName
 from models.play import Play, Psa, StationID
 from models.program import Program
+from models.blog import BlogPost
 
 from configuration import webapp2conf
 
@@ -98,7 +100,7 @@ class MainPage(UserHandler):
     template_values = {
       'session': self.session,
       'flashes': self.session.get_flashes(),
-      'posts': models.getLastPosts(3),
+      'posts': BlogPost.get_last(3),
     }
     permissions = {
       'djs': Permission.DJ_EDIT,
@@ -202,8 +204,9 @@ class RequestPassword(UserHandler):
       program_list = Program.get_by_dj(dj=reset_dj)
 
       if not program_list:
-        self.session.add_flash("You have been temporarily logged in. Please change your"
-                               "password so that you may log in in the future!")
+        self.session.add_flash(
+          "You have been temporarily logged in. Please change your"
+          "password so that you may log in in the future!")
         self.session.add_flash(
           "You will not be able to do much until you have a"
           "program.  If you see this message, please email"
@@ -257,7 +260,8 @@ class RequestPassword(UserHandler):
       return
     if not reset_dj.email_matches(email):
       self.session.add_flash(
-        "The email you have entered does not match our records. Check, and try, again.")
+        "The email you have entered does not match our records. "
+        "Check, and try, again.")
 
     # Generate a key to be sent to the user and add the
     # new password request to the database
@@ -301,7 +305,7 @@ class SelectProgram(UserHandler):
       'program_list': program_list,
       'session': self.session,
       'flash': self.flashes,
-      'posts': models.getLastPosts(1)
+      'posts': BlogPost.get_last(num=1)
     }
     self.response.out.write(template.render(get_path("dj_selectprogram.html"),
       template_values))
@@ -334,20 +338,18 @@ class ChartSong(UserHandler):
       self.redirect("/dj/")
       return
 
-    posts = models.getLastPosts(2)
-
     memcache_key = "playlist_html_%s"%self.session.get('program').get('key')
     playlist_html = memcache.get(memcache_key)
     if not playlist_html:
       playlist_html = template.render("dj_chartsong_playlist_div.html",
         {'playlist': Play.get_last(num=50,
-                                   program=self.program_key,
+                                   program=Program.get(self.program_key),
                                    after=(datetime.date.today())),
          }
       )
       memcache.set(memcache_key, playlist_html, 60 * 60 * 24)
 
-    last_psa = Psa.get_last() # cache.getLastPsa()
+    last_psa = None #Psa.get_last() # cache.getLastPsa()
     new_albums = None
     #new_song_div_html = memcache.get("new_song_div_html")
     album_songs = []
@@ -356,7 +358,7 @@ class ChartSong(UserHandler):
       new_albums = Album.get_new() #by_artist=True)
       if new_albums:
         logging.debug(new_albums)
-        album_songs = Song.get(new_albums[0].p_tracklist)
+        album_songs = Song.get(new_albums[0].tracklist)
       new_song_div_html = template.render(
         get_path("dj_chartsong_newsongdiv.html"),
         {'new_albums': new_albums,
@@ -371,7 +373,6 @@ class ChartSong(UserHandler):
       'new_albums': new_albums,
       'album_songs': album_songs,
       'new_song_div_html': new_song_div_html,
-      'posts': posts,
     }
     self.response.out.write(
       template.render(get_path("dj_chartsong.html"), template_values))
@@ -401,8 +402,8 @@ class ChartSong(UserHandler):
           self.redirect("/dj/chartsong/")
           return
         logging.debug(song)
-        trackname = song.p_title
-        track_artist = song.p_artist
+        trackname = song.title
+        track_artist = song.artist
         Play.new(song=song, program=self.program_key,
                  play_date=datetime.datetime.now(), is_new=True,
                  artist=album.artist).put()
@@ -456,7 +457,7 @@ class ChartSong(UserHandler):
       # End of song charting.
     elif self.request.get("submit") == "Station ID":
       # If the DJ has recorded a station ID
-      station_id = models.StationID(program=self.program_key,
+      station_id = models._raw_models.StationID(program=self.program_key,
                                     play_date=datetime.datetime.now())
       station_id.put()
       self.session.add_flash("Station ID recorded.")
@@ -528,7 +529,7 @@ class ManageDJs(UserHandler):
       'dj_list': dj_list,
       'session': self.session,
       'flash': self.flashes,
-      'posts': models.getLastPosts(3),
+      'posts': BlogPost.get_last(num=3),
     }
     self.response.out.write(template.render(get_path("dj_manage_djs.html"),
       template_values))
@@ -621,7 +622,7 @@ class EditDJ(UserHandler):
         'dj': dj,
         'session': self.session,
         'flash': self.flashes,
-        'posts': models.getLastPosts(3),
+        'posts': BlogPost.get_last(num=3),
       }
       self.response.out.write(
           template.render(get_path("dj_manage_djs.html"), template_values))
@@ -703,7 +704,7 @@ class ManagePrograms(UserHandler):
           "Click <a href='/dj/programs/%s'>here</a> "
           "to edit it (you probably want to do "
           "this as there are no DJs on it currently)."%
-          (program.title, str(program.key())))
+          (program.title, str(program.key)))
 
     self.redirect('/dj/programs/')
 
@@ -738,12 +739,12 @@ class EditProgram(UserHandler):
       self.session.add_flash(
         "There was an error processing your request. Please try again.")
     elif self.request.get("submit") == "Edit Program":
-      program.p_title = self.request.get("title")
-      program.p_slug = self.request.get("slug")
-      program.p_desc = self.request.get("desc")
-      program.p_page_html = self.request.get("page_html")
-      program.p_dj_list = self.request.get_all("djkey")
-      program.p_current = bool(self.request.get("current"))
+      program.title = self.request.get("title")
+      program.slug = self.request.get("slug")
+      program.desc = self.request.get("desc")
+      program.page_html = self.request.get("page_html")
+      program.dj_list = self.request.get_all("djkey")
+      program.current = bool(self.request.get("current"))
       program.put()
       self.session.add_flash(program.title + " successfully edited.")
     elif self.request.get("submit") == "Delete Program":
@@ -755,41 +756,51 @@ class EditProgram(UserHandler):
 class MySelf(UserHandler):
   @login_required
   def get(self):
-    dj = models.Dj.get(self.dj_key)
+    dj = Dj.get(self.dj_key)
     template_values = {
       'session': self.session,
       'flash': self.flashes,
       'dj': dj,
-      'posts': models.getLastPosts(1),
+      'posts': BlogPost.get_last(1),
     }
-    self.response.out.write(template.render(get_path("dj_self.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("dj_self.html"), template_values))
 
   @login_required
   def post(self):
-    dj = models.Dj.get(self.request.get("dj_key"))
-    errors = ""
+    dj_key = ndb.Key(urlsafe=self.request.get("dj_key"))
+    dj = Dj.get(dj_key)
+
     if not dj:
-      self.session.add_flash("An error occurred processing your request.  Please try again.")
+      self.session.add_flash(
+        "An error occurred processing your request.  Please try again.")
       self.redirect("/dj/myself")
       return
     dj.fullname = self.request.get("fullname")
-    dj.lowername = dj.fullname.lower()
+
     email = self.request.get("email")
-    duplicate_dj = models.getDjByEmail(email)
-    if duplicate_dj and str(duplicate_dj.key()) != str(dj.key()):
-      errors += "The email specified is already in use by another DJ.  Please enter a unique one."
+    if email[-1] == "@":
+      email += "bowdoin.edu"
+    if "@" not in email:
+      email += "@bowdoin.edu"
+    duplicate_dj_key = Dj.get_key_by_email(email)
+    if duplicate_dj_key and duplicate_dj_key != dj.key:
+      error = True
+      self.session.add_flash(
+        "The email specified is already in use by another DJ.  "
+        "Please enter a unique one.")
     dj.email = email
-    if dj.email[-1] == "@":
-      dj.email = dj.email + "bowdoin.edu"
-    if "@" not in dj.email:
-      dj.email = dj.email + "@bowdoin.edu"
+
     username = self.request.get("username")
-    duplicate_dj = models.getDjByUsername(username)
-    if duplicate_dj and str(duplicate_dj.key()) != str(dj.key()):
-      errors += "The username specified is already in use by another DJ.  Please choose another."
+    duplicate_dj_key = Dj.get_key_by_username()
+    if duplicate_dj_key and duplicate_dj_key != dj.key:
+      error = True
+      self.session.add_flash(
+        "The username specified is already in use by another DJ.  "
+        "Please choose another.")
     dj.username = username
-    if errors:
-      self.session.add_flash(errors)
+
+    if error:
       self.redirect("/dj/myself")
       return
     if self.request.get("password"):
@@ -798,7 +809,8 @@ class MySelf(UserHandler):
         self.redirect("/dj/myself")
         return
       else:
-        dj.password_hash = hash_password(self.request.get("password"))
+        dj.password = self.request.get("password")
+
     dj.put()
     self.session.add_flash("You have successfully updated your profile.")
     self.redirect("/dj/")
@@ -812,9 +824,10 @@ class MyShow(UserHandler):
       'session': self.session,
       'flash': self.flashes,
       'program': program,
-      'posts': models.getLastPosts(2),
+      'posts': BlogPost.get_last(2),
     }
-    self.response.out.write(template.render(get_path("dj_myshow.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("dj_myshow.html"), template_values))
 
   @login_required
   def post(self):
@@ -824,9 +837,10 @@ class MyShow(UserHandler):
       self.redirect("/dj/myshow")
       return
     slug = self.request.get("slug")
-    p = models.getProgramBySlug(slug)
-    if p and program.key() != p.key():
-      self.session.add_flash("There is already a program with slug \"" + slug + "\".")
+    p = Program.get_by_slug(slug)
+    if p and program.key != p.key:
+      self.session.add_flash("There is already a program with slug \""
+                             + slug + "\".")
       self.redirect("/dj/myshow")
       return
     program.title = self.request.get("title")
@@ -845,7 +859,7 @@ class MyShow(UserHandler):
 class NewBlogPost(UserHandler):
   @authorization_required("Manage Blog")
   def get(self):
-    posts = models.getLastPosts(2)
+    posts = BlogPost.get_last(2)
     template_values = {
       'session': self.session,
       'flash': self.flashes,
@@ -861,13 +875,13 @@ class NewBlogPost(UserHandler):
     text = self.request.get("text")
     post_date = datetime.datetime.now();
     slug = self.request.get("slug")
-    post = models.BlogPost(
-        title=title,
-        text=text,
-        post_date=post_date,
-        slug=slug)
-    posts = models.getLastPosts(2)
-    if models.getPostBySlug(post_date, slug):
+    post = BlogPost.new(
+      title=title,
+      text=text,
+      post_date=post_date,
+      slug=slug)
+    posts = BlogPost.get_last(num=2)
+    if BlogPost.get_by_slug(slug, post_date=post_date):
       errors = ("Error: this post has a duplicate slug to another post from "
                 "the same day.  This probably shouldn't happen often.")
     template_values = {
@@ -891,14 +905,14 @@ class EditBlogPost(UserHandler):
   @authorization_required("Manage Blog")
   def get(self, date_string, slug):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
-    post = models.getPostBySlug(post_date, slug)
+    post = BlogPost.get_by_slug(slug, post_date=post_date)
     if not post:
       self.session.add_flash(
           "The post you're looking for does not exist.  "
           "But you can look at actual posts below :)")
       self.redirect("/")
       return
-    posts = models.getLastPosts(2)
+    posts = BlogPost.get_last(num=2)
     template_values = {
       'session': self.session,
       'flash': self.flashes,
@@ -915,8 +929,8 @@ class EditBlogPost(UserHandler):
     title = self.request.get("title")
     text = self.request.get("text")
     slug = self.request.get("slug")
-    post_key = self.request.get("post_key")
-    post = models.BlogPost.get(post_key)
+    post_key = ndb.Key(urlsafe=self.request.get("post_key"))
+    post = BlogPost.get(post_key)
     if not post:
       self.session.add_flash(
         "The post you're looking for does not exist.  "
@@ -930,17 +944,17 @@ class EditBlogPost(UserHandler):
       self.session.add_flash("Post deleted.")
       self.redirect("/")
       return
-    duplicate = models.getPostBySlug(post.post_date, slug)
+    duplicate = BlogPost.get_by_slug(slug, post_date=post.post_date)
     old_slug = post.slug
     post.slug = slug
     if duplicate:
-      if str(duplicate.key()) != post_key:
+      if duplicate.key != post_key:
         errors = ("This post has a duplicate slug to another post "
                   "from the same day.  Please rename the slug.")
         post.slug = old_slug
     post.title = title
     post.text = text
-    posts = models.getLastPosts(2)
+    posts = BlogPost.get_last(num=2)
     template_values = {
       'session': self.session,
       'flash': self.flashes,
@@ -971,7 +985,7 @@ class RemovePlay(UserHandler):
 class NewEvent(UserHandler):
   @authorization_required("Manage Events")
   def get(self):
-    posts = models.getLastPosts(2)
+    posts = BlogPost.get_last(num=2)
     template_values = {
       'session': self.session,
       'flash': self.flashes,
@@ -1018,7 +1032,7 @@ class EditEvent(UserHandler):
     day = event.event_date.strftime("%m/%d/%Y")
     hour = event.event_date.strftime("%H")
     minute = event.event_date.strftime("%M")
-    posts = models.getLastPosts(2)
+    posts = BlogPost.get_last(num=2)
     template_values = {
       'session': self.session,
       'flash': self.flashes,
@@ -1077,13 +1091,13 @@ class ManagePermissions(UserHandler):
     permissions = Permission.get_all()
     template_values = {
       'permissions': [{
-        'key': p.key(),
+        'key': p.key,
         'title': p.title,
         'dj_list': [Dj.get(d) for d in p.dj_list],
         } for p in permissions],
       'session': self.session,
       'flash': self.flashes,
-      'posts': models.getLastPosts(2),
+      'posts': BlogPost.get_last(num=2),
     }
     self.response.out.write(
         template.render(get_path("dj_permissions.html"), template_values))
@@ -1109,17 +1123,17 @@ class ManagePermissions(UserHandler):
     if action == "add":
       if permission.has_dj(dj):
         errors = ("%s is already in the %s permission list."%
-                  (dj.p_fullname, permission.p_title))
+                  (dj.fullname, permission.title))
       else:
         permission.add_dj(dj)
         status = ("Successfully added %s to %s permission list."%
                   (dj.fullname, permission.title))
     if action == "remove":
-      if dj.key() not in permission.dj_list:
+      if dj.key not in permission.dj_list:
         errors = (dj.fullname + " was not in the " +
                   permission.title + " permission list.")
       else:
-        permission.remove_dj(dj.key())
+        permission.remove_dj(dj.key)
         status = ("Successfully removed " + dj.fullname + " from " +
                   permission.title + " permission list.")
     if errors:

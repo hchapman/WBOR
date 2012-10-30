@@ -288,6 +288,7 @@ class Dj(CachedModel):
     if dj is None:
       raise NoSuchUsername()
 
+    logging.error("dj is %s"%dj)
     if not dj.password_matches(password):
       raise InvalidLogin()
 

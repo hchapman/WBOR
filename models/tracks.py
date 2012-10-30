@@ -287,8 +287,6 @@ class Song(CachedModel):
     if album is not None:
       self.raw.album = album
 
-    return song
-
   @classmethod
   def new(cls, title, artist, album=None,
                parent=None, **kwds):
