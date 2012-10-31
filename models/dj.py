@@ -216,7 +216,6 @@ class Dj(CachedModel):
     try:
       other = self.get_key_by_email(email)
       if other is not None and other != self.key:
-        print other
         raise ModelError("There is already a Dj with this email", other)
     except NoSuchEmail:
       pass

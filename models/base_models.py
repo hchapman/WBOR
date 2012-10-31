@@ -125,7 +125,6 @@ class QueryCache(CacheItem):
     super(QueryCache, self).__init__(cachekey)
     self.set(data=data, cursor=cursor, more=more, keylen=keylen)
 
-
   @classmethod
   def fetch(cls, cachekey):
     result = CachedModel.cache_get(cachekey)
@@ -210,8 +209,9 @@ class SortedQueryCache(QueryCache):
     """Run through data until we find where to add the new key. Don't
     add the key if no spot is found"""
     for i, (key, val) in enumerate(self._data):
-      if new_val > val:
-        self._data.insert(i, (new_key, new_val))
+      if new_val >= val:
+        if key != new_key:
+          self._data.insert(i, (new_key, new_val))
         break
 
   @property
@@ -247,6 +247,16 @@ class CachedModel(object):
     if self._dbentry is None and self._dbkey is not None:
       self._dbentry = self._dbkey.get()
     return self._dbentry
+
+  @classmethod
+  def as_object(cls, thing):
+    """ Tries really, really hard to make thing into an instance of cls. """
+    if isinstance(thing, cls): return thing
+    if isinstance(thing, cls._RAW): return cls(raw=thing)
+    if isinstance(thing, str) or isinstance(thing, unicode):
+      thing = ndb.Key(urlsafe=thing)
+    if isinstance(thing, ndb.Key): return cls.get(thing)
+    return None
 
   def __init__(self, raw=None, raw_key=None, parent=None, cached=True,
                **kwargs):
@@ -334,6 +344,7 @@ class CachedModel(object):
       return cls(raw=keys)
 
     if is_key(keys) or one_key:
+      logging.error(keys.get())
       return cls(raw=keys.get())
 
     raw_objs = filter(None, ndb.get_multi(keys))

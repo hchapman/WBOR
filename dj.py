@@ -42,8 +42,7 @@ from models.base_models import (NoSuchEntry,)
 from models.dj import (Dj, Permission, InvalidLogin,
                        NoSuchUsername, NoSuchEmail)
 from models.tracks import Album, Song, ArtistName
-from models.play import Play, Psa, StationID
-from models.program import Program
+from models.play import Play, Psa, StationID, Program
 from models.blog import BlogPost
 
 from configuration import webapp2conf

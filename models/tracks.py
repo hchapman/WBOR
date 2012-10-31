@@ -170,7 +170,7 @@ class Album(CachedModel):
       return query.fetch(num, keys_only=True, start_cursor=cursor)
     else:
       return query.fetch_page(num, keys_only=True, start_cursor=cursor)
-    
+
 
   def put(self):
     # If we've toggled the newness of the album, update cache.
@@ -225,7 +225,7 @@ class Album(CachedModel):
     cached = cls.get_cached_query(cls.NEW)
     if not cached or cached.need_fetch(num):
       num_to_fetch = num - len(cached)
-      keys, cursor, more = cls.get_key(is_new=True, 
+      keys, cursor, more = cls.get_key(is_new=True,
                                        order=(-RawAlbum.add_date,), num=num,
                                        page=True, cursor=cached.cursor)
       cached.extend(keys)
@@ -274,9 +274,11 @@ class Song(CachedModel):
                title=None, artist=None, album=None,
                parent=None, **kwds):
     if raw is not None:
-      super(Song, self).__init(raw=raw)
+      super(Song, self).__init__(raw=raw)
+      return
     elif raw_key is not None:
-      super()
+      super(Song, self).__init__(raw_key=raw_key)
+      return
 
     if parent is None:
       parent = album
@@ -304,27 +306,26 @@ class Song(CachedModel):
   @classmethod
   def get(cls, keys=None,
           title=None, order=None,
-          num=-1, use_datastore=True, one_key=False):
+          num=-1, one_key=False):
     if keys is not None:
-      logging.debug(keys)
-      return super(Song, cls).get(keys, use_datastore=use_datastore,
-                                        one_key=one_key)
+      logging.error(keys)
+      return super(Song, cls).get(keys, one_key=one_key)
 
     keys = cls.get_key(title=title, order=order, num=num)
     if keys is not None:
-      return cls.get(keys=keys, use_datastore=use_datastore)
+      return cls.get(keys=keys)
     return None
 
   @classmethod
   def get_key(cls, title=None, order=None, num=-1):
-    query = cls.all(keys_only=True)
+    query = cls._RAW.query()
 
     if order is not None:
       query = query.order(order)
 
     if num == -1:
-      return query.get()
-    return query.fetch(num)
+      return query.get(keys_only=True)
+    return query.fetch(num, keys_only=True)
 
   def put(self):
     return super(Song, self).put()
@@ -351,6 +352,7 @@ class ArtistName(CachedModel):
   # not rechecking the datastore. Figit with this number to balance reads and
   # autocomplete functionality. Possibly consider algorithmically determining
   # a score for artist names and prefixes?
+  AC_FETCH_NUM = 10
   MIN_AC_CACHE = 10
   MIN_AC_RESULTS = 5
 
@@ -512,8 +514,27 @@ class ArtistName(CachedModel):
           return cls.get(results)
         return cls.get(results)
 
-    # My calculations say this uses two more Smalls than we need but... shit,
-    # last I looked it's not smalls we're running over on
+    cached = SortedQueryCache.fetch(cls.COMPLETE %cache_prefix)
+    if cached.need_fetch(cls.AC_FETCH_NUM):
+      try:
+        # Try to continue an older query
+        num = cls.AC_FETCH_NUM - len(cached)
+        query = RawArtistName.query(
+          ndb.OR(ndb.AND(RawArtistName.lowercase_name >= prefix,
+                         RawArtistName.lowercase_name < (prefix + u"\ufffd")),
+                 ndb.AND(RawArtistName.search_name >= prefix,
+                         RawArtistName.search_name < (prefix + u"\ufffd"))))
+        raw_artists, cursor, more = query.fetch(num, page=True, start_cursor=cursor)
+      except db.BadRequestError:
+        # Unable to continue the older query. Run a new one.
+        query = RawArtistName.query(
+          ndb.OR(ndb.AND(RawArtistName.lowercase_name >= prefix,
+                         RawArtistName.lowercase_name < (prefix + u"\ufffd")),
+                 ndb.AND(RawArtistName.search_name >= prefix,
+                         RawArtistName.search_name < (prefix + u"\ufffd"))))
+        raw_artists, cursor, more = query.fetch(num, page=True, start_cursor=cursor)
+      
+
     artists_full = (RawArtistName.query()
                     .filter(RawArtistName.lowercase_name >= prefix)
                     .filter(RawArtistName.lowercase_name < (prefix + u"\ufffd"))
