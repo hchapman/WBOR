@@ -48,10 +48,7 @@ $(document).ready(function() {
         $.get("/callvoice", {
             button_id: button_id,
             cid_number: cid_number,
-            cid_name: cid_name},
-              function(data) {
-                  alert(data);
-              });
+            cid_name: cid_name});
     });
 
     nowPlaying();
