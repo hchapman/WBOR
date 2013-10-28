@@ -27,9 +27,12 @@
       </thead>
       <tbody>{% for s in songs %}
         <tr>
-	  <td>{{ forloop.counter }}{% for entry in s %}{% if login or not forloop.first %}
-          <td>{{ entry }}</td>
-        {% endif %}{% endfor %}</tr>
+	  <td>{{ forloop.counter }}</td>
+          {% if login %}<td>{{ s.1 }}</td>{% endif %}
+          <td>{{ s.0.title }}</td>
+          <td>{{ s.0.artist }}</td>
+          <td>{{ s.0.album.title}}</td>
+        </tr>
       {% endfor %}</tbody>
     </table>
     {% else %}
@@ -55,9 +58,11 @@
     <tbody>
       {% for a in albums %}
       <tr>
-      <td>{{ forloop.counter }}{% for entry in a %}{% if login or not forloop.first %}
-        <td>{{ entry }}</td>
-      {% endif %}{% endfor %}</tr>
+        <td>{{ forloop.counter }}</td>
+        {% if login %}<td>{{ a.1 }}</td>{% endif %}
+        <td>{{ a.0.title }}</td>
+        <td>{{ a.0.artist }}</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
@@ -77,11 +82,13 @@
   <h4>{{ start|date }} through {{ end|date }}</h4>
   
   <p>Select a different week below.</p>
-  <form method='post' action='/dj/charts/'>
-    <label>Start date: <input type='text' class='datepicker' name='start_date' id='start_date'></label>
+  <form method='post' action='/charts/'>
+    <label>Start date: 
+      <input type='text' class='datepicker' name='start_date' id='start_date'></label>
     <br />
-	<label>End date: <input type='text' class='datepicker' name='start_date' id='start_date'></label>
-	<br />
+    <label>End date: 
+      <input type='text' class='datepicker' name='end_date' id='end_date'></label>
+    <br />
     <input type='submit' name='submit' value="Submit">
   </form>
 </div>

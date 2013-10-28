@@ -1,0 +1,89 @@
+<form action='/dj/{{ action }}/{% if program %}{{ program.key.urlsafe }}/{% endif %}'
+      method='post' name="program-info-form" id="program-info-form">
+  <h3>Program information</h3>
+  <label for='title'>Title
+  </label>
+  <input id='title' type='text' name='title' value='{{ program.title|escape }}'/>
+
+  <label for='slug'>Slug
+  </label>
+  <div class="control-group">
+    <input id='slug' type='text' name='slug'
+           value='{{ program.slug }}' />
+    <span class="help-inline">Will format as: 
+      <span id="slugified-slug">{{ program.slug }}</span>
+    </span>
+  </div>
+
+  <label for='current' class='checkbox'>
+    <input id='current' type='checkbox' name='current' value='1'
+           {% if not program or program.current %}checked='checked'{% endif %}
+           /> This show is on the air this season
+  </label>
+
+  <label for='desc'>Description
+  </label>
+  <textarea name='desc' class="span5" rows=7 
+            id='desc'>{{ program.desc|escape }}</textarea>
+  <br>
+
+  <label for='page_html'>Page HTML
+  </label>
+  <textarea class='tinymce' name='page_html'
+            id='page_html'>{{ program.page_html|escape }}</textarea>
+  <br>
+
+  <h3>Program DJs</h3>
+  <div id="dj-table"
+       class="{% if not program_djs %}hidden-djs{% endif %}">
+    <label>DJs presently in program
+    </label>
+    <table id="show-dj-list" class="table table-bordered
+                                    table-striped">
+      <thead><tr><th>Remove?</th><th>Name</th><th>Email</th></tr></thead>
+      <tbody>{% for dj in program_djs %}
+        <tr><td>{% ifequal action "myshow" %}
+            {% ifequal dj.key.urlsafe session.dj.key %}{% else %}
+            <a id="remove-dj">×</a>{% endifequal%}
+            {% else %}<a id="remove-dj">×</a>
+            {% endifequal %}</td>
+          <td id="djname">{{ dj.fullname }}</td>
+          <td id="djemail">{{ dj.email }}</td>
+          <input type="hidden" id="djkey" name="djkey" 
+                 value="{{ dj.key.urlsafe }}"></tr> 
+        {% endfor %}</tbody>
+    </table>
+  </div>
+  <div id="no-dj-alert"
+       class="{% if program and program.dj_list %}hidden-djs{% endif %} alert">
+    There are presently no DJs in this program! Ancient
+    proverb says; <em>a program without DJs is like a bird without
+      a beak</em>. You should probably add some.
+  </div>
+</form>
+
+<form class="form form-search" id="dj-search-form">
+      <label for="dj-search-query">Add a DJ
+      </label>
+        <input class="span5 search-query" type="text"
+               name="dj-search-query" id="dj-search-query"
+               placeholder="Search DJs">
+        <input id="dj-search-button"
+               type="submit" class="btn btn-primary" value="Search!"
+               />
+</form>
+    <div id="dj-search-results" class="well" style="display: none;">
+      <h4>Results for &quot;<span id="dj-search-querystring"></span>&quot;</h4>
+      <ul id="dj-search-results-list" class="nav nav-stacked nav-pills">
+      </ul>
+    </div>
+        
+    <div class="form-actions">
+      <input type='submit' class="btn btn-primary" form="program-info-form"
+             name='submit' value="{% if program %}Edit{% else %}Add{% endif %} Program">
+      {% if program %}
+      <input id='delete-button' type='submit' name='submit' form="program-info-form"
+             class="btn btn-danger" value='Delete Program' />
+
+      {% endif %}
+        </div>

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block extra_scripts %}
+    <script type='text/javascript'>
+    function slugify(text) {
+        text = text.toLowerCase();
+        text = text.replace(/[^-a-zA-Z0-9\s]+/ig, '');
+        text = text.replace(/-/gi, "-");
+        text = text.replace(/\s/gi, "-");
+        return text;
+    }
+
+    var djbutton = $("<tr></tr>");
+    djbutton.append($("<td><a>&times;</a></td>"))
+    djbutton.append($("<td id=\"djname\"></td>"));
+    djbutton.append($("<td id=\"djemail\">Email</td>"));
+    djbutton.append($("<input type=\"hidden\" id=\"djkey\""+
+                      " name=\"djkey\" value=\"\"/>"));
+
+    function addDjToProgram(key, name, email) {
+        var newbutton = djbutton.clone();
+        newbutton.find("#djname").text(name);
+        newbutton.find("#djemail").text(email);
+        newbutton.find("#djkey").val(key);
+        $("#show-dj-list").find("tbody").append(newbutton);
+        $("#dj-table").removeClass("hidden-djs");
+        $("#no-dj-alert").addClass("hidden-djs");
+    }
+
+    $(function() {
+        $("a.delete").click(function(e) {
+          var dj_key = $(this).parent().attr("id");
+          dj_key = dj_key.split("_")[1];
+          var permission_key = $(this).parent().parent().attr("id");
+          $.post("/dj/permissions",
+          {
+            'dj_key': dj_key,
+            'permission_key': permission_key,
+            'action': 'remove',
+          },
+          function(data) {
+            if (data.err) {
+              alert(data.err);
+            } else {
+              $("#" + permission_key + "_" + dj_key).remove();
+            }
+          }, "json");
+          return false;
+        });
+
+        $("#dj-search-form").submit(function(e) {
+            if ($("#dj-search-query").val().length < 1)
+                return;
+
+            $.getJSON('/ajax/djcomplete',
+                      {'query': $("#dj-search-query").val()},
+                      function(data) {
+                          $("#dj-search-querystring").text(data["query"]);
+                          $("#dj-search-results-list").empty();
+                          $.each(data["data"], function(i, dj) {
+                              $("<li><a href='/dj/djs/"+dj["key"]+
+                                "'>"+dj["name"]+"</a></li>").appendTo(
+                                   $("#dj-search-results-list"));
+                          });
+                          $("#dj-search-results").slideDown("fast");
+                      });
+           return false;
+        });
+        $("#dj-search-results").slideUp("fast");
+
+        $("#title").focusout(function() {
+            $("#title").each(function(index) {
+                if($("#slug").val().length > 0) {
+                    return;
+                }
+                var tempslug = slugify($(this).val());
+                $("#slug").val(tempslug);
+                $("#slugified-slug").text(tempslug);
+            });
+        });
+        $("#slug").focusout(function() {
+            $("#slug").each(function(index) {
+                $("#slugified-slug").text(slugify($(this).val()));
+            });
+        });
+        if ($(".dj-autocomplete-program").length > 0) {
+        $(".dj-autocomplete-program").each(function(index) {
+            $(this).autocomplete({
+                serviceUrl: '/ajax/djcomplete',
+                minChars: 1,
+                width: $(".dj-autocomplete-program").width(),
+                maxHeight: 400,
+                onSelect: function(value, data) {
+                    addDjToProgram(data["key"], data["name"], data["email"]);
+                },
+            });
+        });
+    }
+    });
+</script>
+{% endblock %}
+
+{% block top_row %}
+<div class="span12">
+  <h1>Open DJ Registration</h1>
+  <hr>
+</div>
+{% endblock %}
+
+{% block content_row %}
+<div class="span7">
+  <p>Great! {{ uses }} new DJs can now register for WBOR.org using the
+    secret code <strong>{{ token }}</strong>. The easiest way to
+    proceed is to copy, paste, and send the new DJs the following
+    email:</p>
+
+  <textarea class="span7" rows=20>
+Hi!
+
+Now that you've been accepted to have a show on WBOR 91.1FM,
+you're going to need to register at WBOR.org so that you can take
+advantage of song charting! To register, copy and paste the
+following URL into your web browser:
+
+http://www.wbor.org/signup?token={{ token }}
+
+Alternatively, you may navigate yourself to the DJ Signup page at
+www.wbor.org and enter the following secret code where
+appropriate:
+
+{{ token }}
+
+Good luck with your new show!
+  </textarea>
+</div>
+{% endblock %}

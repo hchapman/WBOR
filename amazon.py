@@ -39,10 +39,7 @@ def productSearch(keywords):
   coded = dig.encode("base64").strip()
   finalurl = ("http://webservices.amazon.com/onca/xml?" + string +
               "&Signature=" + urllib.quote_plus(coded))
-  logging.warning(hashstring)
-  logging.warning("Final URL: " + finalurl)
   xmldata = urlfetch.fetch(unicode(finalurl)).content
-  logging.warning("XML Data: " + xmldata)
   xmldoc = minidom.parseString(xmldata)
   items = xmldoc.getElementsByTagName("Item")
   # makes sure we only look at items with images,

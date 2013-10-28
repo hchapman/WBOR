@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block top_row %}
+<div class="span12">
+  <h1>Register as a New DJ</h1>
+  <hr>
+</div>
+{% endblock %}
+
+{% block content_row %}
+<div class="span7">
+<p>To sign up as a DJ, you'll need the secret code sent to you in an email when
+  you were granted your show. If you clicked the link in that email,
+  you're all set!</p>
+    <form action='/signup/' method='post'>
+      <label for="token">Secret registration code</label>
+      <input id="token" type="text" name="token" value="{{ token }}"><br />
+
+      <label for='email'>Email </label>
+      <input id='email' type='text' name='email'/><br />
+
+      <label for='fullname'>Full Name </label>
+      <input id='fullname' type='text' name='fullname' /><br />
+
+      <label for='username'>Username </label>
+      <input id='username' name='username' type='text' /><br />
+
+      <label for='password'>Password </label>
+      <input id='password' name='password' type='password' /><br />
+
+      <label for='confirm'>Confirm Password </label>
+      <input id='confirm' name='confirm' type='password' /><br />
+
+      <div class="form-actions">
+      <input class="btn btn-primary"
+             type='submit' name='submit'
+             value="Register" />
+      </div>
+    </form>
+</div>
+{% endblock %}

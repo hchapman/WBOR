@@ -11,7 +11,12 @@
   <h3>Top artists</h3>
   <ol class='charttable' id='songtable'>
     {% for a in program.top_artists|slice:":5" %}
-      <li>{{ a }}
+      <li>{{ a.0 }}
+        <div class="progress" style="margin-bottom: 9px;">
+          <div class="bar"
+               style="width: {% widthratio a.1 program.num_top_plays 100 %}%;">
+          </div>
+        </div></li>
     {% endfor %}
   </ol>
 </div>

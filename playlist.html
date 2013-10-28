@@ -1,5 +1,132 @@
 {% extends "base.html" %}
 
+{% block extra_scripts %}
+    <script type='text/javascript'>
+    function slugify(text) {
+        text = text.toLowerCase();
+        text = text.replace(/[^-a-zA-Z0-9\s]+/ig, '');
+        text = text.replace(/-/gi, "-");
+        text = text.replace(/\s/gi, "-");
+        return text;
+    }
+
+    var djbutton = $("<tr></tr>");
+    djbutton.append($("<td><a>&times;</a></td>"))
+    djbutton.append($("<td id=\"djname\"></td>"));
+    djbutton.append($("<td id=\"djemail\">Email</td>"));
+    djbutton.append($("<input type=\"hidden\" id=\"djkey\""+
+                      " name=\"djkey\" value=\"\"/>"));
+
+    function addDjToProgram(key, name, email) {
+        var newbutton = djbutton.clone();
+        newbutton.find("#djname").text(name);
+        newbutton.find("#djemail").text(email);
+        newbutton.find("#djkey").val(key);
+        $("#show-dj-list").find("tbody").append(newbutton);
+        $("#dj-table").removeClass("hidden-djs");
+        $("#no-dj-alert").addClass("hidden-djs");
+    }
+
+    $(function() {
+        $("a.delete").click(function(e) {
+          var dj_key = $(this).parent().attr("id");
+          dj_key = dj_key.split("_")[1];
+          var permission_key = $(this).parent().parent().attr("id");
+          $.post("/dj/permissions",
+          {
+            'dj_key': dj_key,
+            'permission_key': permission_key,
+            'action': 'remove',
+          },
+          function(data) {
+            if (data.err) {
+              alert(data.err);
+            } else {
+              $("#" + permission_key + "_" + dj_key).remove();
+            }
+          }, "json");
+          return false;
+        });
+
+        $("#dj-search-form").submit(function(e) {
+            if ($("#dj-search-query").val().length < 1)
+                return;
+
+            ajaxSearch(SEARCH_DJ,
+                      $("#dj-search-query").val(),
+                      function(data) {
+                          $("#dj-search-querystring").text(data["query"]);
+                          $("#dj-search-results-list").empty();
+                          $.each(data["data"], function(i, dj) {
+                              $("<li></li>").append(
+                                  $("<a href='#'>"+dj["name"]+"</a>").click(
+                                      function(e) {
+                                          addDjToProgram(
+                                              dj["key"],
+                                              dj["name"],
+                                              dj["email"]);
+                                      })
+                              ).appendTo(
+                                   $("#dj-search-results-list"));
+                          });
+                          $("#dj-search-results").slideDown("fast");
+                      });
+            return false;
+        });
+        $("#dj-search-results").slideUp("fast");
+
+        $("#show-search-form").submit(function(e) {
+            if ($("#show-search-query").val().length < 1)
+                return false;
+
+            ajaxSearch(SEARCH_SHOW,
+                      $("#show-search-query").val(),
+                      function(data) {
+                          $("#show-search-querystring").text(data["query"]);
+                          $("#show-search-results-list").empty();
+                          $.each(data["data"], function(i, show) {
+                              $("<li><a href='/playlists?show="+show["slug"]+
+                                "'>"+show["name"]+"</a></li>").appendTo(
+                                   $("#show-search-results-list"));
+                          });
+                          $("#show-search-results").slideDown("fast");
+                      });
+            return false;
+        });
+        $("#show-search-results").slideUp("fast");
+
+        $("#title").focusout(function() {
+            $("#title").each(function(index) {
+                if($("#slug").val().length > 0) {
+                    return;
+                }
+                var tempslug = slugify($(this).val());
+                $("#slug").val(tempslug);
+                $("#slugified-slug").text(tempslug);
+            });
+        });
+        $("#slug").focusout(function() {
+            $("#slug").each(function(index) {
+                $("#slugified-slug").text(slugify($(this).val()));
+            });
+        });
+        if ($(".dj-autocomplete-program").length > 0) {
+        $(".dj-autocomplete-program").each(function(index) {
+            $(this).autocomplete({
+                serviceUrl: '/ajax/djcomplete',
+                minChars: 1,
+                width: $(".dj-autocomplete-program").width(),
+                maxHeight: 400,
+                onSelect: function(value, data) {
+                    addDjToProgram(data["key"], data["name"], data["email"]);
+                },
+            });
+        });
+    }
+    });
+</script>
+{% endblock %}
+
 {% block title %}Playlists{% endblock %}
 
 {% block main_content %}
@@ -8,22 +135,31 @@
 </div></div>
 <hr>
 <div class="row">
-  <div class='span4 pull-left' id='playlistsearch'>
+  <div class='span5 pull-left' id='playlistsearch'>
     <h2>Playlist Search</h2>
     <form method="GET" id="" action="">
       <label for="programdate">Date (leave blank for most recent playlist):
-  	<input type="text" class="datepicker" name="programdate" id="programdate" />
-      </label>
-      <label for="show">Show:
-  	<select id="show" name="show">
-	  <option value="">All shows</option>
-  	  {% for s in shows %}<option value={{ s.slug }}>{{ s.title }}</option>{% endfor %}
-  	</select>
+  	<input type="text" class="datepicker" name="programdate"
+  	id="programdate" />
+        {% if show %}<input type="hidden" name="show" id="show"
+  	value="{{ show.slug }}" />{% endif %}
       </label>
       <input type="submit" value="Search" class="btn btn-primary"/>
     </form>
+    <h2>View by Program</h2>
+    <form class="form-search" id="show-search-form">
+      <input type="text" class="span3 search-query"
+             id="show-search-query" placeholder="Search Programs"/>
+      <input id="show-search-button"
+             type="submit" class="btn btn-primary" value="Search!" />
+    </form>
+    <div id="show-search-results" class="well" style="display: none;">
+      <h4>Results for &quot;<span id="show-search-querystring"></span>&quot;</h4>
+      <ul id="show-search-results-list" class="nav nav-stacked nav-pills">
+      </ul>
+    </div>
   </div>
-  <div id='playlistresults' class="span8 pull-right">
+  <div id='playlistresults' class="span7 pull-right">
     <h2>Results</h2>
     {% if plays %}
     <ul style='display:none;'>

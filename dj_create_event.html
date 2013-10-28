@@ -13,7 +13,7 @@
     <h4>{% if editing %}Edit{% else %}Create{% endif %} Event</h4>
     <form {% if editing %}{% else %}action='/dj/event/'{% endif %} method='post'>
       {% if editing %}
-      <input type='hidden' value='{{ event.key }}' name='event_key' />
+      <input type='hidden' value='{{ event.key.urlsafe }}' name='event_key' />
       {% endif %}
       <table>
         <tr>

@@ -16,6 +16,26 @@ indexes:
   - name: add_date
     direction: desc
 
+- kind: ArtistName
+  properties:
+  - name: lowercase_name
+  - name: artist_name
+
+- kind: ArtistName
+  properties:
+  - name: search_name
+  - name: artist_name
+
+- kind: BlogPost
+  properties:
+  - name: slug
+  - name: post_date
+
+- kind: Dj
+  properties:
+  - name: __key__
+    direction: desc
+
 - kind: Play
   properties:
   - name: isNew
@@ -25,4 +45,15 @@ indexes:
   properties:
   - name: program
   - name: play_date
+    direction: desc
+
+- kind: Play
+  ancestor: yes
+  properties:
+  - name: play_date
+    direction: desc
+
+- kind: Program
+  properties:
+  - name: __key__
     direction: desc

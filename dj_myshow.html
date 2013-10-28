@@ -1,36 +1,102 @@
 {% extends "base.html" %}
 
+{% block extra_scripts %}
+    <script type='text/javascript'>
+    function slugify(text) {
+        text = text.toLowerCase();
+        text = text.replace(/[^-a-zA-Z0-9\s]+/ig, '');
+        text = text.replace(/-/gi, "-");
+        text = text.replace(/\s/gi, "-");
+        return text;
+    }
+
+    $(function() {
+        $("a.delete").click(function(e) {
+          var dj_key = $(this).parent().attr("id");
+          dj_key = dj_key.split("_")[1];
+          var permission_key = $(this).parent().parent().attr("id");
+          $.post("/dj/permissions",
+          {
+            'dj_key': dj_key,
+            'permission_key': permission_key,
+            'action': 'remove',
+          },
+          function(data) {
+            if (data.err) {
+              alert(data.err);
+            } else {
+              $("#" + permission_key + "_" + dj_key).remove();
+            }
+          }, "json");
+          return false;
+        });
+
+        $("#title").focusout(function() {
+            $("#title").each(function(index) {
+                if($("#slug").val().length > 0) {
+                    return;
+                }
+                var tempslug = slugify($(this).val());
+                $("#slug").val(tempslug);
+                $("#slugified-slug").text(tempslug);
+            });
+        });
+        $("#slug").focusout(function() {
+            $("#slug").each(function(index) {
+                $("#slugified-slug").text(slugify($(this).val()));
+            });
+        });
+
+        $("a#remove-dj").click(function(e){
+            $(this).parentsUntil(":not(td,tr)", "tr").remove();
+            return false;
+        });
+
+        $("#dj-search-form").submit(function(e) {
+            if ($("#dj-search-query").val().length < 1)
+                return false;
+
+            $.getJSON('/ajax/djcomplete',
+                      {'query': $("#dj-search-query").val()},
+                      function(data) {
+                          $("#dj-search-querystring").text(data["query"]);
+                          $("#dj-search-results-list").empty();
+                          $.each(data["data"], function(i, dj) {
+                              $("<li></li>").append(
+                                  $("<a href='#'>"+dj["name"]+"</a>").click(
+                                      function(e) {
+                                          addDjToProgram(
+                                              dj["key"],
+                                              dj["name"],
+                                              dj["email"]);
+                                      })
+                              ).appendTo(
+                                  $("#dj-search-results-list"));
+                          });
+                          $("#dj-search-results").slideDown("fast");
+                      });
+            return false;
+        });
+        $("#dj-search-results").slideUp("fast");
+
+    });
+
+</script>
+{% endblock %}
+
+{% block top_row %}
+  <div class="span12">
+    <h1>{% if program %}Edit my Program{% else %}Create a New
+    Program{% endif %}</h1>
+    <hr>
+  </div>
+{% endblock %}
+
 {% block left_column %}
     <div id='edit-program'>
-        <h4>{{ program.title }}</h4>
-        <form action='/dj/myshow' method='post'>
-          <input type='hidden' value='{{ program.key }}' name='program_key'>
-            <table>
-                <tr>
-                    <td><label for='title'>Title: </label></td>
-                    <td><input id='title' type='text' name='title' value='{{ program.title|escape }}'/></td>
-                </tr>
-                <tr>
-                    <td><label for='slug'>Slug: </label></td>
-                    <td><input id='slug' type='text' name='slug' value='{{ program.slug|escape }}' /></td>
-                </tr>
-                <tr>
-                    <td colspan='2'><label for='desc'>Description: </label></td>
-                </tr>
-                <tr>
-                    <td colspan='2'>
-                        <textarea class='tinymce' name='desc' id='desc'>{{ program.desc|escape }}</textarea>
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan='2'><label for='page_html'>Page HTML: </label></td>
-                </tr>
-                <tr>
-                    <td colspan='2'>
-                        <textarea class='tinymce' name='page_html' id='page_html'>{{ program.page_html|escape }}</textarea>
-                </tr>
-            </table>
-            <input type='submit' name='submit' value="Save">
+        <h2>{% if program %}Editing <em>{{ program.title }}
+          </em>{% else %}Your New Show{% endif %}</h2>
+        {% include "dj_edit_program_form.html" %}
     </div>
 
 {% endblock %}

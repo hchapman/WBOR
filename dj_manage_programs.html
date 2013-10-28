@@ -1,92 +1,154 @@
 {% extends "base.html" %}
 
-{% block left_column %}
-    <div id='edit-program'>
-        <h4>{% if program %}Edit{% else %}Add{% endif %} Program</h4>
-        <form action='/dj/programs/{% if program %}{{ program.key }}/{% endif %}' method='post'>
-            <table>
-                <tr>
-                    <td><label for='title'>Title: </label></td>
-                    <td><input id='title' type='text' name='title' value='{{ program.title|escape }}'/></td>
-                </tr>
-                <tr>
-                    <td><label for='slug'>Slug: </label></td>
-                    <td><input id='slug' type='text' name='slug' value='{{ program.slug|escape }}' /></td>
-                </tr>
-				<tr>
-				  <td><label for='current'>Show is current: </label></td>
-				  <td><input id='current' type='checkbox' name='current' value='1' 
-							 {% if program.current %}checked='checked'{% endif %} /></td>
-				</tr>
-                <tr>
-                    <td colspan='2'><label for='desc'>Description: </label></td>
-                </tr>
-                <tr>
-                    <td colspan='2'>
-                        <textarea class='tinymce' name='desc' id='desc'>{{ program.desc|escape }}</textarea>
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan='2'><label for='page_html'>Page HTML: </label></td>
-                </tr>
-                <tr>
-                    <td colspan='2'>
-                        <textarea class='tinymce' name='page_html' id='page_html'>{{ program.page_html|escape }}</textarea>
-                </tr>
-            </table>
-            <input type='submit' name='submit' value="{% if program %}Edit{% else %}Add{% endif %} Program">
-            {% if program %}
-            <input id='delete-button' type='submit' name='submit' value='Delete Program' />
-            {% endif %}
-    </div>
-    {% if all_dj_list %}
-    <div id='current-djs'>
-        <h4>Select DJs in program</h4>
-        <ul>
-            {% for pair in all_dj_list %}
-            <li><label>
-                {% if pair.in_program %}
-                <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' checked='checked' />
-                {% else %}
-                <input type='checkbox' name='dj_list' value='{{ pair.dj.key }}' />
-                {% endif %}
-                {{ pair.dj.fullname }} ({{ pair.dj.email }})</label>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-    </form>
+{% block extra_scripts %}
+    <script type='text/javascript'>
+    function slugify(text) {
+        text = text.toLowerCase();
+        text = text.replace(/[^-a-zA-Z0-9\s]+/ig, '');
+        text = text.replace(/-/gi, "-");
+        text = text.replace(/\s/gi, "-");
+        return text;
+    }
 
-    {% if current_programs %}
-    <div id='current-programs'>
-        <h4>Current Programs</h4>
-        <ul>
-            {% for p in current_programs %}
-            <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
-			{% if p.dj_list %}<ul style="margin-bottom:0;">
-			  {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
-			</ul>{% endif %}
-            {% endfor %}
-        </ul>
-    </div>
-	{% endif %}{% if legacy_programs %}
-    <div id='legacy-programs'>
-        <h4>Old Programs</h4>
-        <ul>
-            {% for p in legacy_programs %}
-            <li><a href='/dj/programs/{{ p.prog.key }}'>{{ p.prog.title }}</a>
-			{% if p.dj_list %}<ul style="margin-bottom:0;">
-			  {% for dj in p.dj_list %}<li>{{ dj.fullname }} ({{ dj.email }}){% endfor %}
-			</ul>{% endif %}
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
+    $(function() {
+        $("a.delete").click(function(e) {
+          var dj_key = $(this).parent().attr("id");
+          dj_key = dj_key.split("_")[1];
+          var permission_key = $(this).parent().parent().attr("id");
+          $.post("/dj/permissions",
+          {
+            'dj_key': dj_key,
+            'permission_key': permission_key,
+            'action': 'remove',
+          },
+          function(data) {
+            if (data.err) {
+              alert(data.err);
+            } else {
+              $("#" + permission_key + "_" + dj_key).remove();
+            }
+          }, "json");
+          return false;
+        });
+
+    $("a#remove-dj").click(function(e){
+      $(this).parentsUntil(":not(td,tr)", "tr").remove();
+      return false;
+    });
+
+        $("#dj-search-form").submit(function(e) {
+            if ($("#dj-search-query").val().length < 1)
+                return false;
+
+            $.getJSON('/ajax/djcomplete',
+                      {'query': $("#dj-search-query").val()},
+                      function(data) {
+                          $("#dj-search-querystring").text(data["query"]);
+                          $("#dj-search-results-list").empty();
+                          $.each(data["data"], function(i, dj) {
+                              $("<li></li>").append(
+                                  $("<a href='#'>"+dj["name"]+"</a>").click(
+                                      function(e) {
+                                          addDjToProgram(
+                                              dj["key"],
+                                              dj["name"],
+                                              dj["email"]);
+                                          return false;
+                                      })
+                              ).appendTo(
+                                   $("#dj-search-results-list"));
+                          });
+                          $("#dj-search-results").slideDown("fast");
+                      });
+            return false;
+        });
+        $("#dj-search-results").slideUp("fast");
+
+        $("#show-search-form").submit(function(e) {
+            if ($("#show-search-query").val().length < 1)
+                return false;
+
+            $.getJSON('/ajax/showcomplete',
+                      {'query': $("#show-search-query").val()},
+                      function(data) {
+                          $("#show-search-querystring").text(data["query"]);
+                          $("#show-search-results-list").empty();
+                          $.each(data["data"], function(i, show) {
+                              $("<li><a href='/dj/programs/"+show["key"]+
+                                "'>"+show["name"]+"</a></li>").appendTo(
+                                    $("#show-search-results-list"));
+                          });
+                          $("#show-search-results").slideDown("fast");
+                      });
+            return false;
+        });
+        $("#show-search-results").slideUp("fast");
+
+        $("#title").focusout(function() {
+            $("#title").each(function(index) {
+                if($("#slug").val().length > 0) {
+                    return;
+                }
+                var tempslug = slugify($(this).val());
+                $("#slug").val(tempslug);
+                $("#slugified-slug").text(tempslug);
+            });
+        });
+        $("#slug").focusout(function() {
+            $("#slug").each(function(index) {
+                $("#slugified-slug").text(slugify($(this).val()));
+            });
+        });
+        if ($(".dj-autocomplete-program").length > 0) {
+        $(".dj-autocomplete-program").each(function(index) {
+            $(this).autocomplete({
+                serviceUrl: '/ajax/djcomplete',
+                minChars: 1,
+                width: $(".dj-autocomplete-program").width(),
+                maxHeight: 400,
+                onSelect: function(value, data) {
+                    addDjToProgram(data["key"], data["name"], data["email"]);
+                },
+            });
+        });
+    }
+    });
+</script>
 {% endblock %}
 
-{% block right_column %}
-    <div>
-        <a href='/dj/'>Return to main index</a>
+{% block main_content %}
+<div class="row">
+  <div class="span12">
+    <h1>Manage Programs</h1>
+    <hr>
+  </div>
+</div>
+<div class="row">
+  <div class="span7">
+    <h2>{% if program %}Edit{% else %}Add{% endif %} Program</h2>
+    {% include "dj_edit_program_form.html" %}
+  </div>
+
+  <div class="span5">
+    <h2>Find a Program</h2>
+    <h3>Most recently added</h3>
+    <ul>
+      {% for p in new_programs %}
+      <li><a href="/dj/programs/{{ p.key.urlsafe }}">{{ p.title }}</a></li>
+      {% endfor %}
+    </ul>
+    <h3>Search programs</h3>
+    <form class="form-search" id="show-search-form">
+      <input type="text" class="span3 search-query"
+             id="show-search-query" placeholder="Search Programs"/>
+      <input id="show-search-button"
+             type="submit" class="btn btn-primary" value="Search!" />
+    </form>
+    <div id="show-search-results" class="well" style="display: none;">
+      <h4>Results for &quot;<span id="show-search-querystring"></span>&quot;</h4>
+      <ul id="show-search-results-list" class="nav nav-stacked nav-pills">
+      </ul>
     </div>
-    {% include "last_n_posts.html" %}
+  </div>
+</div>
 {% endblock %}

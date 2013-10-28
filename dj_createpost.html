@@ -11,7 +11,7 @@
     <h4>{% if editing %}Edit{% else %}Create{% endif %} Post</h4>
     <form {% if editing %}{% else %}action='/dj/newpost/'{% endif %} method='post'>
       {% if editing %}
-      <input type='hidden' value='{{ post.key }}' name='post_key' />
+      <input type='hidden' value='{{ post.key.urlsafe }}' name='post_key' />
       {% endif %}
       <table>
         <tr>

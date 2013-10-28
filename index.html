@@ -39,15 +39,15 @@
   {% if events %}
   {% for e in events %}
   <div>
-    {% if e.url %}
-    <h5><a href='{{ e.url }}'>{{ e.title }}</a></h5>
+    {% if e.slug %}
+    <h3><a href='{{ e.slug }}'>{{ e.title }}</a></h3>
     {% else %}
-    <h5>{{ e.title }}</h5>
+    <h3>{{ e.title }}</h3>
     {% endif %}
     <h6>{{ e.event_date|date:"F j, Y g:i a"}}</h6>
-    <p>{{ e.desc|safe }}</p>
-    {% if logged_in %}
-    <a href='/dj/event/{{ e.key }}'>Edit</a>
+    <p>{{ e.text|safe }}</p>
+    {% if session.dj.permissions.events %}
+    <a href='/dj/event/{{ e.key.urlsafe }}'>Edit</a>
     {% endif %}
   </div>
   {% endfor %}
@@ -74,7 +74,11 @@
             <th>Album Title</th></tr></thead>
             <tbody>
         {% for song in top_songs %}
-        <tr><td>{{forloop.counter}}.</td><td>{{ song.1 }}</td><td>{{ song.2 }}<td><i>{{ song.3 }}</i></td></tr>
+        <tr>
+          <td>{{forloop.counter}}.</td>
+          <td>{{ song.0.title }}</td>
+          <td>{{ song.0.artist }}</td>
+          <td><i>{{ song.0.album.title }}</i></td></tr>
         {% endfor %}
         </tbody>
 	</table>{% else %}<div class='charttable'>
@@ -88,7 +92,10 @@
             <th>Album Title</th></tr></thead>
             <tbody>
           {% for album in top_albums %}
-          <tr><td>{{forloop.counter}}.</td><td><i>{{ album.1 }}</i></td><td>{{ album.2 }}</td></tr>
+          <tr>
+            <td>{{forloop.counter}}.</td>
+            <td><i>{{ album.0.artist }}</i></td>
+            <td>{{ album.0.title }}</td></tr>
           {% endfor %}
           </tbody>
 	  </table>{% else %}<div class='charttable'>
@@ -103,9 +110,9 @@
     <ul id='albumlist'>{% for album in album_list %}
       <li>
         <a class="thumbnail" 
-           href="/albums/{{ album.cover_large_key|urlencode }}"
+           href="/albums/{{ album.cover_large_key|default_if_none:album.cover_small_key }}"
            title="{{ album.title|escape }} - {{ album.artist|escape }}">
-          <img src="/albums/{{ album.cover_small_key|urlencode }}">
+          <img src="/albums/{{ album.cover_small_key }}">
       </a>
       </li>{% endfor %}
     </ul>

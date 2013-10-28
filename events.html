@@ -15,15 +15,15 @@
   {% if events %}
   {% for e in events %}
   <div>
-    {% if e.url %}
-    <h5><a href='{{ e.url }}'>{{ e.title }}</a></h5>
+    {% if e.slug %}
+    <h3><a href='{{ e.slug }}'>{{ e.title }}</a></h3>
     {% else %}
-    <h5>{{ e.title }}</h5>
+    <h3>{{ e.title }}</h3>
     {% endif %}
     <h6>{{ e.event_date|date:"F j, Y g:i a"}}</h6>
-    <p>{{ e.desc|safe }}</p>
+    <p>{{ e.text|safe }}</p>
     {% if logged_in %}
-    <a href='/dj/event/{{ e.key }}'>Edit</a>
+    <a href='/dj/event/{{ e.key.urlsafe }}'>Edit</a>
     {% endif %}
   </div>
   {% endfor %}

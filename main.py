@@ -1,22 +1,6 @@
 #!/usr/bin/env python
-#
-# Copyright 2007 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 
 import os
-import cache
 import urllib
 import hashlib
 import datetime
@@ -24,8 +8,13 @@ import time
 import json
 import logging
 
+from models.dj import Permission, Dj, DjRegistrationToken
+from models.tracks import Album, Song, ArtistName
+from models.play import Play, Program
+from models.base_models import NoSuchEntry
+from models.blog import BlogPost, Event
+
 import amazon
-import models
 
 from google.appengine.api import urlfetch
 from google.appengine.api import memcache
@@ -35,36 +24,38 @@ from google.appengine.runtime import DeadlineExceededError
 import webapp2
 from webapp2_extras import sessions
 
+from google.appengine.ext import ndb
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
 from google.appengine.ext.webapp import blobstore_handlers
 
 from passwd_crypto import hash_password
 from handlers import BaseHandler, UserHandler
-from dj import check_login
+from dj import check_login, login_required
 
 from configuration import webapp2conf
 import configuration as conf
 
-def getPath(filename):
+def get_path(filename):
   return os.path.join(os.path.dirname(__file__), filename)
 
 class MainPage(BaseHandler):
   def get(self):
     ## Album list disabled until it is further optimized.
     #album_list = []
-    album_list = cache.getNewAlbums(num=36)
-    start = datetime.datetime.now() - datetime.timedelta(weeks=1)
-    end = datetime.datetime.now()
+    album_list = Album.get_new(num=36)
+    start = datetime.date.today() - datetime.timedelta(days=6)
+    end = datetime.date.today() + datetime.timedelta(days=1)
     song_num = 10
     album_num = 10
-    top_songs, top_albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
-    posts = models.getLastPosts(3)
-    events = models.getEventsAfter(datetime.datetime.now() -
-                                   datetime.timedelta(days=1), 3)
+    logging.debug("Calling get top")
+    top_songs, top_albums = Play.get_top(start, end, song_num, album_num)
+    posts = BlogPost.get_last(num=3)
+    events = Event.get_upcoming(num=3)
+
     template_values = {
       'news_selected': True,
-      'flash': self.flash,
+      'flash': self.flashes,
       'session': self.session,
       'album_list': album_list,
       'top_songs': top_songs,
@@ -72,26 +63,46 @@ class MainPage(BaseHandler):
       'posts': posts,
       'events': events,
       }
-    self.response.out.write(template.render(getPath("index.html"),
+    self.response.out.write(template.render(get_path("index.html"),
                                             template_values))
 
 class DjComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
-    djs = models.djAutocomplete(q)
+    djs = Dj.autocomplete(q)
     self.response.out.write(json.dumps({
           'query': q,
-          'suggestions': [dj.fullname for dj in djs],
-          'data': [str(dj.key()) for dj in djs],
-          }))
+          'suggestions': ["%s - %s"%(dj.fullname, dj.email) for dj in djs],
+          'data': [{'key': dj.key.urlsafe(),
+                    'name': dj.fullname,
+                    'email': dj.email} for dj in djs],}))
+
+class ShowComplete(BaseHandler):
+  def get(self):
+    q = self.request.get("query")
+    progs = Program.autocomplete(q)
+    self.response.out.write(json.dumps({
+      'query': q,
+      'suggestions': ["%s - %s"%(prog.title, prog.slug) for prog in progs],
+      'data': [{'key': prog.key.urlsafe(),
+                'name': prog.title,
+                'slug': prog.slug} for prog in progs],}))
+
+class DjSearch(BaseHandler):
+  def get(self):
+    q = self.request.get("query")
+    djs = Dj.autocomplete(q)
+    self.response.out.write(json.dumps({
+      'query': q,
+      'data': [dj.to_json() for dj in djs],}))
 
 class ArtistComplete(BaseHandler):
   def get(self):
     q = self.request.get("query")
-    artists = cache.artistAutocomplete(q)
+    artists = ArtistName.autocomplete(q)
     self.response.out.write(json.dumps({
           'query': q,
-          'suggestions': [ar.artist_name for ar in artists],
+          'suggestions': artists,
           }))
 
 class AlbumTable(BaseHandler):
@@ -109,12 +120,16 @@ class AlbumTable(BaseHandler):
       return
     album_table_html = memcache.get("album_table_html")
     if album_table_html is None:
-      albums = models.getNewAlbums(20, page)
+      albums, cursor, more = Albums.get_new(
+        num=20, cursor=cursor, page=True)
       template_values = {
         'session': self.session,
         'album_list': albums,
+        'cursor': cursor.urlsafe(),
+        'more': more,
         }
-      album_table_html = template.render(getPath("newalbums.html"), template_values)
+      album_table_html = template.render(
+        get_path("newalbums.html"), template_values)
       memcache.set("album_table_html", album_table_html)
     self.response.out.write(album_table_html)
 
@@ -131,15 +146,22 @@ class AlbumInfo(BaseHandler):
     # datetime.datetime.now().strftime("%Y-%m-%dT%H:%M%:%SZ")
     items = amazon.productSearch(keywords)
     json_data = {'items': [{
-          'small_pic': i.getElementsByTagName("SmallImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
-          'large_pic': i.getElementsByTagName("LargeImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
-          'medium_pic': i.getElementsByTagName("MediumImage")[0].getElementsByTagName("URL")[0].firstChild.nodeValue,
+          'small_pic': (i.getElementsByTagName("SmallImage")[0].
+                        getElementsByTagName("URL")[0].
+                        firstChild.nodeValue),
+          'large_pic': (i.getElementsByTagName("LargeImage")[0].
+                        getElementsByTagName("URL")[0].
+                        firstChild.nodeValue),
+          'medium_pic': (i.getElementsByTagName("MediumImage")[0].
+                         getElementsByTagName("URL")[0].
+                         firstChild.nodeValue),
           'artist': i.getElementsByTagName("Artist")[0].firstChild.nodeValue,
           'title': i.getElementsByTagName("Title")[0].firstChild.nodeValue,
           'asin': i.getElementsByTagName("ASIN")[0].firstChild.nodeValue,
-          'tracks': [t.firstChild.nodeValue for t in i.getElementsByTagName("Track")],
+          'tracks': [t.firstChild.nodeValue
+                     for t in i.getElementsByTagName("Track")],
           } for i in items]}
-    updatehtml = template.render(getPath("addalbumupdate.html"), json_data)
+    updatehtml = template.render(get_path("addalbumupdate.html"), json_data)
     json_data['updatehtml'] = updatehtml
     self.response.headers['Content-Type'] = 'text/json'
     self.response.out.write(json.dumps(json_data))
@@ -147,33 +169,51 @@ class AlbumInfo(BaseHandler):
 
 class Setup(BaseHandler):
   def get(self):
-    labels = ["Manage DJs", "Manage Programs", "Manage Permissions",
-              "Manage Albums", "Manage Genres", "Manage Blog", "Manage Events"]
-    for l in labels:
-      if not models.getPermission(l):
-        permission = models.Permission(title=l, dj_list=[])
-        permission.put()
-    seth = models.getDjByEmail("seth.glickman@gmail.com")
-    if not seth:
-      seth = models.Dj(fullname='Seth Glickman', lowername='seth glickman',
-                       email='seth.glickman@gmail.com', username='seth',
-                       password_hash=hash_password('testme'))
+    labels = Permission.PERMISSIONS
+    try:
+      seth = Dj.get_by_email("seth.glickman@gmail.com")
+    except NoSuchEntry:
+      seth = Dj.new(fullname='Seth Glickman',
+                    email='seth.glickman@gmail.com', username='seth',
+                    password='testme')
       seth.put()
-      program = models.Program(title='Seth\'s Show', slug='seth',
-                               desc='This is the show where Seth plays his favorite music.',
-        dj_list=[seth.key()], page_html='a <b>BOLD</b> show!')
+      hchaps = Dj.new(fullname='Harrison Chapman',
+                      email="hchaps@gmail.com", username="hchaps",
+                      password="wbor")
+
+      program = Program.new(
+        title='Seth\'s Show', slug='seth',
+        desc='This is the show where Seth plays his favorite music.',
+        dj_list=[seth.key],
+        page_html='a <b>BOLD</b> show!')
       program.put()
     for l in labels:
-      permission = models.getPermission(l)
-      if seth.key() not in permission.dj_list:
-        permission.dj_list.append(seth.key())
+      try:
+        permission = Permission.get_by_title(l)
+      except NoSuchEntry:
+        permission = Permission.new(l, [])
         permission.put()
-    if not models.getLastPosts(3):
-      post1 = models.BlogPost(title="Blog's first post!", text="This is really just filler text on the first post.", slug="first-post", post_date=datetime.datetime.now())
+      finally:
+        if seth.key not in permission.dj_list:
+          permission.add_dj(seth.key)
+          permission.put()
+    if not BlogPost.get_last(num=3):
+      post1 = BlogPost.new(
+        title="Blog's first post!",
+        text="This is really just filler text on the first post.",
+        slug="first-post", post_date=datetime.datetime.now())
       post1.put()
       time.sleep(2)
-      post2 = models.BlogPost(title="Blog's second post!", text="More filler text, alas.", slug="second-post", post_date=datetime.datetime.now())
+      post2 = BlogPost.new(
+        title="Blog's second post!",
+        text="More filler text, alas.",
+        slug="second-post", post_date=datetime.datetime.now())
       post2.put()
+      contactspage = BlogPost.new(
+        title="Contacts Page",
+        text="This is a dummy stub for the contacts page. Lorem ipsum whatnot",
+        slug="contacts-page", post_date=datetime.datetime.now())
+      contactspage.put()
     artists = [
       "Bear In Heaven",
       "Beck",
@@ -192,10 +232,13 @@ class Setup(BaseHandler):
       "Crayon Fields",
       ]
     for a in artists:
-      if not models.ArtistName.all().filter("artist_name =", a).fetch(1):
-        ar = models.ArtistName(artist_name=a, lowercase_name=a.lower(), search_names=models.artistSearchName(a).split())
+      if not (ArtistName._RAW.query()
+              .filter(ArtistName._RAW.artist_name == a)
+              .fetch(1, keys_only=True)):
+        ar = ArtistName.new(artist_name=a)
         ar.put()
-    self.session.add_flash("Permissions set up, ArtistNames set up, Blog posts set up, DJ Seth entered.")
+    self.session.add_flash("Permissions set up, ArtistNames set up, "
+                           "Blog posts set up, DJ Seth entered.")
     self.redirect('/')
 
 
@@ -203,9 +246,10 @@ class Setup(BaseHandler):
 class BlogDisplay(BaseHandler):
   def get(self, date_string, post_slug):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
-    post = models.getPostBySlug(post_date, post_slug)
+    post = BlogPost.get_by_slug(post_slug, post_date=post_date)
     if not post:
-      self.session.add_flash("The post you requested could not be found.  Please try again.")
+      self.session.add_flash(
+        "The post you requested could not be found.  Please try again.")
       self.redirect('/')
       return
     template_values = {
@@ -239,17 +283,21 @@ class ViewCoverHandler(blobstore_handlers.BlobstoreDownloadHandler):
 
 class UpdateInfo(webapp2.RequestHandler):
   def get(self):
-    recent_songs = cache.getLastPlays(num=3)
-    logging.debug(recent_songs)
+    recent_songs = Play.get_last(num=3)
     if recent_songs is not None and len(recent_songs) > 0:
       last_play = recent_songs[0]
-      song, program = (cache.getSong(last_play.song_key),
-                       cache.getProgram(last_play.program_key))
+      song, program = (last_play.song,
+                       last_play.program)
       song_string = song.title
       artist_string = song.artist
-      program_title, program_desc, program_slug = (program.title,
-                                                   program.desc,
-                                                   program.slug)
+      if program is not None:
+        program_title, program_desc, program_slug = (program.title,
+                                                     program.desc,
+                                                     program.slug)
+      else:
+        program_title, program_desc, program_slug = ("no show",
+                                                     "No description",
+                                                     "")
     else:
       song, program = None, None
       song_string = "nothing"
@@ -266,10 +314,10 @@ class UpdateInfo(webapp2.RequestHandler):
           'program_desc': program_desc,
           'program_slug': program_slug,
           'top_played': ("Top artists: " + ", ".join(
-            [a for a in program.top_artists[:3]]) if
+            [a[0] for a in program.top_artists[:3]]) if
                          program is not None else None),
           'recent_songs_html': template.render(
-            getPath("recent_songs.html"), {'plays': recent_songs}),
+            get_path("recent_songs.html"), {'plays': recent_songs}),
           }))
 
 class CallVoice(webapp2.RequestHandler):
@@ -292,15 +340,15 @@ class CallVoice(webapp2.RequestHandler):
 class SongList(BaseHandler):
   def get(self):
     self.response.headers["Content-Type"] = "text/json"
-    album_key = self.request.get("album_key")
-    songlist_html = memcache.get("songlist_html_" + album_key)
+    album_key = ndb.Key(urlsafe=self.request.get("album_key"))
+    songlist_html = memcache.get("songlist_html_%s" % album_key.urlsafe())
     if songlist_html:
       self.response.out.write(json.dumps({
             'songListHtml': songlist_html,
             'generated': 'memcache',
             }))
       return
-    album = cache.getAlbum(album_key)
+    album = Album.get(album_key, one_key=True)
     self.response.headers["Content-Type"] = "text/json"
     if not album:
       self.response.out.write(json.dumps({
@@ -308,29 +356,27 @@ class SongList(BaseHandler):
                     "not be found.  Please try again.")
             }))
       return
-    songlist_html = template.render(getPath("ajax_songlist.html"), {
-        'songList': [cache.getSong(k) for k in album.songList],
+    songlist_html = template.render(get_path("ajax_songlist.html"), {
+        'songList': Song.get(album.tracklist),
         })
-    memcache.set("songlist_html_" + album_key, songlist_html)
+    memcache.set("songlist_html_%s"%album_key.urlsafe(), songlist_html)
     self.response.out.write(json.dumps({
-          'songListHtml': template.render(getPath("ajax_songlist.html"), {
-              'songList': [cache.getSong(k) for k in album.songList],
+          'songListHtml': template.render(get_path("ajax_songlist.html"), {
+              'songList': Song.get(album.tracklist),
               }),
           'generated': 'generated',
           }))
 
-
-
 class EventPage(BaseHandler):
   def get(self):
     start_date = datetime.datetime.now() - datetime.timedelta(days=2)
-    events = models.getEventsAfter(start_date)
+    events = Event.get_last(num=3)
     template_values = {
       'events_selected': True,
       'session': self.session,
       'events': events,
       }
-    self.response.out.write(template.render(getPath("events.html"),
+    self.response.out.write(template.render(get_path("events.html"),
                                             template_values))
 
 class SchedulePage(BaseHandler):
@@ -339,71 +385,70 @@ class SchedulePage(BaseHandler):
       'schedule_selected': True,
       'session': self.session,
     }
-    self.response.out.write(template.render(getPath("schedule.html"),
+    self.response.out.write(template.render(get_path("schedule.html"),
                                             template_values))
 
 class PlaylistPage(BaseHandler):
   def get(self):
-    shows = models.getPrograms()
     slug = self.request.get("show")
     datestring = self.request.get("programdate")
     selected_date = None
+    selected_program = None
 
     if datestring:
       try:
         selected_date = datetime.datetime.strptime(datestring, "%m/%d/%Y")
         selected_date = selected_date + datetime.timedelta(hours=12)
       except:
-        self.session.add_flash("The date provided could not be parsed.")
-        self.redirect("/")
+        self.session.add_flash("The date provided could not be parsed.", level="error")
+        self.redirect("/playlists")
         return
 
     if slug:
-      selected_program = models.getProgramBySlug(slug)
+      selected_program = Program.get(slug=slug)
       if not selected_program:
-        self.session.add_flash("There is no program for slug %s." % slug)
-        self.redirect("/")
+        self.session.add_flash("There is no program for slug %s." % slug, level="error")
+        self.redirect("/playlists")
         return
       if selected_date:
-        plays = models.getPlaysBetween(program=selected_program,
-                                       after=(selected_date -
-                                              datetime.timedelta(hours=24)),
-                                       before=(selected_date +
-                                               datetime.timedelta(hours=24)))
+        plays = Play.get_last(program=selected_program,
+                              after=(selected_date -
+                                     datetime.timedelta(hours=24)),
+                              before=(selected_date +
+                                      datetime.timedelta(hours=24)),
+          num=60)
       else:
-        lastplay = models.getLastPlays(program=selected_program, num=1)
+        lastplay = Play.get_last(program=selected_program)
         if lastplay:
-          lastplay = lastplay[0]
           last_date = lastplay.play_date
-          plays = models.getPlaysBetween(program=selected_program,
-                                         after=(last_date -
-                                                datetime.timedelta(days=1)))
+          plays = Play.get_last(program=selected_program,
+                                after=(last_date -
+                                       datetime.timedelta(days=1)),
+                                num=60)
         else:
           plays = []
     else:
-      if not selected_date:
-        lastplay = cache.getLastPlay()
-        if lastplay:
-          selected_date = lastplay.play_date
 
       if selected_date:
-        plays = models.getPlaysForDate(selected_date)
+        plays = Play.get_last(before=selected_date, num=60)
       else:
-        plays = cache.getLastPlays(60)
+        plays = Play.get_last(num=60)
 
     template_values = {
       'playlists_selected': True,
       'session': self.session,
       'plays': plays,
-      'shows': shows,
+      'show': selected_program,
+      'datestring': datestring,
       }
-    self.response.out.write(template.render(getPath("playlist.html"),
+    self.response.out.write(template.render(get_path("playlist.html"),
                                             template_values))
 
 class PlaylistExport(BaseHandler):
+  @login_required
   def get(self):
     import csv
-    shows = models.getPrograms()
+    shows = [] #Program.get(num=1000)
     slug = self.request.get("show")
     datestring = self.request.get("programdate")
     selected_date = None
@@ -419,44 +464,49 @@ class PlaylistExport(BaseHandler):
         return
 
     if slug:
-      selected_program = models.getProgramBySlug(slug)
+      selected_program = Program.get_by_slug(slug)
       if not selected_program:
         self.session.add_flash("There is no program for slug %s." % slug)
         self.redirect("/")
         return
       if selected_date:
-        plays = models.getPlaysBetween(program=selected_program,
-                                       after=(selected_date -
-                                              datetime.timedelta(hours=24)),
-                                       before=(selected_date +
-                                               datetime.timedelta(hours=24)))
+        plays = Play.get_last(program=selected_program,
+                              after=(selected_date -
+                                     datetime.timedelta(hours=24)),
+                              before=(selected_date +
+                                      datetime.timedelta(hours=24)),
+                              num=60)
       else:
-        lastplay = models.getLastPlays(program=selected_program, num=1)
+        lastplay = Play.get_last(program=selected_program)
         if lastplay:
-          lastplay = lastplay[0]
           last_date = lastplay.play_date
-          plays = models.getPlaysBetween(program=selected_program,
-                                         after=(last_date -
-                                                datetime.timedelta(days=1)))
+          plays = Play.get_last(program=selected_program,
+                                after=(last_date -
+                                       datetime.timedelta(days=1)),
+                                num=60)
         else:
           plays = []
     else:
       if selected_date is None:
-        lastplay = cache.getLastPlay()
+        lastplay = Play.get_last()
         if lastplay:
           selected_date = lastplay.play_date
 
       if selected_date:
         print "doop"
         print selected_date.isoformat(" ")
-        plays = models.getRetardedNumberOfPlaysForDate(selected_date)
+        plays = Play.get_last(after=(selected_date -
+                                     datetime.timedelta(hours=24)),
+                              before=(selected_date +
+                                      datetime.timedelta(hours=24)),
+                              num=1000)
       else:
-        plays = cache.getLastPlays(60)
+        plays = Play.get_last(num=60)
 
     csv_sep = "\t"
     out_data = [("Date", "Time", "Title", "Artist")]
     for p in plays:
-      s = cache.getSong(p.song_key)
+      s = p.song
       out_data.append((p.play_date.isoformat(csv_sep), s.title, s.artist))
 
     self.response.out.write("\n".join([csv_sep.join(row) for row in out_data]))
@@ -466,27 +516,75 @@ class FunPage(BaseHandler):
     template_values = {
       'session': self.session,
     }
-    self.response.out.write(template.render(getPath("fun.html"),
+    self.response.out.write(template.render(get_path("fun.html"),
                                             template_values))
 
 class ChartsPage(UserHandler):
   @check_login
   def get(self):
-    start = datetime.datetime.now() - datetime.timedelta(weeks=1)
-    end = datetime.datetime.now()
-    song_num = 60
-    album_num = 60
-    songs, albums = models.getTopSongsAndAlbums(start, end, song_num, album_num)
+    start = datetime.date.today() - datetime.timedelta(days=6)
+    end = datetime.date.today() + datetime.timedelta(days=1)
+    song_num = 30
+    album_num = 30
+    songs, albums = Play.get_top(start, end, song_num, album_num)
     template_values = {
       'charts_selected': True,
       'session': self.session,
+      'flash': self.flashes,
       'songs': songs,
       'albums': albums,
       'start': start,
       'end': end,
       'login': self.dj_login,
       }
-    self.response.out.write(template.render(getPath("charts.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("charts.html"), template_values))
+
+  @check_login
+  def post(self):
+    song_num = 30
+    album_num = 30
+
+    # Parse dates
+    start_date_req = self.request.get("start_date")
+    if start_date_req:
+      try:
+        start = datetime.datetime.strptime(start_date_req, "%m/%d/%Y").date()
+      except ValueError:
+        self.session.add_flash(
+          "Unable to parse start date. Defaulting to a week ago, today.")
+        start = datetime.date.today() - datetime.timedelta(days=6)
+    else:
+      start = datetime.date.today() - datetime.timedelta(days=6)
+
+    end_date_req = self.request.get("end_date")
+    if end_date_req:
+      try:
+        end = datetime.datetime.strptime(end_date_req, "%m/%d/%Y").date()
+      except ValueError:
+        self.session.add_flash(
+          "Couldn't parse end date. Defaulting to a week of charts.")
+        end = start + datetime.timedelta(weeks=1)
+    else:
+      end = start + datetime.timedelta(weeks=1)
+
+    if self.request.get("song_num"):
+      song_num = int(self.request.get("song_num"))
+    if self.request.get("album_num"):
+      album_num = int(self.request.get("album_num"))
+    songs, albums = Play.get_top(start, end, song_num, album_num)
+    template_values = {
+      'charts_selected': True,
+      'session': self.session,
+      'flash': self.flashes,
+      'songs': songs,
+      'albums': albums,
+      'start': start,
+      'end': end,
+      'login': self.dj_login,
+    }
+    self.response.out.write(
+      template.render(get_path("charts.html"), template_values))
 
 class HistoryPage(BaseHandler):
   def get(self):
@@ -494,105 +592,124 @@ class HistoryPage(BaseHandler):
       'history_selected': True,
       'session': self.session,
     }
-    self.response.out.write(template.render(getPath("history.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("history.html"), template_values))
+    
+class DJoftheWeekPage(BaseHandler):
+  def get(self):
+    template_values = {
+      'djoftheweek_selected': True,
+      'session': self.session,
+    }
+    self.response.out.write(
+      template.render(get_path("djoftheweek.html"), template_values))
 
 class ContactPage(BaseHandler):
   def get(self):
     # TODO: Please please fix this. Although realistically it will be fixed on
     # models rework in future.
     # So general MGMT can edit contacts page
-    contacts = memcache.get("contacts_page_html")
-    if contacts is None:
-      contacts = models.BlogPost.all().filter("slug =", "contacts-page").get()
-    cache.mcset_t(contacts, 3600, "contacts_page_html")
+    contacts = BlogPost.get_by_slug("contacts-page")
+
     template_values = {
       'contact_selected': True,
       'session': self.session,
       'contacts': contacts
     }
-    self.response.out.write(template.render(getPath("contact.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("contact.html"), template_values))
 
-class ConvertArtistNames(BaseHandler):
+# Allows DJ auto-signup
+# get(): Display DJ signup form
+# post(): Register DJ (if valid signup token)
+class SignUp(BaseHandler):
   def get(self):
-    an = models.ArtistName.all().fetch(2000)
-    total = 0
-    try:
-      for a in an:
-        if not a.search_names:
-          total += 1
-          a.search_names = models.artistSearchName(a.lowercase_name).split()
-          a.put()
-      self.response.out.write("converted %d artist names." % total)
-    except DeadlineExceededError:
-      self.response.out.write("converted %d artist names, incomplete." % total)
+    template_values = {
+      'token': self.request.get("token"),
+      'session': self.session,
+      'flash': self.flashes,
+      'posts': BlogPost.get_last(num=3),
+    }
+    self.response.out.write(
+      template.render(get_path("signup.html"), template_values))
 
+  def post(self):
+    if self.request.get("submit") != "Register":
+      self.session.add_flash(
+        "There was an error processing your request.  Please try again.",
+        level="error")
+      self.redirect(")/signup?token=%s"%token)
+      return
 
-class ConvertPlays(BaseHandler):
-  def get(self):
-    pc = models.Play.all().fetch(2000)
-    total = 0
-    for p in pc:
-      if not p.artist:
-        total += 1
-        p.artist = p.song.artist
-        p.put()
-    self.response.out.write("converted %d plays." % total)
+    elif self.request.get("submit") == "Register":
+      token_str = self.request.get("token")
+      fullname = self.request.get("fullname")
+      email = self.request.get("email")
+      username = self.request.get("username")
+      password = self.request.get("password")
+
+      # Assert that the DJ Registration code is valid and available
+      token = DjRegistrationToken.get(token_str)
+      if not token:
+        self.session.add_flash(
+          "The secret registration token you have entered is either "
+          "invalid, or has already been used up. Double check that "
+          "it is correct. If it is not, <a>contact Ruben</a>.",
+          level="error")
+        self.redirect("/signup?token=%s"%token_str)
+        return
+
+      required_fields = [fullname, email, username, password]
+      if "" in [field.strip() for field in required_fields]:
+        self.session.add_flash("None of the fields may be empty")
+        self.redirect("/signup?token=%s"%token_str)
+        return
+
+      if password is not None and password != self.request.get("confirm"):
+        self.session.add_flash("Passwords do not match.")
+        self.redirect("/signup?token=%s"%token_str)
+        return
+
+      dj = Dj(fullname=fullname,
+              email=email,
+              username=username,
+              password=password)
+
+      # Putting the DJ with the token will transactionally update the token
+      dj.put(token=token)
+
+      self.session.add_flash("%s, you have successfully registered as a DJ."
+                             "You may now log in" % dj.fullname,
+                             level="success")
+
+    self.redirect("/")
+
 
 class ProgramPage(BaseHandler):
   def get(self, slug):
-    program = models.getProgramBySlug(slug)
-    posts = models.getLastPosts(1)
+    program = Program.get_by_slug(slug)
     if not program:
       self.session.add_flash("Invalid program slug specified.")
       self.redirect("/")
       return
     template_values = {
       'session': self.session,
-      'flash': self.flash,
+      'flash': self.flashes,
       'program': program,
-      'djs' :  (tuple(models.Dj.get(dj)
-                      for dj in program.dj_list) if program.dj_list
-                else None),
-      'posts': posts,
+      'djs' :  tuple(Dj.get(program.dj_list) if program.dj_list
+                     else None),
       }
-    self.response.out.write(template.render(getPath("show.html"), template_values))
+    self.response.out.write(
+      template.render(get_path("show.html"), template_values))
 
-## There should never be a need to use the following handler in the future.
-# However, it remains for educational purposes.
-# Be aware that it's somewhat hackishly written
-class SecretPortCoversPage(blobstore_handlers.BlobstoreDownloadHandler):
+class TestModels(BaseHandler):
   def get(self):
-    cursor = self.request.get('cursor', None)
-    query = models.Album.all()
-    if cursor:
-      logging.debug("cursor get!")
-      query.with_cursor(start_cursor=cursor)
-    album = query.get()
-    if album:
-      new_cursor = query.cursor()
-      new_url = '/secret12345qwerty?cursor=%s' % new_cursor
-      album = album
-      try:
-        models.moveCoverToBlobstore(album)
-      except:
-        pass
-      self.response.out.write("""
-<html>
-<head>
-  <meta http-equiv="refresh" content="0;url=%s"/>
-</head>
-<body>
-  <h3>Update Datastore</h3>
-  <ul>
-    <li>Cursor: %s</li>
-    <li>LastCursor: %s</li>
-    <li>Updated: %s</li>
-  </ul>
-</body>
-</html>
-    """%(new_url, new_cursor, cursor, album.title))
-      return
-    self.response.out.write("Done")
+    from models._raw_models import Play
+    self.response.out.write("hey there")
+    key = Play.query().get(keys_only=True)
+    self.response.out.write(key)
+    play = key.get()
+    self.response.out.write(play)
 
 def profile_main():
   # This is the main function for profiling
@@ -612,26 +729,28 @@ def profile_main():
 
 
 app = webapp2.WSGIApplication([
-    ('/', MainPage),
-    ('/updateinfo/?', UpdateInfo),
-    ('/ajax/albumtable/?', AlbumTable),
-    ('/ajax/albuminfo/?', AlbumInfo),
-    ('/ajax/artistcomplete/?', ArtistComplete),
-    ('/ajax/getSongList/?', SongList),
-    ('/ajax/djcomplete/?', DjComplete),
-    ('/setup/?', Setup),
-    ('/blog/([^/]*)/([^/]*)/?', BlogDisplay),
-    ('/programs?/([^/]*)/?', ProgramPage),
-    ('/schedule/?', SchedulePage),
-    ('/playlists/?', PlaylistPage),
-    ('/playexport/?', PlaylistExport),
-    ('/fun/?', FunPage),
-    ('/charts/?', ChartsPage),
-    ('/history/?', HistoryPage),
-    ('/contact/?', ContactPage),
-    ('/events/?', EventPage),
-    ('/searchnames/?', ConvertArtistNames),
-    ('/convertplays/?', ConvertPlays),
-    ('/albums/([^/]*)/?', ViewCoverHandler),
-    ('/callvoice/?', CallVoice),
-    ], debug=True, config=webapp2conf)
+  ('/', MainPage),
+  ('/updateinfo/?', UpdateInfo),
+  ('/ajax/albumtable/?', AlbumTable),
+  ('/ajax/albuminfo/?', AlbumInfo),
+  ('/ajax/artistcomplete/?', ArtistComplete),
+  ('/ajax/getSongList/?', SongList),
+  ('/ajax/djcomplete/?', DjComplete),
+  ('/ajax/showcomplete/?', ShowComplete),
+  ('/setup/?', Setup),
+  ('/blog/([^/]*)/([^/]*)/?', BlogDisplay),
+  ('/programs?/([^/]*)/?', ProgramPage),
+  ('/schedule/?', SchedulePage),
+  ('/playlists/?', PlaylistPage),
+  ('/playexport/?', PlaylistExport),
+  ('/fun/?', FunPage),
+  ('/charts/?', ChartsPage),
+  ('/history/?', HistoryPage),
+  ('/djoftheweek/?', DJoftheWeekPage),
+  ('/contact/?', ContactPage),
+  ('/events/?', EventPage),
+  ('/albums/([^/]*)/?', ViewCoverHandler),
+  ('/callvoice/?', CallVoice),
+  ('/testmodels/?', TestModels),
+  ('/signup/?', SignUp),
+], debug=True, config=webapp2conf)

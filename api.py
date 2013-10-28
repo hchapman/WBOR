@@ -59,7 +59,7 @@ class ProgramHandler(ApiRequestHandler):
 class AlbumHandler(ApiRequestHandler):
   def get(self, key):
     album = cache.getAlbum(key)
-    logging.info(album.to_json())
+    logging.debug(album.to_json())
     if album is not None:
       self.json_respond(album.to_json())
 

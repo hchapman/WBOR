@@ -6,7 +6,7 @@
     <div id='edit-self'>
         <h4>Your Profile</h4>
         <form action='/dj/myself' method='post'>
-          <input type='hidden' value='{{ dj.key }}' name='dj_key'>
+          <input type='hidden' value='{{ dj.key.urlsafe }}' name='dj_key'>
             <table>
                 <tr>
                     <td><label for='fullname'>Full Name: </label></td>

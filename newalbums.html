@@ -1,6 +1,6 @@
 <h4>On the New Shelf</h4>
 <ul id='albumlist'>
     {% for album in album_list %}
-    <li><a href='/albums/{{ album.key }}/l' title='{{ album.title|escape }} - {{ album.artist|escape }}'><img src='/albums/{{ album.key }}/s' /></a></li>
+    <li><a href='/albums/{{ album.cover_large_key|default_if_none:album.cover_small_key }}/l' title='{{ album.title|escape }} - {{ album.artist|escape }}'><img src='/albums/{{ album.cover_small_key }}' /></a></li>
     {% endfor %}
 </ul>
