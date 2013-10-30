@@ -107,7 +107,7 @@
   </div>
   <div id='newalbums-poop'>
     <h2>On The New Shelf</h2>
-    <ul id='albumlist'>{% for album in album_list %}
+    <ul id='albumlist'>{% for album in album_list reversed %}
       <li>
         <a class="thumbnail" 
            href="/albums/{{ album.cover_large_key|default_if_none:album.cover_small_key }}"

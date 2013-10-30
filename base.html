@@ -242,6 +242,9 @@ function nowPlaying() {
                   <li {% if schedule_selected %}class='active'{% endif %}>
                     <a href='/schedule'>Schedule</a>
                   </li>
+                  <li {% if week_selected %}class='active'{% endif %}>
+                    <a href='/week'>DJ of the Week</a>
+                  </li>
                   <li {% if playlists_selected %}class='active'{% endif %}>
                     <a href='/playlists'>Playlists</a>
                   </li>
@@ -253,9 +256,6 @@ function nowPlaying() {
                   </li>
                   <li {% if history_selected %}class='active'{% endif %}>
                     <a href='/history'>History</a>
-                  </li>
-                  <li {% if djoftheweek_selected %}class='active'{% endif %}>
-                    <a href='/djoftheweek'>DJ of the Week</a>
                   </li>
                   <li {% if contact_selected %}class='active'{% endif %}>
                     <a href='/contact'>Contact</a>

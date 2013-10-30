@@ -595,10 +595,10 @@ class HistoryPage(BaseHandler):
     self.response.out.write(
       template.render(get_path("history.html"), template_values))
     
-class DJoftheWeekPage(BaseHandler):
+class WeekPage(BaseHandler):
   def get(self):
     template_values = {
-      'djoftheweek_selected': True,
+      'week_selected': True,
       'session': self.session,
     }
     self.response.out.write(
@@ -746,9 +746,9 @@ app = webapp2.WSGIApplication([
   ('/fun/?', FunPage),
   ('/charts/?', ChartsPage),
   ('/history/?', HistoryPage),
-  ('/djoftheweek/?', DJoftheWeekPage),
   ('/contact/?', ContactPage),
   ('/events/?', EventPage),
+  ('/week/?', WeekPage),
   ('/albums/([^/]*)/?', ViewCoverHandler),
   ('/callvoice/?', CallVoice),
   ('/testmodels/?', TestModels),

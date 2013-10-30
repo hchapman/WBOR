@@ -1,5 +1,5 @@
 <ul id='manage-albums-list'>
-    {% for album in reversed(new_album_list) %}
+    {% for album in new_album_list reversed %}
         <li class='newalbum' id='{{ album.key.urlsafe }}'>
             <div class='album-manager'>
             <label class="checkbox">
