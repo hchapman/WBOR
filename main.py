@@ -241,8 +241,6 @@ class Setup(BaseHandler):
                            "Blog posts set up, DJ Seth entered.")
     self.redirect('/')
 
-
-
 class BlogDisplay(BaseHandler):
   def get(self, date_string, post_slug):
     post_date = datetime.datetime.strptime(date_string, "%Y-%m-%d")
@@ -597,12 +595,15 @@ class HistoryPage(BaseHandler):
     
 class WeekPage(BaseHandler):
   def get(self):
+    week = self.request.get('week')
     template_values = {
       'week_selected': True,
       'session': self.session,
     }
-    self.response.out.write(
-      template.render(get_path("djoftheweek.html"), template_values))
+    if len(week) == 0:
+        self.response.out.write(template.render(get_path("djoftheweek.html"), template_values))
+    else:
+        self.response.out.write(template.render(get_path("djoftheweek_%s.html" % week), template_values))
 
 class ContactPage(BaseHandler):
   def get(self):
