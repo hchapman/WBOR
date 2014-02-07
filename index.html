@@ -20,23 +20,12 @@
 {% endblock %}
 
 {% block top_row %}
-<div class="span12">
-<h1>Home</h1>
-<hr>
-</div>
 {% endblock %}
 
 {% block left_column %}
-<div>
-  <h2>Recently on WBOR</h2>
-  <div id="latestplays">
-    <i>Loading...</i>
-  </div>
-</div>
-
+{% if events %}
 <div id='upcomingevents'>
   <h2>Upcoming Events</h2>
-  {% if events %}
   {% for e in events %}
   <div>
     {% if e.slug %}
@@ -51,11 +40,14 @@
     {% endif %}
   </div>
   {% endfor %}
-  {% else %}
-  <div>
-    There are no events scheduled for the immediate future.
+</div>
+{% endif %}
+
+<div>
+  <h2>Recently Played</h2>
+  <div id="latestplays">
+    <i>Loading...</i>
   </div>
-  {% endif %}
 </div>
 
 <div id='charts'>
@@ -107,7 +99,7 @@
   </div>
   <div id='newalbums-poop'>
     <h2>On The New Shelf</h2>
-    <ul id='albumlist'>{% for album in album_list reversed %}
+    <ul id='albumlist'>{% for album in album_list %}
       <li>
         <a class="thumbnail" 
            href="/albums/{{ album.cover_large_key|default_if_none:album.cover_small_key }}"

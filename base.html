@@ -19,12 +19,13 @@
     <script type='text/javascript' src='/static/js/jquery.screw.you.tinymce.js'></script>
     <script type='text/javascript'
             src='/static/js/jquery.form.js'></script>
+    <script src='/static/js/marquee.js'></script>
     <script type="text/javascript" src="/static/js/wbor.js"></script>
     <script type='text/javascript'>
     background = function() {
         document.body.style.background =
             'url(/static/images/bg/' +
-            (Math.round(Math.random() * 21) + 1) + '.gif)';
+            (Math.round(Math.random() * 24) + 1) + '.gif)';
     }
 
 $(document).ready(function() {
@@ -197,14 +198,13 @@ function nowPlaying() {
               <div class="pull-right">
                 <a class="btn btn-primary btn-large"
                    data-toggle="modal"
-                   href="#call-me-modal">
+                   href="#call-me-modal"
+                   style="display:block;margin-bottom:5px;">
                   <strong>Call us!</strong>
-                  <br>We'll connect you
                 </a>
                 <a href='/static/wbor.m3u' class="btn btn-listen
                                                   btn-large">
                   <strong>Listen now!</strong>
-                  <br>Live Internet stream
                 </a>
               </div>
             </div><!-- End header -->
@@ -329,37 +329,36 @@ function nowPlaying() {
         </div>
 
         <div class="navbar navbar-nowplaying">
-          <div class="navbar-inner">
-            <div class="container" id='nowplaying'>
-              <ul class="nav pull-left">
-               <li><p class="navbar-text">Now playing</p></li>
-                <li><a id='currentsong'
-                       rel="tooltip"
-                       title="Track"
-                        data-placement="bottom">gathering
-                    info...</a></li>
-                <li><p class="navbar-text">by</p></li>
-                <li><a id='currentartist'
-                       rel="tooltip"
-                       title="Artist"
-                        data-placement="bottom">gathering
-                    info...</a></li>
-                <li><p class="navbar-text">on</p></li>
-                <li><a href='show/hitgitsplit' id='currentshow'
-                          rel="popover" data-placement="bottom"
-                          data-original-title="Show Description">
-                      wait for it...
-                  </a>
-                </li>
-
-              </ul>
-              <ul class="nav pull-right">
+          <div class="navbar-inner" style="padding:0">
+            <ul class="pull-right" style="margin:0;">
                 {% if "dj" in session %}
                 <form class="navbar-form pull-right">
                   <a class="btn btn-wbor" href="/dj/chartsong">Chart
                     Song</a>
                 </form>
                 {% endif %}
+            </ul>
+            <div class="container" id='nowplaying'>
+               <ul id=marquee class="nav pull-left" behavior="scroll" scrollamount="2" direction="left" width="890">
+               <li><p class="navbar-text">Now Playing 
+                   <a id='currentsong'
+                       rel="tooltip"
+                       title="Track"
+                        data-placement="bottom">gathering
+                    info...</a> 
+                   by 
+                   <a id='currentartist'
+                       rel="tooltip"
+                       title="Artist"
+                        data-placement="bottom">gathering
+                    info...</a> 
+                   on 
+                   <a href='show/hitgitsplit' id='currentshow'
+                          rel="popover" data-placement="bottom"
+                          data-original-title="Show Description">
+                      wait for it...
+                  </a>
+                </p></li>
               </ul>
             </div>
           </div>
@@ -405,14 +404,27 @@ function nowPlaying() {
         </footer><!-- end footer -->
       </div><!-- End wrap -->
     </div><!-- End outer wrap -->
-    <script type="text/javascript"
-            src="/static/js/bootstrap.js"></script>
-    <script type="text/javascript">
-      $(function() {
-      $('a[rel="popover"]').popover();
-      $('span[rel="popover"]').popover();
-      $('a[rel="tooltip"]').tooltip();
-      });
+    <script type="text/javascript" src="/static/js/bootstrap.js"></script>
+    </script>
+    <script>
+    $(function () {
+        $('#marquee').marquee('pointer').mouseover(function () {
+            $(this).trigger('stop');
+        }).mouseout(function () {
+            $(this).trigger('start');
+        }).mousemove(function (event) {
+            if ($(this).data('drag') == true) {
+                this.scrollLeft = $(this).data('scrollX') + ($(this).data('x') - event.clientX);
+            }
+        }).mousedown(function (event) {
+            $(this).data('drag', true).data('x', event.clientX).data('scrollX', this.scrollLeft);
+        }).mouseup(function () {
+            $(this).data('drag', false);
+        });
+        $('a[rel="popover"]').popover();
+        $('span[rel="popover"]').popover();
+        $('a[rel="tooltip"]').tooltip();
+    });
     </script>
   </body>
 </html>

@@ -43,7 +43,7 @@ class MainPage(BaseHandler):
   def get(self):
     ## Album list disabled until it is further optimized.
     #album_list = []
-    album_list = Album.get_new(num=36)
+    album_list = reversed(Album.get_new(num=36))
     start = datetime.date.today() - datetime.timedelta(days=6)
     end = datetime.date.today() + datetime.timedelta(days=1)
     song_num = 10
