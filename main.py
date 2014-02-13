@@ -516,7 +516,14 @@ class FunPage(BaseHandler):
     }
     self.response.out.write(template.render(get_path("fun.html"),
                                             template_values))
-
+class FixCrash(BaseHandler):
+  def get(self):
+    template_values = {
+      'session': self.session,
+    }
+    memcache.flush_all()
+    self.response.out.write(template.render(get_path("fun.html"),
+                                            template_values))
 class ChartsPage(UserHandler):
   @check_login
   def get(self):
@@ -754,4 +761,5 @@ app = webapp2.WSGIApplication([
   ('/callvoice/?', CallVoice),
   ('/testmodels/?', TestModels),
   ('/signup/?', SignUp),
+  ('/fixcrash/?', FixCrash),
 ], debug=True, config=webapp2conf)

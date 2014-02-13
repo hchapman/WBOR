@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="google-site-verification" content="2k_poTMCoylg3ImnnxObgyKB8GNEiCDVcJyc64jyhbY" />
 
     <title>{% block title %}WBOR{% endblock %}</title>
 
@@ -339,8 +340,13 @@ function nowPlaying() {
                 {% endif %}
             </ul>
             <div class="container" id='nowplaying'>
-               <ul id=marquee class="nav pull-left" behavior="scroll" scrollamount="2" direction="left" width="890">
-               <li><p class="navbar-text">Now Playing 
+               <ul id=marquee class="nav pull-left" behavior="scroll" scrollamount="2" direction="left" 
+                   {% if "dj" in session %}
+                    width="890" height="40">
+                   {% else %}
+                    width="980">
+                   {% endif %}
+               <p class="navbar-text">Now Playing 
                    <a id='currentsong'
                        rel="tooltip"
                        title="Track"
@@ -358,7 +364,7 @@ function nowPlaying() {
                           data-original-title="Show Description">
                       wait for it...
                   </a>
-                </p></li>
+                </p>
               </ul>
             </div>
           </div>

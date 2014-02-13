@@ -15,8 +15,6 @@ handlers:
   script: main.app
 - url: /static
   static_dir: static
-- url: /fixcrash
-  script: fix.app
 - url: /fun/?
   static_files: static/screenclean.swf
   upload: static/screenclean.swf
